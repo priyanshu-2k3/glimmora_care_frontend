@@ -1,0 +1,163 @@
+import type { HealthRecord } from '@/types/health'
+import { makeMarker } from './markers'
+
+export const MOCK_HEALTH_RECORDS: HealthRecord[] = [
+  // PAT_001 — Priya Sharma
+  {
+    id: 'rec_001',
+    patientId: 'pat_001',
+    type: 'lab_report',
+    title: 'Annual Metabolic Panel — Feb 2025',
+    date: '2025-02-20',
+    source: 'SRL Diagnostics, Andheri',
+    sourceLab: 'SRL Diagnostics',
+    doctor: 'Dr. Arjun Mehta',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'pat_001',
+    uploadedAt: '2025-02-21T09:30:00Z',
+    fileSize: '1.2 MB',
+    ocrConfidence: 94,
+    markers: [
+      makeMarker('m001', 'HbA1c', 'Hemoglobin A1c', 6.4, '%', 4.0, 5.6, 'metabolic', '2025-02-20', 96, 'rising'),
+      makeMarker('m002', 'Fasting Blood Glucose', 'Fasting Glucose', 118, 'mg/dL', 70, 100, 'metabolic', '2025-02-20', 98, 'rising'),
+      makeMarker('m003', 'Total Cholesterol', 'Cholesterol', 218, 'mg/dL', 0, 200, 'cardiac', '2025-02-20', 95, 'rising'),
+      makeMarker('m004', 'LDL', 'LDL Cholesterol', 142, 'mg/dL', 0, 100, 'cardiac', '2025-02-20', 93, 'stable'),
+      makeMarker('m005', 'HDL', 'HDL Cholesterol', 48, 'mg/dL', 40, 80, 'cardiac', '2025-02-20', 95, 'stable'),
+      makeMarker('m006', 'Triglycerides', 'Triglycerides', 180, 'mg/dL', 0, 150, 'cardiac', '2025-02-20', 97, 'rising'),
+    ],
+  },
+  {
+    id: 'rec_002',
+    patientId: 'pat_001',
+    type: 'lab_report',
+    title: 'CBC & Thyroid Panel — Oct 2024',
+    date: '2024-10-15',
+    source: 'Thyrocare, Mumbai',
+    sourceLab: 'Thyrocare',
+    doctor: 'Dr. Arjun Mehta',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_doctor_001',
+    uploadedAt: '2024-10-16T08:00:00Z',
+    fileSize: '0.9 MB',
+    ocrConfidence: 91,
+    markers: [
+      makeMarker('m007', 'Hemoglobin', 'Hemoglobin', 11.2, 'g/dL', 12.0, 17.5, 'blood', '2024-10-15', 98, 'falling'),
+      makeMarker('m008', 'TSH', 'Thyroid Stimulating Hormone', 4.8, 'mIU/L', 0.4, 4.0, 'hormonal', '2024-10-15', 94, 'rising'),
+      makeMarker('m009', 'Ferritin', 'Ferritin', 8, 'ng/mL', 12, 300, 'blood', '2024-10-15', 97, 'falling'),
+      makeMarker('m010', 'Vitamin D', 'Vitamin D3', 18, 'ng/mL', 30, 100, 'nutritional', '2024-10-15', 95, 'falling'),
+    ],
+  },
+  {
+    id: 'rec_003',
+    patientId: 'pat_001',
+    type: 'vitals',
+    title: 'Blood Pressure Reading — Jan 2025',
+    date: '2025-01-10',
+    source: 'Self-recorded',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'pat_001',
+    uploadedAt: '2025-01-10T18:00:00Z',
+    markers: [
+      makeMarker('m011', 'Systolic BP', 'Systolic Blood Pressure', 136, 'mmHg', 90, 120, 'cardiac', '2025-01-10', 88, 'rising'),
+      makeMarker('m012', 'Diastolic BP', 'Diastolic Blood Pressure', 88, 'mmHg', 60, 80, 'cardiac', '2025-01-10', 88, 'rising'),
+    ],
+  },
+  // PAT_002 — Ramesh Patel
+  {
+    id: 'rec_004',
+    patientId: 'pat_002',
+    type: 'lab_report',
+    title: 'Comprehensive Metabolic Panel — Mar 2025',
+    date: '2025-03-01',
+    source: 'Metropolis Labs, Pune',
+    sourceLab: 'Metropolis Healthcare',
+    doctor: 'Dr. Arjun Mehta',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_doctor_001',
+    uploadedAt: '2025-03-02T07:00:00Z',
+    fileSize: '2.1 MB',
+    ocrConfidence: 97,
+    markers: [
+      makeMarker('m013', 'HbA1c', 'Hemoglobin A1c', 7.8, '%', 4.0, 5.6, 'metabolic', '2025-03-01', 99, 'rising'),
+      makeMarker('m014', 'Fasting Glucose', 'Fasting Glucose', 158, 'mg/dL', 70, 100, 'metabolic', '2025-03-01', 98, 'rising'),
+      makeMarker('m015', 'Creatinine', 'Serum Creatinine', 1.4, 'mg/dL', 0.6, 1.2, 'renal', '2025-03-01', 96, 'rising'),
+      makeMarker('m016', 'Uric Acid', 'Uric Acid', 7.8, 'mg/dL', 2.4, 7.0, 'renal', '2025-03-01', 97, 'rising'),
+      makeMarker('m017', 'Systolic BP', 'Systolic Blood Pressure', 148, 'mmHg', 90, 120, 'cardiac', '2025-03-01', 94, 'rising'),
+    ],
+  },
+  // PAT_003 — Lakshmi Nair
+  {
+    id: 'rec_005',
+    patientId: 'pat_003',
+    type: 'ngo_field_entry',
+    title: 'Maternal Health Screening — Feb 2025',
+    date: '2025-02-28',
+    source: 'Rural Health Foundation — Village Wadgaon',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_ngo_001',
+    uploadedAt: '2025-02-28T16:00:00Z',
+    markers: [
+      makeMarker('m018', 'Hemoglobin', 'Hemoglobin', 9.8, 'g/dL', 12.0, 17.5, 'blood', '2025-02-28', 85, 'falling'),
+      makeMarker('m019', 'Systolic BP', 'Systolic Blood Pressure', 110, 'mmHg', 90, 120, 'cardiac', '2025-02-28', 80, 'stable'),
+      makeMarker('m020', 'Diastolic BP', 'Diastolic Blood Pressure', 72, 'mmHg', 60, 80, 'cardiac', '2025-02-28', 80, 'stable'),
+    ],
+  },
+  // PAT_004 — Mohammed Anwar
+  {
+    id: 'rec_006',
+    patientId: 'pat_004',
+    type: 'lab_report',
+    title: 'Cardiac & Lipid Panel — Mar 2025',
+    date: '2025-03-01',
+    source: 'Lal Path Labs, Nashik',
+    sourceLab: 'Lal PathLabs',
+    doctor: 'Dr. Arjun Mehta',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_doctor_001',
+    uploadedAt: '2025-03-02T08:00:00Z',
+    fileSize: '1.8 MB',
+    ocrConfidence: 96,
+    markers: [
+      makeMarker('m021', 'Total Cholesterol', 'Cholesterol', 256, 'mg/dL', 0, 200, 'cardiac', '2025-03-01', 98, 'rising'),
+      makeMarker('m022', 'LDL', 'LDL Cholesterol', 178, 'mg/dL', 0, 100, 'cardiac', '2025-03-01', 96, 'rising'),
+      makeMarker('m023', 'HDL', 'HDL Cholesterol', 38, 'mg/dL', 40, 80, 'cardiac', '2025-03-01', 97, 'falling'),
+      makeMarker('m024', 'Triglycerides', 'Triglycerides', 224, 'mg/dL', 0, 150, 'cardiac', '2025-03-01', 95, 'rising'),
+      makeMarker('m025', 'Creatinine', 'Serum Creatinine', 1.6, 'mg/dL', 0.6, 1.2, 'renal', '2025-03-01', 97, 'rising'),
+      makeMarker('m026', 'ALT', 'Alanine Aminotransferase', 62, 'U/L', 7, 56, 'hepatic', '2025-03-01', 95, 'rising'),
+    ],
+  },
+  {
+    id: 'rec_007',
+    patientId: 'pat_004',
+    type: 'lab_report',
+    title: 'Metabolic Panel — Sep 2024',
+    date: '2024-09-10',
+    source: 'Lal Path Labs, Nashik',
+    sourceLab: 'Lal PathLabs',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_doctor_001',
+    uploadedAt: '2024-09-11T09:00:00Z',
+    fileSize: '1.5 MB',
+    ocrConfidence: 93,
+    markers: [
+      makeMarker('m027', 'Total Cholesterol', 'Cholesterol', 238, 'mg/dL', 0, 200, 'cardiac', '2024-09-10', 94, 'rising'),
+      makeMarker('m028', 'LDL', 'LDL Cholesterol', 162, 'mg/dL', 0, 100, 'cardiac', '2024-09-10', 93, 'rising'),
+      makeMarker('m029', 'Triglycerides', 'Triglycerides', 198, 'mg/dL', 0, 150, 'cardiac', '2024-09-10', 96, 'rising'),
+    ],
+  },
+]
+
+export function getRecordsByPatient(patientId: string): HealthRecord[] {
+  return MOCK_HEALTH_RECORDS.filter((r) => r.patientId === patientId)
+}
+
+export function getRecordById(id: string): HealthRecord | undefined {
+  return MOCK_HEALTH_RECORDS.find((r) => r.id === id)
+}
