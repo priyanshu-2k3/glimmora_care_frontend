@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   value: number // 0-100
-  variant?: 'default' | 'gold' | 'success' | 'warning' | 'error'
+  variant?: 'default' | 'gold' | 'success' | 'warning' | 'error' | 'pink' | 'green'
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
   label?: string
@@ -15,6 +15,8 @@ const variants = {
   success: 'bg-success-DEFAULT',
   warning: 'bg-warning-DEFAULT',
   error: 'bg-error-DEFAULT',
+  pink: 'bg-error-vivid',
+  green: 'bg-success-vivid',
 }
 
 const sizes = {

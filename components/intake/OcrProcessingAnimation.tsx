@@ -45,10 +45,10 @@ export function OcrProcessingAnimation({ isRunning, onComplete }: OcrProcessingA
   if (!isRunning && !done) return null
 
   return (
-    <div className="bg-ivory-warm border border-sand-light rounded-2xl p-6 space-y-3">
+    <div className="bg-white border border-sand-light/60 rounded-xl shadow-sm p-6 space-y-3">
       <div className="flex items-center gap-2 mb-4">
         {done
-          ? <CheckCircle className="w-5 h-5 text-success-DEFAULT" />
+          ? <CheckCircle className="w-5 h-5 text-gold-soft" />
           : <Loader2 className="w-5 h-5 text-gold-soft animate-spin" />
         }
         <span className="font-body font-medium text-sm text-charcoal-deep">

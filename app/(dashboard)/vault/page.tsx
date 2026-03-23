@@ -68,7 +68,7 @@ export default function VaultPage() {
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Health Vault</h1>
+          <h1 className="font-body text-2xl font-bold text-charcoal-deep">Health Vault</h1>
           <p className="text-sm text-greige font-body mt-1">
             <Shield className="w-3.5 h-3.5 inline mr-1 text-gold-soft" />
             All records encrypted with AES-256. Access governed by patient consent.
@@ -104,7 +104,7 @@ export default function VaultPage() {
           description="Try a different search or adjust the patient filter."
         />
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           {records.map((rec) => {
             const patient = MOCK_PATIENTS.find((p) => p.id === rec.patientId)
             const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
@@ -121,7 +121,16 @@ export default function VaultPage() {
                           <p className="font-body font-medium text-charcoal-deep text-sm">{rec.title}</p>
                           <div className="flex items-center gap-2 shrink-0 flex-wrap">
                             <EncryptionBadge isEncrypted={rec.isEncrypted} />
-                            <Badge variant={rec.consentStatus === 'granted' ? 'success' : rec.consentStatus === 'revoked' ? 'error' : 'warning'}>
+                            <Badge
+                              variant={rec.consentStatus === 'granted' ? 'success' : rec.consentStatus === 'revoked' ? 'error' : 'warning'}
+                              className={
+                                rec.consentStatus === 'granted'
+                                  ? 'bg-gold-soft text-charcoal-deep border-gold-muted font-semibold shadow-sm'
+                                  : rec.consentStatus === 'revoked'
+                                  ? 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm'
+                                  : 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm'
+                              }
+                            >
                               {rec.consentStatus}
                             </Badge>
                           </div>

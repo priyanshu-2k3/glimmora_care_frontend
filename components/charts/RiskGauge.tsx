@@ -35,8 +35,8 @@ export function RiskGauge({ score, riskLevel, size = 120 }: RiskGaugeProps) {
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-xl font-semibold" style={{ color: RISK_COLORS[riskLevel] }}>{score}%</span>
-          <span className="text-[9px] font-body text-greige uppercase tracking-wider">confidence</span>
+          <span className="font-body text-xl font-bold" style={{ color: RISK_COLORS[riskLevel] }}>{score}%</span>
+          <span className="text-[9px] font-body font-semibold text-greige uppercase tracking-widest">confidence</span>
         </div>
       </div>
       <span className={cn('text-xs font-body font-medium px-2.5 py-0.5 rounded-full')} style={{ color: RISK_COLORS[riskLevel], background: RISK_COLORS[riskLevel] + '18' }}>

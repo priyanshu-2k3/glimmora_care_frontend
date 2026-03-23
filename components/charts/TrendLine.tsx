@@ -55,7 +55,7 @@ export function TrendLine({ trajectory, normalMin, normalMax, height = 220 }: Tr
           <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
           <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} domain={['auto', 'auto']} />
           <Tooltip
-            contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 12, fontFamily: 'Outfit' }}
+            contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 12, fontFamily: 'Inter' }}
             formatter={(val: number | undefined) => [`${val ?? ''}`, 'Value']}
           />
           {normalMax !== undefined && (

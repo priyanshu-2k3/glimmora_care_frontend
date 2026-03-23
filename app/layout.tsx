@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond, Outfit } from 'next/font/google'
+import { Cormorant_Garamond, Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 
@@ -11,7 +11,7 @@ const cormorant = Cormorant_Garamond({
   display: 'swap',
 })
 
-const outfit = Outfit({
+const inter = Inter({
   variable: '--font-body',
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${cormorant.variable} ${outfit.variable} antialiased font-body bg-ivory-cream text-charcoal-deep`}>
+      <body className={`${cormorant.variable} ${inter.variable} antialiased font-body bg-ivory-cream text-charcoal-deep`}>
         <AuthProvider>
           {children}
         </AuthProvider>

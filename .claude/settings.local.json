@@ -5,7 +5,10 @@
       "Bash(wc -l /d/BAAREZ/Moda-Glimmora-new-v2/src/services/*.ts)",
       "Bash(ls -la \"d:/BAAREZ/Moda-Glimmora-new-v2/src/app/\\(brand\\)/brand/heritage/[id]/\")",
       "Bash(npm install recharts framer-motion clsx tailwind-merge lucide-react date-fns)",
-      "Bash(npm install recharts framer-motion clsx tailwind-merge lucide-react date-fns --save)"
+      "Bash(npm install recharts framer-motion clsx tailwind-merge lucide-react date-fns --save)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>&1\")",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Write-Host ''Done''\")",
+      "Bash(powershell -Command \"Remove-Item -Path ''B:\\\\Glimmora\\\\glimmora_care_frontend\\\\.next\\\\dev\\\\lock'' -ErrorAction SilentlyContinue; Write-Host ''Lock removed''\")"
     ]
   }
 }

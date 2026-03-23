@@ -42,14 +42,14 @@ export default function IntakePage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Health Data Intake</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Health Data Intake</h1>
         <p className="text-sm text-greige font-body mt-1">Upload lab reports or prescriptions. Our OCR engine will extract and normalize health markers.</p>
       </div>
 
       {/* Patient selector */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Select Patient</CardTitle>
+          <CardTitle className="text-base font-body font-semibold">Select Patient</CardTitle>
           <CardDescription>Choose the patient this record belongs to</CardDescription>
         </CardHeader>
         <CardContent>
@@ -71,7 +71,7 @@ export default function IntakePage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Upload Documents</CardTitle>
+              <CardTitle className="text-base font-body font-semibold">Upload Documents</CardTitle>
               <CardDescription>Supported: PDF, JPG, PNG · Max 10MB</CardDescription>
             </div>
             <Badge variant="info">OCR Enabled</Badge>
@@ -86,7 +86,7 @@ export default function IntakePage() {
             }}
           />
           {filesSelected && !processComplete && (
-            <Button className="mt-4 w-full" onClick={handleProcess} isLoading={isProcessing}>
+            <Button className="mt-4 w-full bg-gold-whisper text-charcoal-deep border border-gold-soft/40 hover:opacity-90" onClick={handleProcess} isLoading={isProcessing}>
               <Sparkles className="w-4 h-4" />
               {isProcessing ? 'Processing...' : 'Process with OCR Engine'}
             </Button>
@@ -105,7 +105,7 @@ export default function IntakePage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Extracted Health Markers</CardTitle>
+                <CardTitle className="text-base font-body font-semibold">Extracted Health Markers</CardTitle>
                 <CardDescription>Review and confirm extracted data before saving</CardDescription>
               </div>
               <Badge variant="gold">
@@ -117,13 +117,13 @@ export default function IntakePage() {
             <MarkerExtractionForm markers={sampleMarkers} />
             <div className="mt-6 pt-4 border-t border-sand-light flex gap-3">
               {isSaved ? (
-                <div className="flex items-center gap-2 text-success-DEFAULT text-sm font-body">
-                  <span className="w-5 h-5 rounded-full bg-success-soft/20 flex items-center justify-center">✓</span>
+                <div className="flex items-center gap-2 text-black text-sm font-body">
+                  <span className="w-5 h-5 rounded-full bg-gold-soft/20 flex items-center justify-center text-gold-soft">✓</span>
                   Record saved to vault successfully
                 </div>
               ) : (
                 <>
-                  <Button onClick={handleSave} className="flex-1">
+                  <Button onClick={handleSave} className="flex-1 bg-gold-whisper text-charcoal-deep border border-gold-soft/40 hover:opacity-90">
                     <Save className="w-4 h-4" />
                     Save to Health Vault
                   </Button>

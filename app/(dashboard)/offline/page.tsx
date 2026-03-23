@@ -54,7 +54,7 @@ export default function OfflinePage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Offline Village Mode</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Offline Village Mode</h1>
         <p className="text-sm text-greige font-body mt-1">Tablet-based offline data collection with encrypted local storage and delta sync</p>
       </div>
 
@@ -67,9 +67,9 @@ export default function OfflinePage() {
               'bg-warning-soft/15': syncState === 'offline',
               'bg-azure-whisper': syncState === 'syncing',
             })}>
-              {syncState === 'online' && <Wifi className="w-6 h-6 text-success-DEFAULT" />}
-              {syncState === 'offline' && <WifiOff className="w-6 h-6 text-warning-DEFAULT" />}
-              {syncState === 'syncing' && <RefreshCw className="w-6 h-6 text-sapphire-deep animate-spin" />}
+              {syncState === 'online' && <Wifi className="w-6 h-6 text-gold-soft" />}
+              {syncState === 'offline' && <WifiOff className="w-6 h-6 text-gold-soft" />}
+              {syncState === 'syncing' && <RefreshCw className="w-6 h-6 text-gold-soft animate-spin" />}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export default function OfflinePage() {
       {/* Offline mode settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Offline Mode Settings</CardTitle>
+          <CardTitle className="text-base font-body font-semibold">Offline Mode Settings</CardTitle>
           <CardDescription>Configure local storage and sync behaviour</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -133,7 +133,7 @@ export default function OfflinePage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-greige" />
-            <CardTitle className="text-base">Local Storage</CardTitle>
+            <CardTitle className="text-base font-body font-semibold">Local Storage</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -145,7 +145,7 @@ export default function OfflinePage() {
               { label: 'Synced Today', value: syncState === 'online' ? synced.toString() : '0' },
             ].map((s) => (
               <div key={s.label} className="bg-ivory-warm border border-sand-light rounded-xl p-3">
-                <p className="font-display text-xl text-charcoal-deep">{s.value}</p>
+                <p className="font-body text-xl font-bold text-charcoal-deep">{s.value}</p>
                 <p className="text-[10px] text-greige font-body">{s.label}</p>
               </div>
             ))}
@@ -157,19 +157,25 @@ export default function OfflinePage() {
       {syncState !== 'online' && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Pending Sync Queue</CardTitle>
+            <CardTitle className="text-base font-body font-semibold">Pending Sync Queue</CardTitle>
             <CardDescription>{PENDING_RECORDS.length} records waiting to be uploaded</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {PENDING_RECORDS.map((rec) => (
                 <div key={rec.id} className="flex items-center gap-3 py-2.5 border-b border-sand-light last:border-0">
-                  <Clock className="w-4 h-4 text-greige shrink-0" />
+                  <Clock className="w-5 h-5 text-greige shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-body font-medium text-charcoal-deep">{rec.patient}</p>
                     <p className="text-xs text-greige">{rec.type} · {rec.timestamp} · {rec.size}</p>
                   </div>
-                  <Badge variant={rec.action === 'create' ? 'info' : 'warning'} className="shrink-0 text-[10px]">
+                  <Badge
+                    variant={rec.action === 'create' ? 'info' : 'warning'}
+                    className={`shrink-0 text-xs px-3 py-1 ${rec.action === 'create'
+                      ? 'bg-azure-whisper text-sapphire-deep border-sapphire-mist font-semibold shadow-sm'
+                      : 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm'
+                    }`}
+                  >
                     {rec.action}
                   </Badge>
                 </div>
@@ -185,7 +191,7 @@ export default function OfflinePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-warning-DEFAULT" />
-              <CardTitle className="text-base">Sync Conflicts</CardTitle>
+              <CardTitle className="text-base font-body font-semibold">Sync Conflicts</CardTitle>
             </div>
             <CardDescription>Resolve data discrepancies before sync completes</CardDescription>
           </CardHeader>

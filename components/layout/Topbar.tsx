@@ -5,7 +5,6 @@ import { Menu, Bell, Search } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
 import type { Role } from '@/types/auth'
 
 interface TopbarProps {
@@ -19,11 +18,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const currentNav = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   )
+  const pageTitle = currentNav?.label || 'Dashboard'
 
   if (!user) return null
 
   return (
-    <header className="h-14 bg-ivory-cream border-b border-sand-light flex items-center px-4 gap-4 sticky top-0 z-10">
+    <header className="h-16 bg-white border-b border-sand-light flex items-center px-5 gap-4 sticky top-0 z-10">
       {/* Mobile menu */}
       <button
         onClick={onMenuClick}
@@ -32,27 +32,45 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Page title */}
-      <div className="flex-1">
-        <h2 className="text-base font-display text-charcoal-deep tracking-tight">
-          {currentNav?.label || 'Dashboard'}
+      {/* Breadcrumb + title */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-greige font-body leading-none mb-0.5">
+          Home / <span className="text-stone">{pageTitle}</span>
+        </p>
+        <h2 className="text-lg font-body font-semibold text-charcoal-deep leading-none truncate">
+          {pageTitle}
         </h2>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        <button className="p-1.5 text-greige hover:text-charcoal-deep transition-colors hidden sm:flex">
-          <Search className="w-4 h-4" />
+        {/* Search bar */}
+        <div className="hidden md:flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-lg px-3 py-1.5 w-44">
+          <Search className="w-3.5 h-3.5 text-greige shrink-0" />
+          <input
+            type="text"
+            placeholder="Search..."
+            className="bg-transparent text-xs font-body text-charcoal-deep placeholder:text-greige outline-none w-full"
+          />
+        </div>
+
+        {/* Notification bell */}
+        <button className="relative p-2 text-greige hover:text-charcoal-deep transition-colors">
+          <Bell className="w-4.5 h-4.5" />
+          <span className="absolute top-1 right-1 w-4 h-4 bg-error-DEFAULT text-ivory-cream text-[9px] font-body font-semibold rounded-full flex items-center justify-center leading-none">
+            3
+          </span>
         </button>
-        <button className="p-1.5 text-greige hover:text-charcoal-deep transition-colors relative">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-warning-DEFAULT rounded-full" />
-        </button>
-        <div className="flex items-center gap-2 pl-2 border-l border-sand-light">
+
+        {/* Divider */}
+        <div className="w-px h-7 bg-sand-light mx-1" />
+
+        {/* User */}
+        <div className="flex items-center gap-2.5">
           <Avatar name={user.name} size="sm" />
-          <div className="hidden sm:block">
-            <p className="text-xs font-body font-medium text-charcoal-deep leading-none">{user.name.split(' ')[0]}</p>
-            <Badge variant="default" className="text-[9px] mt-0.5">{ROLES[user.role as Role]?.label}</Badge>
+          <div className="hidden sm:block leading-tight">
+            <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]} {user.name.split(' ')[1]?.[0]}.</p>
+            <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
           </div>
         </div>
       </div>

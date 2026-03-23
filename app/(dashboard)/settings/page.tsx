@@ -35,7 +35,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Settings</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Settings</h1>
         <p className="text-sm text-greige font-body mt-1">Manage your account and preferences</p>
       </div>
 
@@ -48,7 +48,7 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-4">
                     <Avatar name={user.name} size="xl" />
                     <div>
-                      <CardTitle>{user.name}</CardTitle>
+                      <CardTitle className="font-body font-semibold">{user.name}</CardTitle>
                       <CardDescription>{user.email}</CardDescription>
                       <Badge variant="gold" className="mt-1">{ROLES[user.role as Role]?.label}</Badge>
                     </div>

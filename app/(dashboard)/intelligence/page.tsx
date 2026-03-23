@@ -41,7 +41,7 @@ export default function IntelligencePage() {
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">AGI Preventive Intelligence</h1>
+          <h1 className="font-body text-2xl font-bold text-charcoal-deep">AGI Preventive Intelligence</h1>
           <p className="text-sm text-greige font-body mt-1">Longitudinal trend modeling · Non-diagnostic · Confidence-scored</p>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function IntelligencePage() {
             { label: 'Risk Insights', value: insights.length },
           ].map((s) => (
             <Card key={s.label} className="text-center py-4">
-              <p className="font-display text-2xl text-charcoal-deep">{s.value}</p>
+              <p className="font-body text-2xl font-bold text-charcoal-deep">{s.value}</p>
               <p className="text-xs text-greige font-body">{s.label}</p>
             </Card>
           ))}
@@ -100,12 +100,12 @@ export default function IntelligencePage() {
                         <CardHeader>
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <CardTitle className="text-base">{traj.markerName}</CardTitle>
+                              <CardTitle className="text-base font-body font-semibold">{traj.markerName}</CardTitle>
                               <CardDescription>Over {traj.timeRange} · {traj.dataPoints.length} data points</CardDescription>
                             </div>
                             <div className="flex items-center gap-4 shrink-0">
                               <ConfidenceScore score={traj.confidenceScore} size="sm" />
-                              <RiskGauge score={traj.confidenceScore} riskLevel={traj.riskLevel} size={80} />
+                              <RiskGauge score={traj.confidenceScore} riskLevel={traj.riskLevel} size={130} />
                             </div>
                           </div>
                         </CardHeader>
@@ -141,35 +141,38 @@ export default function IntelligencePage() {
             {activeTab === 'correlations' && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Multi-Marker Correlation Analysis</CardTitle>
+                  <CardTitle className="text-base font-body font-semibold">Multi-Marker Correlation Analysis</CardTitle>
                   <CardDescription>Statistical associations between health markers across the patient cohort</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="divide-y divide-sand-light/60">
                     {CORRELATIONS.map((c, i) => {
                       const strength = Math.abs(c.correlationValue)
                       const color = strength > 0.8 ? '#4A6347' : strength > 0.6 ? '#A68B3D' : '#9A8F82'
+                      const bgColor = strength > 0.8 ? 'bg-success-soft/10' : strength > 0.6 ? 'bg-warning-soft/15' : 'bg-parchment/40'
                       return (
-                        <div key={i} className="flex items-center gap-3">
+                        <div key={i} className={`flex items-center gap-4 px-3 py-3.5 rounded-lg transition-colors hover:bg-parchment/60 ${bgColor}`}>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-body font-medium text-charcoal-deep">{c.marker1}</span>
-                              <span className="text-xs text-greige">↔</span>
-                              <span className="text-sm font-body font-medium text-charcoal-deep">{c.marker2}</span>
+                              <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker1}</span>
+                              <span className="text-xs font-body text-gold-muted font-bold">↔</span>
+                              <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker2}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
                               <Badge variant={c.direction === 'positive' ? 'success' : 'error'}>
                                 {c.direction}
                               </Badge>
                               <Badge variant="default">{c.significance}</Badge>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="w-20 h-1.5 bg-parchment rounded-full overflow-hidden">
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="w-28 h-2 bg-sand-light rounded-full overflow-hidden">
                               <div
-                                className="h-full rounded-full"
+                                className="h-full rounded-full transition-all duration-500"
                                 style={{ width: `${strength * 100}%`, background: color }}
                               />
                             </div>
-                            <span className="text-xs font-body font-semibold w-10 text-right" style={{ color }}>
+                            <span className="text-sm font-body font-bold w-12 text-right" style={{ color }}>
                               {c.correlationValue.toFixed(2)}
                             </span>
                           </div>

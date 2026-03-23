@@ -11,7 +11,7 @@ export function ConfidenceScore({ score, label = 'Confidence', size = 'md' }: Co
   const sizeClasses = { sm: 'text-sm', md: 'text-base', lg: 'text-2xl' }
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className={cn('font-display font-semibold', sizeClasses[size])} style={{ color }}>
+      <div className={cn('font-body font-bold', sizeClasses[size])} style={{ color }}>
         {score}%
       </div>
       <div className="w-full h-1 bg-parchment rounded-full overflow-hidden">

@@ -30,12 +30,15 @@ const config: Config = {
           deep: '#2D2A26',
         },
         noir: '#1A1816',
+        'dark-espresso': '#1E120D',
 
         // Accent Palette - Intelligence Signal
         gold: {
           soft: '#C9A962',
           muted: '#B89B4A',
           deep: '#9A7F35',
+          primary: '#C89B3C',
+          hover: '#B8862E',
         },
         champagne: '#E8DCC4',
         bronze: {
@@ -54,6 +57,7 @@ const config: Config = {
         success: {
           soft: '#6B8068',
           DEFAULT: '#4A6347',
+          vivid: '#52A87A',
         },
         warning: {
           soft: '#C4A35A',
@@ -62,6 +66,7 @@ const config: Config = {
         error: {
           soft: '#A67272',
           DEFAULT: '#8B5252',
+          vivid: '#B07278',
         },
         info: {
           soft: '#6B7A8A',
@@ -70,13 +75,13 @@ const config: Config = {
       },
       fontFamily: {
         display: ['Cormorant Garamond', 'Georgia', 'serif'],
-        body: ['Outfit', '-apple-system', 'sans-serif'],
+        body: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       boxShadow: {
-        'sm': '0 1px 2px rgba(26, 24, 22, 0.04)',
-        'md': '0 4px 12px rgba(26, 24, 22, 0.06)',
-        'lg': '0 12px 32px rgba(26, 24, 22, 0.08)',
-        'xl': '0 24px 64px rgba(26, 24, 22, 0.12)',
+        'sm': '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+        'md': '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+        'lg': '0 12px 32px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06)',
+        'xl': '0 24px 64px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08)',
       },
       backgroundImage: {
         'ivory-flow': 'linear-gradient(135deg, #FAF8F5 0%, #EDE8DF 100%)',

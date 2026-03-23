@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Globe, Users, TrendingUp, AlertTriangle, Baby, Heart } from 'lucide-react'
 import { POPULATION_DATA } from '@/data/population'
@@ -10,10 +11,10 @@ import { Tabs } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import type { RiskIntensity } from '@/types/population'
 
-const RISK_CONFIG: Record<RiskIntensity, { label: string; color: string; badgeVariant: 'success' | 'warning' | 'error' }> = {
-  stable: { label: 'Stable', color: '#4A6347', badgeVariant: 'success' },
-  moderate: { label: 'Moderate', color: '#A68B3D', badgeVariant: 'warning' },
-  elevated: { label: 'Elevated', color: '#8B5252', badgeVariant: 'error' },
+const RISK_CONFIG: Record<RiskIntensity, { label: string; color: string; badgeVariant: 'success' | 'warning' | 'error'; progressVariant: 'success' | 'gold' | 'error' | 'pink' | 'green'; className: string }> = {
+  stable:   { label: 'Stable',   color: '#52A87A', badgeVariant: 'success', progressVariant: 'green', className: 'bg-success-vivid/20 text-success-vivid border-success-vivid font-semibold shadow-sm' },
+  moderate: { label: 'Moderate', color: '#C9A962', badgeVariant: 'warning', progressVariant: 'gold',  className: 'bg-gold-soft text-charcoal-deep border-gold-muted font-semibold shadow-sm' },
+  elevated: { label: 'Elevated', color: '#B07278', badgeVariant: 'error',   progressVariant: 'pink',  className: 'bg-error-vivid text-ivory-cream border-error-vivid font-semibold shadow-sm' },
 }
 
 const TABS = [
@@ -28,10 +29,62 @@ export default function PopulationPage() {
   const districts = regions.filter((r) => r.level === 'district')
   const villages = regions.filter((r) => r.level === 'village')
 
+  const [districtAnim, setDistrictAnim] = useState<number[]>(districts.map(() => 0))
+  const [villageAnim, setVillageAnim] = useState<number[]>(villages.map(() => 0))
+  const [elderlyData, setElderlyData] = useState(elderlyMetrics.map((m) => ({ ...m, bpElevated: 0, glucoseElevated: 0, renalRisk: 0 })))
+
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const elderlyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setDistrictAnim(districts.map(() => 0))
+    setVillageAnim(villages.map(() => 0))
+
+    const el = overviewRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        const steps = 50
+        const ms = 1000 / steps
+        let step = 0
+        const timer = setInterval(() => {
+          step++
+          const eased = 1 - Math.pow(1 - Math.min(step / steps, 1), 3)
+          setDistrictAnim(districts.map((d) => Math.round(d.screeningCoverage * eased)))
+          setVillageAnim(villages.map((v) => Math.round(v.screeningCoverage * eased)))
+          if (step >= steps) clearInterval(timer)
+        }, ms)
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    setElderlyData(elderlyMetrics.map((m) => ({ ...m, bpElevated: 0, glucoseElevated: 0, renalRisk: 0 })))
+
+    const el = elderlyRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        // Set real data once — recharts animates the bars rising smoothly
+        setElderlyData(elderlyMetrics.map((m) => ({ ...m })))
+      },
+      { threshold: 0.3 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Population Intelligence</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Population Intelligence</h1>
         <p className="text-sm text-greige font-body mt-1">Aggregated anonymized data only · No individual identifiers · Maharashtra Division</p>
       </div>
 
@@ -52,7 +105,7 @@ export default function PopulationPage() {
           <Card key={stat.label} className="flex items-center gap-3">
             <stat.icon className={cn('w-5 h-5 shrink-0', stat.color)} />
             <div>
-              <p className="font-display text-xl text-charcoal-deep">{stat.value}</p>
+              <p className="font-body text-xl font-bold text-charcoal-deep">{stat.value}</p>
               <p className="text-xs text-greige font-body">{stat.label}</p>
             </div>
           </Card>
@@ -63,27 +116,28 @@ export default function PopulationPage() {
         {(activeTab) => (
           <>
             {activeTab === 'overview' && (
-              <div className="space-y-4">
+              <div ref={overviewRef} className="space-y-4">
                 {/* District coverage */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">District Coverage & Risk Map</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">District Coverage & Risk Map</CardTitle>
                     <CardDescription>Screening coverage and risk intensity by district</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {districts.map((d) => {
+                      {districts.map((d, i) => {
                         const risk = RISK_CONFIG[d.riskIntensity]
+                        const val = districtAnim[i] ?? 0
                         return (
                           <div key={d.id} className="flex items-center gap-3">
                             <span className="text-sm font-body text-charcoal-warm w-28 shrink-0">{d.name}</span>
                             <Progress
-                              value={d.screeningCoverage}
+                              value={val}
                               className="flex-1"
-                              variant={d.screeningCoverage > 75 ? 'success' : d.screeningCoverage > 55 ? 'gold' : 'warning'}
+                              variant={risk.progressVariant}
                             />
-                            <span className="text-xs text-greige w-10 text-right shrink-0">{d.screeningCoverage}%</span>
-                            <Badge variant={risk.badgeVariant} className="shrink-0 text-[10px]">{risk.label}</Badge>
+                            <span className="text-xs text-greige w-10 text-right shrink-0">{val}%</span>
+                            <Badge variant={risk.badgeVariant} className={`shrink-0 text-[10px] ${risk.className}`}>{risk.label}</Badge>
                             <span className="text-xs text-greige shrink-0 hidden sm:block">{d.activePatients} patients</span>
                           </div>
                         )
@@ -95,18 +149,19 @@ export default function PopulationPage() {
                 {/* Village level */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Village-Level Detail — Raigad</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Village-Level Detail — Raigad</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-3">
-                      {villages.map((v) => {
+                      {villages.map((v, i) => {
                         const risk = RISK_CONFIG[v.riskIntensity]
+                        const val = villageAnim[i] ?? 0
                         return (
                           <div key={v.id} className="p-3 rounded-xl border border-sand-light bg-ivory-warm text-center">
                             <p className="text-sm font-body font-medium text-charcoal-deep">{v.name}</p>
-                            <p className="font-display text-xl mt-1" style={{ color: risk.color }}>{v.screeningCoverage}%</p>
+                            <p className="font-body text-xl font-bold mt-1" style={{ color: risk.color }}>{val}%</p>
                             <p className="text-[10px] text-greige font-body">screened</p>
-                            <Badge variant={risk.badgeVariant} className="mt-1.5 text-[9px]">{risk.label}</Badge>
+                            <Badge variant={risk.badgeVariant} className={`mt-1.5 text-[9px] ${risk.className}`}>{risk.label}</Badge>
                           </div>
                         )
                       })}
@@ -115,25 +170,27 @@ export default function PopulationPage() {
                 </Card>
 
                 {/* Elderly */}
+                <div ref={elderlyRef}>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Elderly Chronic Risk Profile</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Elderly Chronic Risk Profile</CardTitle>
                     <CardDescription>Aggregated chronic condition indicators by district</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={elderlyMetrics} margin={{ left: -20, right: 8 }}>
+                      <BarChart data={elderlyData} margin={{ left: -20, right: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5DFD3" />
                         <XAxis dataKey="region" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                         <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} />
                         <Tooltip contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Outfit' }} />
-                        <Bar dataKey="bpElevated" name="BP Elevated" fill="#8B5252" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="glucoseElevated" name="Glucose Elevated" fill="#C9A962" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="renalRisk" name="Renal Risk" fill="#4A5568" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="bpElevated" name="BP Elevated" fill="#B07278" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={1000} animationEasing="ease-out" />
+                        <Bar dataKey="glucoseElevated" name="Glucose Elevated" fill="#C9A962" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={1000} animationEasing="ease-out" animationBegin={150} />
+                        <Bar dataKey="renalRisk" name="Renal Risk" fill="#4A5568" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={1000} animationEasing="ease-out" animationBegin={300} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
+                </div>
               </div>
             )}
 
@@ -141,7 +198,7 @@ export default function PopulationPage() {
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Maternal Health Metrics</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Maternal Health Metrics</CardTitle>
                     <CardDescription>Aggregated hemoglobin, BP, and follow-up rates across regions</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -150,21 +207,29 @@ export default function PopulationPage() {
                         <div key={m.region} className="p-4 bg-ivory-warm border border-sand-light rounded-xl">
                           <div className="flex items-center justify-between mb-3">
                             <p className="font-body font-medium text-charcoal-deep">{m.region}</p>
-                            <Badge variant={m.hemoglobinAvg < 10 ? 'error' : m.hemoglobinAvg < 11 ? 'warning' : 'success'}>
+                            <Badge
+                              variant={m.hemoglobinAvg < 10 ? 'error' : m.hemoglobinAvg < 11 ? 'warning' : 'success'}
+                              className={m.hemoglobinAvg < 10
+                                ? 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm'
+                                : m.hemoglobinAvg < 11
+                                ? 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm'
+                                : 'bg-success-soft text-success-DEFAULT border-success-DEFAULT font-semibold shadow-sm'
+                              }
+                            >
                               Hb: {m.hemoglobinAvg} g/dL
                             </Badge>
                           </div>
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="font-display text-lg text-charcoal-deep">{m.bpElevated}</p>
+                              <p className="font-body text-lg font-bold text-charcoal-deep">{m.bpElevated}</p>
                               <p className="text-[10px] text-greige font-body">BP Elevated</p>
                             </div>
                             <div>
-                              <p className="font-display text-lg text-warning-DEFAULT">{m.screeningGap}%</p>
+                              <p className="font-body text-black text-lg font-bold text-warning-DEFAULT">{m.screeningGap}%</p>
                               <p className="text-[10px] text-greige font-body">Screening Gap</p>
                             </div>
                             <div>
-                              <p className="font-display text-lg text-charcoal-deep">{m.followUpRate}%</p>
+                              <p className="font-body text-lg font-bold text-charcoal-deep">{m.followUpRate}%</p>
                               <p className="text-[10px] text-greige font-body">Follow-up Rate</p>
                             </div>
                           </div>
@@ -181,7 +246,7 @@ export default function PopulationPage() {
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Pediatric Growth Indicators</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Pediatric Growth Indicators</CardTitle>
                     <CardDescription>Growth anomaly and underweight clustering by region</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -199,7 +264,7 @@ export default function PopulationPage() {
                       {pediatricMetrics.map((m) => (
                         <div key={m.region} className="text-center p-3 bg-ivory-warm border border-sand-light rounded-xl">
                           <p className="text-xs font-body font-medium text-charcoal-deep">{m.region}</p>
-                          <p className="font-display text-xl mt-1 text-charcoal-deep">{m.screeningInterval}d</p>
+                          <p className="font-body text-xl font-bold mt-1 text-charcoal-deep">{m.screeningInterval}d</p>
                           <p className="text-[10px] text-greige font-body">avg screening interval</p>
                         </div>
                       ))}
@@ -212,7 +277,7 @@ export default function PopulationPage() {
             {activeTab === 'seasonal' && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Seasonal Health Patterns — Maharashtra</CardTitle>
+                  <CardTitle className="text-base font-body font-semibold">Seasonal Health Patterns — Maharashtra</CardTitle>
                   <CardDescription>Monthly screening participation and marker deviation trends</CardDescription>
                 </CardHeader>
                 <CardContent>

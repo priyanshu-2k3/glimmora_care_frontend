@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Bot, Activity, CheckCircle, Pause, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
+import { Bot, Activity, Pause, Loader2, AlertCircle, RotateCcw, Zap, ShieldCheck, TrendingUp } from 'lucide-react'
 import { MOCK_AGENTS } from '@/data/agents'
 import type { Agent, AgentStatus, ActivitySeverity } from '@/types/agent'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
@@ -20,11 +20,11 @@ const STATUS_META: Record<AgentStatus, { label: string; icon: React.ElementType;
   error: { label: 'Error', icon: AlertCircle, color: 'text-error-DEFAULT' },
 }
 
-const SEVERITY_META: Record<ActivitySeverity, { variant: 'default' | 'gold' | 'success' | 'warning' | 'error' | 'info' | 'dark' }> = {
-  info: { variant: 'info' },
-  warning: { variant: 'warning' },
-  success: { variant: 'success' },
-  error: { variant: 'error' },
+const SEVERITY_META: Record<ActivitySeverity, { variant: 'default' | 'gold' | 'success' | 'warning' | 'error' | 'info' | 'dark'; className: string }> = {
+  info:    { variant: 'info',    className: 'bg-azure-whisper text-sapphire-deep border-sapphire-mist font-semibold shadow-sm' },
+  warning: { variant: 'warning', className: 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm' },
+  success: { variant: 'success', className: 'bg-success-soft text-success-DEFAULT border-success-DEFAULT font-semibold shadow-sm' },
+  error:   { variant: 'error',   className: 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm' },
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
@@ -41,7 +41,7 @@ function AgentCard({ agent }: { agent: Agent }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">{agent.name}</CardTitle>
+              <CardTitle className="text-base font-body font-semibold">{agent.name}</CardTitle>
               <Toggle checked={enabled} onChange={setEnabled} size="sm" />
             </div>
             <CardDescription className="line-clamp-2">{agent.description}</CardDescription>
@@ -52,11 +52,11 @@ function AgentCard({ agent }: { agent: Agent }) {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="text-center">
-            <p className="font-display text-lg text-charcoal-deep">{agent.totalActions.toLocaleString()}</p>
+            <p className="font-body text-lg font-bold text-charcoal-deep">{agent.totalActions.toLocaleString()}</p>
             <p className="text-xs text-greige font-body">Total Actions</p>
           </div>
           <div className="text-center">
-            <p className="font-display text-lg text-charcoal-deep">{agent.successRate}%</p>
+            <p className="font-body text-lg font-bold text-charcoal-deep">{agent.successRate}%</p>
             <p className="text-xs text-greige font-body">Success Rate</p>
           </div>
           <div className="text-center">
@@ -104,22 +104,24 @@ export default function AgentsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Autonomous Agent Framework</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Autonomous Agent Framework</h1>
         <p className="text-sm text-greige font-body mt-1">5 controlled automation agents operating within governance boundaries</p>
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {[
-          { label: 'Active Agents', value: MOCK_AGENTS.filter((a) => a.status === 'active').length, icon: CheckCircle, color: 'text-success-DEFAULT' },
-          { label: 'Total Actions', value: MOCK_AGENTS.reduce((s, a) => s + a.totalActions, 0).toLocaleString(), icon: Activity, color: 'text-charcoal-deep' },
-          { label: 'Ethics Violations', value: '0', icon: CheckCircle, color: 'text-success-DEFAULT' },
-          { label: 'Avg Success Rate', value: `${Math.round(MOCK_AGENTS.reduce((s, a) => s + a.successRate, 0) / MOCK_AGENTS.length)}%`, icon: Activity, color: 'text-charcoal-deep' },
+          { label: 'Active Agents',   value: MOCK_AGENTS.filter((a) => a.status === 'active').length, icon: Bot,          bg: 'bg-azure-whisper',    color: 'text-sapphire-deep' },
+          { label: 'Total Actions',   value: MOCK_AGENTS.reduce((s, a) => s + a.totalActions, 0).toLocaleString(),       icon: Zap,          bg: 'bg-champagne',        color: 'text-gold-deep' },
+          { label: 'Ethics Violations', value: '0',                                                                       icon: ShieldCheck,  bg: 'bg-success-soft/20',  color: 'text-success-DEFAULT' },
+          { label: 'Avg Success Rate', value: `${Math.round(MOCK_AGENTS.reduce((s, a) => s + a.successRate, 0) / MOCK_AGENTS.length)}%`, icon: TrendingUp, bg: 'bg-parchment', color: 'text-charcoal-warm' },
         ].map((stat) => (
-          <Card key={stat.label} className="flex items-center gap-3">
-            <stat.icon className={cn('w-5 h-5 shrink-0', stat.color)} />
+          <Card key={stat.label} className="flex items-center gap-3 p-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stat.bg}`}>
+              <stat.icon className={cn('w-5 h-5', stat.color)} />
+            </div>
             <div>
-              <p className="font-display text-xl text-charcoal-deep">{stat.value}</p>
+              <p className="font-body text-xl font-bold text-charcoal-deep">{stat.value}</p>
               <p className="text-xs text-greige font-body">{stat.label}</p>
             </div>
           </Card>
@@ -136,7 +138,7 @@ export default function AgentsPage() {
         <div className="lg:col-span-1">
           <Card className="sticky top-20">
             <CardHeader>
-              <CardTitle className="text-base">Live Activity Feed</CardTitle>
+              <CardTitle className="text-base font-body font-semibold">Live Activity Feed</CardTitle>
               <CardDescription>All agent actions logged in real-time</CardDescription>
             </CardHeader>
             <CardContent>
@@ -152,7 +154,7 @@ export default function AgentsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs font-body font-medium text-charcoal-deep">{act.action}</p>
-                        <Badge variant={SEVERITY_META[act.severity].variant} className="text-[9px]">
+                        <Badge variant={SEVERITY_META[act.severity].variant} className={`text-[9px] px-2.5 py-0.5 ${SEVERITY_META[act.severity].className}`}>
                           {act.agentType.replace('_', ' ')}
                         </Badge>
                       </div>

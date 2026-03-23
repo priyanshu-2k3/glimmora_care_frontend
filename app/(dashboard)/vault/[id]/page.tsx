@@ -56,7 +56,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
               <FileText className="w-6 h-6 text-greige" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-display text-2xl text-charcoal-deep tracking-tight">{record.title}</h1>
+              <h1 className="font-body text-2xl font-bold text-charcoal-deep">{record.title}</h1>
               <p className="text-sm text-greige font-body mt-0.5">
                 {RECORD_TYPE_LABELS[record.type]} · {formatDate(record.date)}
                 {record.sourceLab && ` · ${record.sourceLab}`}
@@ -107,7 +107,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
               {activeTab === 'consent' && (
                 <div>
                   <CardHeader>
-                    <CardTitle className="text-base">Access Consent Management</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Access Consent Management</CardTitle>
                     <CardDescription>Control who can view this patient's health records</CardDescription>
                   </CardHeader>
                   <ConsentManager consents={consents} />
@@ -116,7 +116,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
               {activeTab === 'audit' && (
                 <div>
                   <CardHeader>
-                    <CardTitle className="text-base">Immutable Audit Trail</CardTitle>
+                    <CardTitle className="text-base font-body font-semibold">Immutable Audit Trail</CardTitle>
                     <CardDescription>All access and modification events are logged permanently</CardDescription>
                   </CardHeader>
                   <AuditTrailViewer entries={auditEntries} />
