@@ -145,13 +145,13 @@ export default function IntelligencePage() {
                   <CardDescription>Statistical associations between health markers across the patient cohort</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="divide-y divide-sand-light/60">
+                  <div className="space-y-3">
                     {CORRELATIONS.map((c, i) => {
                       const strength = Math.abs(c.correlationValue)
                       const color = strength > 0.8 ? '#4A6347' : strength > 0.6 ? '#A68B3D' : '#9A8F82'
                       const bgColor = strength > 0.8 ? 'bg-success-soft/10' : strength > 0.6 ? 'bg-warning-soft/15' : 'bg-parchment/40'
                       return (
-                        <div key={i} className={`flex items-center gap-4 px-3 py-3.5 rounded-lg transition-colors hover:bg-parchment/60 ${bgColor}`}>
+                        <div key={i} className={`flex items-center gap-6 px-4 py-4 rounded-xl border border-sand-light/50 transition-colors hover:border-gold-soft/40 hover:bg-parchment/60 ${bgColor}`}>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker1}</span>
@@ -159,10 +159,24 @@ export default function IntelligencePage() {
                               <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker2}</span>
                             </div>
                             <div className="flex items-center gap-1.5 mt-1">
-                              <Badge variant={c.direction === 'positive' ? 'success' : 'error'}>
+                              <Badge
+                                variant={c.direction === 'positive' ? 'success' : 'error'}
+                                className={c.direction === 'positive'
+                                  ? 'bg-success-soft text-ivory-cream border-success-DEFAULT font-semibold shadow-sm'
+                                  : 'bg-[#B07278] text-white border-[#9A6068] font-semibold shadow-sm'}
+                              >
                                 {c.direction}
                               </Badge>
-                              <Badge variant="default">{c.significance}</Badge>
+                              <Badge
+                                variant="default"
+                                className={c.significance === 'strong'
+                                  ? 'bg-sapphire-deep text-ivory-cream border-sapphire-deep font-semibold shadow-sm'
+                                  : c.significance === 'moderate'
+                                  ? 'bg-gold-soft text-charcoal-deep border-gold-muted font-semibold shadow-sm'
+                                  : 'bg-parchment text-stone border-sand-light font-semibold shadow-sm'}
+                              >
+                                {c.significance}
+                              </Badge>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
