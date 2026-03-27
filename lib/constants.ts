@@ -48,6 +48,54 @@ export const NAV_ITEMS = [
     roles: ['patient', 'doctor', 'admin'] as Role[],
   },
   {
+    href: '/profiles',
+    label: 'Family Profiles',
+    icon: 'User',
+    roles: ['patient', 'doctor', 'admin'] as Role[],
+  },
+  {
+    href: '/twin',
+    label: 'Health Twin',
+    icon: 'Activity',
+    roles: ['patient', 'doctor'] as Role[],
+  },
+  {
+    href: '/family',
+    label: 'Family Account',
+    icon: 'Users',
+    roles: ['patient', 'admin'] as Role[],
+  },
+  {
+    href: '/family/members',
+    label: 'Manage Members',
+    icon: 'UserCheck',
+    roles: ['patient', 'admin'] as Role[],
+  },
+  {
+    href: '/emergency',
+    label: 'Emergency Access',
+    icon: 'AlertTriangle',
+    roles: ['patient', 'admin'] as Role[],
+  },
+  {
+    href: '/consent',
+    label: 'Consent Manager',
+    icon: 'FileCheck',
+    roles: ['patient', 'doctor', 'admin'] as Role[],
+  },
+  {
+    href: '/access',
+    label: 'Access Control',
+    icon: 'Lock',
+    roles: ['patient', 'admin'] as Role[],
+  },
+  {
+    href: '/logs',
+    label: 'Audit Logs',
+    icon: 'ClipboardList',
+    roles: ['patient', 'doctor', 'admin'] as Role[],
+  },
+  {
     href: '/intelligence',
     label: 'Intelligence',
     icon: 'Brain',
@@ -66,12 +114,6 @@ export const NAV_ITEMS = [
     roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
   },
   {
-    href: '/twin',
-    label: 'Health Twin',
-    icon: 'Activity',
-    roles: ['patient', 'doctor'] as Role[],
-  },
-  {
     href: '/population',
     label: 'Population',
     icon: 'Globe',
@@ -82,6 +124,12 @@ export const NAV_ITEMS = [
     label: 'Offline Sync',
     icon: 'WifiOff',
     roles: ['ngo_worker', 'admin'] as Role[],
+  },
+  {
+    href: '/notifications',
+    label: 'Notifications',
+    icon: 'Bell',
+    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
   },
   {
     href: '/settings',

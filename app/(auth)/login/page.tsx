@@ -109,6 +109,15 @@ export default function LoginPage() {
         </Button>
       </form>
 
+      <div className="mt-4 flex items-center justify-between">
+        <Link href="/forgot-password" className="text-xs text-greige hover:text-gold-deep font-body transition-colors">
+          Forgot password?
+        </Link>
+        <Link href="/otp-verify" className="text-xs text-greige hover:text-gold-deep font-body transition-colors">
+          Login with OTP
+        </Link>
+      </div>
+
       <p className="mt-4 text-center text-xs text-greige font-body">
         New to GlimmoraCare?{' '}
         <Link href="/register" className="text-gold-deep hover:text-gold-muted transition-colors">
