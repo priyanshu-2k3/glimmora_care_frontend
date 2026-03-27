@@ -51,11 +51,11 @@ export function getRiskColor(level: string): string {
 
 export function getRiskBg(level: string): string {
   switch (level) {
-    case 'low': return 'bg-success-soft/10 text-success-DEFAULT border-success-soft/30'
-    case 'moderate': return 'bg-warning-soft/10 text-warning-DEFAULT border-warning-soft/30'
-    case 'elevated': return 'bg-warning-soft/20 text-warning-DEFAULT border-warning-soft/40'
-    case 'high': return 'bg-error-soft/10 text-error-DEFAULT border-error-soft/30'
-    default: return 'bg-parchment text-stone border-sand-light'
+    case 'low': return 'bg-success-soft/20 text-charcoal-deep border-success-soft/50'
+    case 'moderate': return 'bg-warning-soft/30 text-charcoal-deep border-warning-soft/60'
+    case 'elevated': return 'bg-warning-soft/40 text-charcoal-deep border-warning-DEFAULT/50'
+    case 'high': return 'bg-error-soft/25 text-charcoal-deep border-error-soft/50'
+    default: return 'bg-parchment text-charcoal-deep border-sand-light'
   }
 }
 

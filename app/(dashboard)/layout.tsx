@@ -35,9 +35,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!isAuthenticated) return null
 
   return (
-    <div className="flex h-screen bg-ivory-warm overflow-hidden">
+    <div className="flex h-screen bg-ivory-cream overflow-hidden">
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:w-60 lg:shrink-0">
+      <div className="hidden lg:flex lg:w-56 lg:shrink-0">
         <Sidebar />
       </div>
 

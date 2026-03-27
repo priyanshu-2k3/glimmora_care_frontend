@@ -97,14 +97,14 @@ export default function AssistantsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-4 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">AI Assistant</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">AI Assistant</h1>
         <p className="text-sm text-greige font-body mt-1">Persona-based intelligence assistant · Non-diagnostic · Confidence-scored</p>
       </div>
 
       {/* Disclaimer */}
-      <div className="flex items-start gap-2 bg-warning-soft/10 border border-warning-soft/30 rounded-xl px-4 py-3">
-        <AlertTriangle className="w-4 h-4 text-warning-DEFAULT shrink-0 mt-0.5" />
-        <p className="text-xs text-warning-DEFAULT font-body">
+      <div className="flex items-start gap-2 bg-warning-soft/25 border border-warning-soft/60 rounded-xl px-4 py-3">
+        <AlertTriangle className="text-red-500 w-4 h-4 text-warning-DEFAULT shrink-0 mt-0.5" />
+        <p className="text-xs text-warning-DEFAULT font-body text-black">
           <strong>Important:</strong> This assistant provides informational context only. It does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical decisions.
         </p>
       </div>
@@ -133,7 +133,7 @@ export default function AssistantsPage() {
         <CardHeader className="border-b border-sand-light shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">{config.label}</CardTitle>
+              <CardTitle className="text-base font-body font-semibold">{config.label}</CardTitle>
               <CardDescription>{config.description}</CardDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={clearMessages} className="text-greige">
@@ -216,7 +216,7 @@ export default function AssistantsPage() {
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
               disabled={isTyping}
             />
-            <Button onClick={handleSend} disabled={!input.trim() || isTyping} size="md">
+            <Button onClick={handleSend} disabled={!input.trim() || isTyping} size="md" className="bg-gold-whisper text-charcoal-deep border border-gold-soft/40 hover:opacity-90">
               <Send className="w-4 h-4" />
             </Button>
           </div>

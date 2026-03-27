@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Activity, Eye, EyeOff, TrendingUp } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -34,6 +34,49 @@ export default function TwinPage() {
     Object.fromEntries(twin?.markerOverlays.map((m) => [m.markerId, m.isVisible]) ?? [])
   )
 
+  const DC_ITEMS = [
+    { label: 'Metabolic Markers',   value: 85 },
+    { label: 'Cardiac Profile',     value: 78 },
+    { label: 'Blood Panel',         value: 90 },
+    { label: 'Nutritional Markers', value: 60 },
+    { label: 'Renal Function',      value: 50 },
+  ]
+
+  const [lifestyleAnim, setLifestyleAnim] = useState<number[]>(
+    (twin?.lifestyleAdherence ?? []).map(() => 0)
+  )
+  const [dcAnim, setDcAnim] = useState<number[]>(DC_ITEMS.map(() => 0))
+  const sectionRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setLifestyleAnim((twin?.lifestyleAdherence ?? []).map(() => 0))
+    setDcAnim(DC_ITEMS.map(() => 0))
+
+    const el = sectionRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        const duration = 1000
+        const steps = 50
+        const ms = duration / steps
+        let step = 0
+        const timer = setInterval(() => {
+          step++
+          const eased = 1 - Math.pow(1 - Math.min(step / steps, 1), 3)
+          setLifestyleAnim((twin?.lifestyleAdherence ?? []).map((c) => Math.round(c.score * eased)))
+          setDcAnim(DC_ITEMS.map((item) => Math.round(item.value * eased)))
+          if (step >= steps) clearInterval(timer)
+        }, ms)
+      },
+      { threshold: 0.2 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [selectedPatient])
+
   function toggleMarker(id: string) {
     setVisibleMarkers((prev) => ({ ...prev, [id]: !prev[id] }))
   }
@@ -57,7 +100,7 @@ export default function TwinPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">Digital Health Twin</h1>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Digital Health Twin</h1>
         <p className="text-sm text-greige font-body mt-1">Longitudinal health representation · Non-diagnostic · Confidence-scored</p>
       </div>
 
@@ -85,20 +128,20 @@ export default function TwinPage() {
         <>
           {/* Header stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="text-center py-3">
-              <p className="font-display text-2xl text-charcoal-deep">{twin.markerOverlays.length}</p>
+            <Card padding="none" className="flex flex-col items-center justify-center p-6 shadow-md hover:shadow-lg transition-all duration-200">
+              <p className="font-body text-2xl font-bold text-charcoal-deep">{twin.markerOverlays.length}</p>
               <p className="text-xs text-greige font-body">Tracked Markers</p>
             </Card>
-            <Card className="text-center py-3">
-              <p className="font-display text-2xl text-charcoal-deep">{twin.dataCompleteness}%</p>
+            <Card padding="none" className="flex flex-col items-center justify-center p-6 shadow-md hover:shadow-lg transition-all duration-200">
+              <p className="font-body text-2xl font-bold text-charcoal-deep">{twin.dataCompleteness}%</p>
               <p className="text-xs text-greige font-body">Data Completeness</p>
             </Card>
-            <Card className="text-center py-3">
-              <p className="font-display text-2xl text-charcoal-deep">{twin.snapshots.length}</p>
+            <Card padding="none" className="flex flex-col items-center justify-center p-6 shadow-md hover:shadow-lg transition-all duration-200">
+              <p className="font-body text-2xl font-bold text-charcoal-deep">{twin.snapshots.length}</p>
               <p className="text-xs text-greige font-body">Snapshots</p>
             </Card>
-            <Card className="flex items-center justify-center py-3">
-              <RiskGauge score={currentRisk} riskLevel={currentRisk > 50 ? 'elevated' : currentRisk > 35 ? 'moderate' : 'low'} size={90} />
+            <Card padding="none" className="flex flex-col items-center justify-center p-6 shadow-md hover:shadow-lg transition-all duration-200">
+              <RiskGauge score={currentRisk} riskLevel={currentRisk > 50 ? 'elevated' : currentRisk > 35 ? 'moderate' : 'low'} size={128} />
             </Card>
           </div>
 
@@ -107,7 +150,7 @@ export default function TwinPage() {
             <CardHeader>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <CardTitle>Longitudinal Marker Timeline</CardTitle>
+                  <CardTitle className="font-body font-semibold">Longitudinal Marker Timeline</CardTitle>
                   <CardDescription>Toggle markers to overlay on timeline · {allDates.length} data points</CardDescription>
                 </div>
                 {patient && <Badge variant="gold">{patient.name}</Badge>}
@@ -139,7 +182,7 @@ export default function TwinPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <Tooltip
-                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Outfit' }}
+                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Inter' }}
                   />
                   {twin.markerOverlays.map((m) =>
                     visibleMarkers[m.markerId] ? (
@@ -163,7 +206,7 @@ export default function TwinPage() {
           {/* Risk trajectory */}
           <Card>
             <CardHeader>
-              <CardTitle>Risk Trajectory Curve</CardTitle>
+              <CardTitle className="font-body font-semibold">Risk Trajectory Curve</CardTitle>
               <CardDescription>Informational risk score projection — not a clinical forecast</CardDescription>
             </CardHeader>
             <CardContent>
@@ -179,7 +222,7 @@ export default function TwinPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} domain={[0, 100]} />
                   <Tooltip
-                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Outfit' }}
+                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Inter' }}
                     formatter={(val: number | undefined) => [
                       `${val ?? ''}`, 'Value'
                     ]}
@@ -195,41 +238,35 @@ export default function TwinPage() {
           </Card>
 
           {/* Lifestyle adherence + Data completeness */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div ref={sectionRef} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Lifestyle Adherence Index</CardTitle>
+                <CardTitle className="text-base font-body font-semibold">Lifestyle Adherence Index</CardTitle>
                 <CardDescription>Data engagement score — non-clinical</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {twin.lifestyleAdherence.map((cat) => (
+                {twin.lifestyleAdherence.map((cat, i) => (
                   <Progress
                     key={cat.name}
-                    value={cat.score}
-                    label={cat.name}
+                    value={lifestyleAnim[i] ?? 0}
+                    label={`${cat.name} · ${lifestyleAnim[i] ?? 0}%`}
                     showLabel
-                    variant={cat.score >= 75 ? 'success' : cat.score >= 55 ? 'gold' : 'warning'}
+                    variant="gold"
                   />
                 ))}
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Data Completeness</CardTitle>
+                <CardTitle className="text-base font-body font-semibold">Data Completeness</CardTitle>
                 <CardDescription>Health record coverage by category</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { label: 'Metabolic Markers', value: 85 },
-                  { label: 'Cardiac Profile', value: 78 },
-                  { label: 'Blood Panel', value: 90 },
-                  { label: 'Nutritional Markers', value: 60 },
-                  { label: 'Renal Function', value: 50 },
-                ].map((item) => (
+                {DC_ITEMS.map((item, i) => (
                   <Progress
                     key={item.label}
-                    value={item.value}
-                    label={item.label}
+                    value={dcAnim[i] ?? 0}
+                    label={`${item.label} · ${dcAnim[i] ?? 0}%`}
                     showLabel
                     variant="default"
                   />
