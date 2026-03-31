@@ -1,35 +1,50 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Shield, Eye, EyeOff, CheckCircle, ArrowLeft, AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { authApi, ApiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [form, setForm] = useState({ password: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const token = searchParams.get('token') ?? ''
 
   const rules = [
-    { label: 'At least 8 characters', ok: form.password.length >= 8 },
+    { label: 'At least 8 characters',    ok: form.password.length >= 8 },
     { label: 'Contains uppercase letter', ok: /[A-Z]/.test(form.password) },
-    { label: 'Contains number', ok: /\d/.test(form.password) },
-    { label: 'Passwords match', ok: form.password === form.confirm && form.confirm !== '' },
+    { label: 'Contains number',           ok: /\d/.test(form.password) },
+    { label: 'Passwords match',           ok: form.password === form.confirm && form.confirm !== '' },
   ]
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!rules.every((r) => r.ok)) return
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setIsLoading(false)
-    setDone(true)
-    setTimeout(() => router.push('/login'), 2000)
+    setError(null)
+    try {
+      await authApi.resetPassword(token, form.password)
+      setDone(true)
+      setTimeout(() => router.push('/login'), 2000)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.status === 400 ? 'Reset link is invalid or has expired.' : err.detail)
+      } else {
+        setError('Connection error. Please try again.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -53,6 +68,21 @@ export default function ResetPasswordPage() {
             <h2 className="font-display text-xl text-charcoal-deep mb-1">Create new password</h2>
             <p className="text-sm text-greige font-body">Choose a strong password for your account.</p>
           </div>
+
+          {error && (
+            <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
+              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            </div>
+          )}
+
+          {!token && (
+            <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3 mb-4">
+              <p className="text-xs font-body text-warning-DEFAULT">
+                No reset token found. Please use the link from your email.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -78,10 +108,15 @@ export default function ResetPasswordPage() {
             <div className="bg-parchment rounded-xl p-3 space-y-1.5">
               {rules.map((rule) => (
                 <div key={rule.label} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${rule.ok ? 'bg-success-DEFAULT' : 'bg-sand-DEFAULT'}`}>
+                  <div className={cn(
+                    'w-4 h-4 rounded-full flex items-center justify-center shrink-0',
+                    rule.ok ? 'bg-success-DEFAULT' : 'bg-sand-DEFAULT',
+                  )}>
                     {rule.ok && <CheckCircle className="w-3 h-3 text-ivory-cream" />}
                   </div>
-                  <span className={`text-xs font-body ${rule.ok ? 'text-success-DEFAULT' : 'text-greige'}`}>{rule.label}</span>
+                  <span className={cn('text-xs font-body', rule.ok ? 'text-success-DEFAULT' : 'text-greige')}>
+                    {rule.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -98,5 +133,13 @@ export default function ResetPasswordPage() {
         </>
       )}
     </Card>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="animate-pulse bg-parchment rounded-xl h-96" />}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

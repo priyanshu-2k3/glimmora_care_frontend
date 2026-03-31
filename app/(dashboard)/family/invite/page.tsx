@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, UserPlus, Shield, Eye, Users, Crown, ArrowLeft, Check, Copy, RefreshCw } from 'lucide-react'
 import { MOCK_FAMILY } from '@/data/family'
@@ -45,6 +46,7 @@ interface InviteForm {
 }
 
 export default function FamilyInvitePage() {
+  const router = useRouter()
   const [form, setForm] = useState<InviteForm>({
     email: '',
     name: '',
@@ -103,7 +105,7 @@ export default function FamilyInvitePage() {
                 <RefreshCw className="w-4 h-4" />
                 Send another
               </Button>
-              <Button className="flex-1" onClick={() => window.location.href = '/family'}>
+              <Button className="flex-1" onClick={() => router.push('/family')}>
                 Done
               </Button>
             </div>
