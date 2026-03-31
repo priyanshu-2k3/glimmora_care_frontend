@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
   Activity, Globe, WifiOff, Settings, LogOut, ChevronDown,
@@ -42,9 +42,15 @@ const NAV_SECTIONS = [
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout } = useAuth()
   const { profiles, activeProfile, switchProfile, canSwitchProfile } = useProfile()
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false)
+
+  async function handleLogout() {
+    await logout()
+    router.push('/login')
+  }
 
   if (!user) return null
 
@@ -182,7 +188,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <p className="text-[10px] font-body text-greige capitalize">{ROLES[user.role as Role]?.label}</p>
           </div>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="p-1.5 text-greige hover:text-error-DEFAULT hover:bg-error-soft/10 rounded-md transition-all duration-200"
             title="Sign out"
           >

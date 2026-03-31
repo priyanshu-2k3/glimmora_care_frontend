@@ -1,47 +1,107 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Crown, Shield, Eye, Trash2, RefreshCw, Mail, Check, X, ArrowLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Users, Crown, Shield, Eye, Trash2, RefreshCw, Mail, Check, X, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { MOCK_FAMILY } from '@/data/family'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
+import { useProfile } from '@/context/ProfileContext'
+import { useAuth } from '@/context/AuthContext'
+import { familyApi, ApiError, type BackendInvite } from '@/lib/api'
 import type { FamilyRole } from '@/types/profile'
 
-const ROLE_META: Record<FamilyRole, { label: string; icon: React.ElementType; color: string; desc: string }> = {
-  owner: { label: 'Owner', icon: Crown, color: 'text-gold-deep', desc: 'Full control of family account' },
-  admin: { label: 'Admin', icon: Shield, color: 'text-charcoal-deep', desc: 'Can manage members & records' },
-  member: { label: 'Member', icon: Users, color: 'text-stone', desc: 'Can view & add own records' },
-  view_only: { label: 'View Only', icon: Eye, color: 'text-greige', desc: 'Read-only access' },
+const ROLE_META: Record<string, { label: string; icon: React.ElementType; color: string; desc: string }> = {
+  owner:     { label: 'Owner',     icon: Crown,  color: 'text-gold-deep',     desc: 'Full control of family account' },
+  admin:     { label: 'Admin',     icon: Shield, color: 'text-charcoal-deep', desc: 'Can manage members & records' },
+  member:    { label: 'Member',    icon: Users,  color: 'text-stone',         desc: 'Can view & add own records' },
+  view_only: { label: 'View Only', icon: Eye,    color: 'text-greige',        desc: 'Read-only access' },
 }
 
 const ROLE_SELECT_OPTIONS: { value: FamilyRole; label: string }[] = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'member', label: 'Member' },
+  { value: 'admin',     label: 'Admin' },
+  { value: 'member',    label: 'Member' },
   { value: 'view_only', label: 'View Only' },
 ]
 
 export default function FamilyMembersPage() {
-  const [members, setMembers] = useState(MOCK_FAMILY.members)
+  const router = useRouter()
+  const { user } = useAuth()
+  const { family, familyMembers, isLoading } = useProfile()
+  const isRealPatient = !!user?.accessToken && user.role === 'patient'
+
   const [editingRole, setEditingRole] = useState<string | null>(null)
   const [pendingRole, setPendingRole] = useState<FamilyRole | null>(null)
+  const [savingRole, setSavingRole] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
-  function changeRole(memberId: string, role: FamilyRole) {
-    setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, role } : m))
+  const [invites, setInvites] = useState<BackendInvite[]>([])
+  const [loadingInvites, setLoadingInvites] = useState(false)
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  // Local members state so role/remove changes reflect immediately
+  const [localMembers, setLocalMembers] = useState(familyMembers)
+  useEffect(() => { setLocalMembers(familyMembers) }, [familyMembers])
+
+  useEffect(() => {
+    if (!isRealPatient || !family) return
+    setLoadingInvites(true)
+    familyApi.listInvites()
+      .then(setInvites)
+      .catch(() => {})
+      .finally(() => setLoadingInvites(false))
+  }, [isRealPatient, family?.id])
+
+  async function changeRole(memberId: string, role: FamilyRole) {
+    setSavingRole(true)
+    try {
+      await familyApi.updateMemberRole(memberId, role)
+      setLocalMembers((prev) => prev.map((m) => m.user_id === memberId ? { ...m, role } : m))
+    } catch {}
+    setSavingRole(false)
     setEditingRole(null)
     setPendingRole(null)
   }
 
-  function removeMember(memberId: string) {
-    setMembers((prev) => prev.filter((m) => m.id !== memberId))
+  async function removeMember(memberId: string) {
+    setRemovingId(memberId)
+    try {
+      await familyApi.removeMember(memberId)
+      setLocalMembers((prev) => prev.filter((m) => m.user_id !== memberId))
+    } catch {}
+    setRemovingId(null)
   }
 
-  const active = members.filter((m) => m.status === 'active')
-  const pending = members.filter((m) => m.status === 'pending')
+  async function handleResend(inviteId: string) {
+    setResendingId(inviteId)
+    try { await familyApi.resendInvite(inviteId) } catch {}
+    setResendingId(null)
+  }
+
+  async function handleCancelInvite(inviteId: string) {
+    setCancellingId(inviteId)
+    try {
+      await familyApi.cancelInvite(inviteId)
+      setInvites((prev) => prev.filter((i) => i.id !== inviteId))
+    } catch {}
+    setCancellingId(null)
+  }
+
+  const pendingInvites = invites.filter((i) => i.status === 'pending')
+  const familyName = family?.name ?? 'Your Family'
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -51,14 +111,14 @@ export default function FamilyMembersPage() {
         </Link>
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep">Manage Members</h1>
-          <p className="text-sm text-greige font-body mt-0.5">{MOCK_FAMILY.name} · {members.length} total members</p>
+          <p className="text-sm text-greige font-body mt-0.5">{familyName} · {localMembers.length} total members</p>
         </div>
       </div>
 
       {/* Role reference */}
       <Card>
         <CardContent className="p-4 grid grid-cols-2 gap-3">
-          {(Object.entries(ROLE_META) as [FamilyRole, typeof ROLE_META[FamilyRole]][]).map(([role, meta]) => (
+          {(Object.entries(ROLE_META) as [string, typeof ROLE_META[string]][]).map(([role, meta]) => (
             <div key={role} className="flex items-start gap-2">
               <meta.icon className={cn('w-4 h-4 shrink-0 mt-0.5', meta.color)} />
               <div>
@@ -73,19 +133,21 @@ export default function FamilyMembersPage() {
       {/* Active members */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-body text-base">Active Members ({active.length})</CardTitle>
+          <CardTitle className="font-body text-base">Active Members ({localMembers.length})</CardTitle>
         </CardHeader>
         <CardContent className="divide-y divide-sand-light">
-          {active.map((member) => {
-            const meta = ROLE_META[member.role]
-            const isOwner = member.role === 'owner'
-            const isEditing = editingRole === member.id
+          {localMembers.map((member) => {
+            const roleKey = family?.member_roles?.[member.user_id] ?? member.role ?? 'member'
+            const meta = ROLE_META[roleKey] ?? ROLE_META.member
+            const isOwner = roleKey === 'owner'
+            const isEditing = editingRole === member.user_id
+            const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email || member.user_id
             return (
-              <div key={member.id} className="flex items-center gap-3 py-3">
-                <Avatar name={member.name} size="md" />
+              <div key={member.user_id} className="flex items-center gap-3 py-3">
+                <Avatar name={displayName} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{member.name}</p>
-                  <p className="text-xs text-greige truncate">{member.email} · <span className="capitalize">{member.relation}</span></p>
+                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{displayName}</p>
+                  {member.email && <p className="text-xs text-greige truncate">{member.email}</p>}
                 </div>
 
                 {isEditing ? (
@@ -93,11 +155,15 @@ export default function FamilyMembersPage() {
                     <Select
                       label=""
                       options={ROLE_SELECT_OPTIONS}
-                      value={pendingRole || member.role}
+                      value={pendingRole || (roleKey as FamilyRole)}
                       onChange={(e) => setPendingRole(e.target.value as FamilyRole)}
                     />
-                    <button onClick={() => changeRole(member.id, pendingRole || member.role)} className="p-1.5 text-success-DEFAULT hover:bg-success-soft rounded-lg">
-                      <Check className="w-4 h-4" />
+                    <button
+                      onClick={() => changeRole(member.user_id, pendingRole || (roleKey as FamilyRole))}
+                      disabled={savingRole}
+                      className="p-1.5 text-success-DEFAULT hover:bg-success-soft rounded-lg"
+                    >
+                      {savingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     </button>
                     <button onClick={() => { setEditingRole(null); setPendingRole(null) }} className="p-1.5 text-greige hover:bg-parchment rounded-lg">
                       <X className="w-4 h-4" />
@@ -106,16 +172,20 @@ export default function FamilyMembersPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => { if (!isOwner) { setEditingRole(member.id); setPendingRole(member.role) } }}
-                      disabled={isOwner}
-                      className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-colors', isOwner ? 'cursor-default' : 'hover:bg-parchment cursor-pointer')}
+                      onClick={() => { if (!isOwner && isRealPatient) { setEditingRole(member.user_id); setPendingRole(roleKey as FamilyRole) } }}
+                      disabled={isOwner || !isRealPatient}
+                      className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-colors', (isOwner || !isRealPatient) ? 'cursor-default' : 'hover:bg-parchment cursor-pointer')}
                     >
                       <meta.icon className={cn('w-3.5 h-3.5', meta.color)} />
                       <span>{meta.label}</span>
                     </button>
-                    {!isOwner && (
-                      <button onClick={() => removeMember(member.id)} className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
+                    {!isOwner && isRealPatient && (
+                      <button
+                        onClick={() => removeMember(member.user_id)}
+                        disabled={removingId === member.user_id}
+                        className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                      >
+                        {removingId === member.user_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
@@ -127,29 +197,43 @@ export default function FamilyMembersPage() {
       </Card>
 
       {/* Pending invites */}
-      {pending.length > 0 && (
+      {(pendingInvites.length > 0 || loadingInvites) && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-body text-base">Pending Invitations ({pending.length})</CardTitle>
+            <CardTitle className="font-body text-base">Pending Invitations ({pendingInvites.length})</CardTitle>
             <CardDescription>Waiting for acceptance</CardDescription>
           </CardHeader>
           <CardContent className="divide-y divide-sand-light">
-            {pending.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 py-3">
+            {loadingInvites ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 text-gold-soft animate-spin" />
+              </div>
+            ) : pendingInvites.map((invite) => (
+              <div key={invite.id} className="flex items-center gap-3 py-3">
                 <div className="w-9 h-9 rounded-full bg-ivory-warm border border-dashed border-greige flex items-center justify-center">
                   <Mail className="w-4 h-4 text-greige" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-body font-medium text-charcoal-deep truncate">{member.name}</p>
-                  <p className="text-xs text-greige truncate">{member.email}</p>
+                  <p className="text-sm font-body font-medium text-charcoal-deep truncate">{invite.email}</p>
+                  <p className="text-xs text-greige capitalize">{invite.role}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="warning">Pending</Badge>
-                  <button className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors" title="Resend invite">
-                    <RefreshCw className="w-3.5 h-3.5" />
+                  <button
+                    onClick={() => handleResend(invite.id)}
+                    disabled={resendingId === invite.id}
+                    className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors"
+                    title="Resend invite"
+                  >
+                    <RefreshCw className={cn('w-3.5 h-3.5', resendingId === invite.id && 'animate-spin')} />
                   </button>
-                  <button onClick={() => removeMember(member.id)} className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors" title="Cancel invite">
-                    <X className="w-3.5 h-3.5" />
+                  <button
+                    onClick={() => handleCancelInvite(invite.id)}
+                    disabled={cancellingId === invite.id}
+                    className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                    title="Cancel invite"
+                  >
+                    {cancellingId === invite.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -159,13 +243,13 @@ export default function FamilyMembersPage() {
       )}
 
       <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={() => window.location.href = '/family/invite'}>
+        <Button variant="outline" className="flex-1" onClick={() => router.push('/family')}>
           <Mail className="w-4 h-4" />
           Invite New Member
         </Button>
-        <Button variant="outline" onClick={() => window.location.href = '/family/roles'}>
+        <Button variant="outline" onClick={() => router.push('/family')}>
           <Shield className="w-4 h-4" />
-          Manage Roles
+          Back to Family
         </Button>
       </div>
     </div>

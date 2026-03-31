@@ -10,11 +10,11 @@ import { cn } from '@/lib/utils'
 const ROLES_LIST: Role[] = ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin']
 
 export function RoleSwitcher() {
-  const { user, login } = useAuth()
+  const { user, demoLogin } = useAuth()
   const router = useRouter()
 
   async function switchRole(role: Role) {
-    await login(role)
+    await demoLogin(role)
     router.push('/dashboard')
   }
 

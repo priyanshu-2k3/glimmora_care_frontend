@@ -3,10 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus, Shield, ArrowRight, ArrowLeft, Plus, Trash2, Eye, EyeOff, Check, Users, User, ChevronDown } from 'lucide-react'
+import {
+  UserPlus, Shield, ArrowRight, ArrowLeft,
+  Plus, Trash2, Eye, EyeOff, Check, Users, User, ChevronDown, AlertCircle,
+} from 'lucide-react'
 import type { Role } from '@/types/auth'
 import type { ProfileRelation } from '@/types/profile'
 import { ROLES } from '@/lib/constants'
+import { useAuth } from '@/context/AuthContext'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -18,7 +22,7 @@ const ROLE_OPTIONS = (Object.keys(ROLES) as Role[]).map((r) => ({ value: r, labe
 
 const RELATION_OPTIONS = [
   { value: 'spouse', label: 'Spouse / Partner' },
-  { value: 'child', label: 'Child' },
+  { value: 'child',  label: 'Child' },
   { value: 'parent', label: 'Parent' },
   { value: 'sibling', label: 'Sibling' },
 ]
@@ -37,14 +41,14 @@ interface FamilyMemberForm {
 }
 
 interface OwnerForm {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
   password: string
   confirmPassword: string
   role: Role
   organization: string
-  location: string
 }
 
 const STEPS = [
@@ -55,19 +59,20 @@ const STEPS = [
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { register, error, clearError } = useAuth()
   const [step, setStep] = useState(1)
   const [showPw, setShowPw] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const [owner, setOwner] = useState<OwnerForm>({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
     role: 'patient',
     organization: '',
-    location: '',
   })
 
   const [members, setMembers] = useState<FamilyMemberForm[]>([])
@@ -75,13 +80,7 @@ export default function RegisterPage() {
   function addMember() {
     setMembers((prev) => [...prev, {
       id: `m_${Date.now()}`,
-      name: '',
-      relation: 'spouse',
-      dob: '',
-      bloodGroup: 'B+',
-      email: '',
-      password: '',
-      hasAccount: false,
+      name: '', relation: 'spouse', dob: '', bloodGroup: 'B+', email: '', password: '', hasAccount: false,
     }])
   }
 
@@ -94,19 +93,33 @@ export default function RegisterPage() {
   }
 
   const pwRules = [
-    { label: 'At least 8 characters', ok: owner.password.length >= 8 },
-    { label: 'Contains uppercase', ok: /[A-Z]/.test(owner.password) },
-    { label: 'Contains number', ok: /\d/.test(owner.password) },
-    { label: 'Passwords match', ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
+    { label: 'At least 8 characters',  ok: owner.password.length >= 8 },
+    { label: 'Contains uppercase',      ok: /[A-Z]/.test(owner.password) },
+    { label: 'Contains number',         ok: /\d/.test(owner.password) },
+    { label: 'Passwords match',         ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
   ]
 
-  const step1Valid = owner.name && owner.email && pwRules.every((r) => r.ok)
+  const step1Valid =
+    owner.firstName && owner.lastName && owner.email && owner.phone && pwRules.every((r) => r.ok)
 
   async function handleSubmit() {
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setIsLoading(false)
-    router.push('/verify-email')
+    clearError()
+    try {
+      await register({
+        firstName: owner.firstName,
+        lastName: owner.lastName,
+        email: owner.email,
+        phone: owner.phone,
+        password: owner.password,
+        role: owner.role,
+      })
+      router.push('/verify-email')
+    } catch {
+      // error shown via context
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -122,9 +135,9 @@ export default function RegisterPage() {
           <div key={s.id} className="flex items-center gap-2 flex-1">
             <div className={cn(
               'w-7 h-7 rounded-full flex items-center justify-center text-xs font-body font-semibold shrink-0 transition-all',
-              step > s.id ? 'bg-success-DEFAULT text-ivory-cream' :
+              step > s.id  ? 'bg-success-DEFAULT text-ivory-cream' :
               step === s.id ? 'bg-gold-deep text-ivory-cream' :
-              'bg-parchment text-greige border border-sand-light'
+                              'bg-parchment text-greige border border-sand-light',
             )}>
               {step > s.id ? <Check className="w-3.5 h-3.5" /> : s.id}
             </div>
@@ -136,6 +149,14 @@ export default function RegisterPage() {
         ))}
       </div>
 
+      {/* Error banner (shown on step 3) */}
+      {error && step === 3 && (
+        <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+          <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+        </div>
+      )}
+
       {/* ─── STEP 1: Account Owner ─── */}
       {step === 1 && (
         <div className="space-y-4">
@@ -145,12 +166,21 @@ export default function RegisterPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+            <div>
               <Input
-                label="Full Name"
-                placeholder="Priya Sharma"
-                value={owner.name}
-                onChange={(e) => setOwner((p) => ({ ...p, name: e.target.value }))}
+                label="First Name"
+                placeholder="Priya"
+                value={owner.firstName}
+                onChange={(e) => setOwner((p) => ({ ...p, firstName: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <Input
+                label="Last Name"
+                placeholder="Sharma"
+                value={owner.lastName}
+                onChange={(e) => setOwner((p) => ({ ...p, lastName: e.target.value }))}
                 required
               />
             </div>
@@ -171,6 +201,7 @@ export default function RegisterPage() {
                 placeholder="+91 98765 43210"
                 value={owner.phone}
                 onChange={(e) => setOwner((p) => ({ ...p, phone: e.target.value }))}
+                required
               />
             </div>
             <div className="col-span-2 sm:col-span-1">
@@ -221,7 +252,9 @@ export default function RegisterPage() {
               {pwRules.map((rule) => (
                 <div key={rule.label} className="flex items-center gap-1.5">
                   <div className={cn('w-3.5 h-3.5 rounded-full shrink-0', rule.ok ? 'bg-success-DEFAULT' : 'bg-sand-DEFAULT')} />
-                  <span className={cn('text-[11px] font-body', rule.ok ? 'text-success-DEFAULT' : 'text-greige')}>{rule.label}</span>
+                  <span className={cn('text-[11px] font-body', rule.ok ? 'text-success-DEFAULT' : 'text-greige')}>
+                    {rule.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -239,7 +272,7 @@ export default function RegisterPage() {
         <div className="space-y-4">
           <div>
             <h2 className="font-display text-xl text-charcoal-deep mb-0.5">Family Members</h2>
-            <p className="text-xs text-greige font-body">Register health profiles for your family. Each member with an email gets their own login.</p>
+            <p className="text-xs text-greige font-body">Optional — you can add family profiles after registration too.</p>
           </div>
 
           {/* Owner summary */}
@@ -248,7 +281,9 @@ export default function RegisterPage() {
               <User className="w-4 h-4 text-gold-deep" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-body font-semibold text-charcoal-deep">{owner.name || 'You'}</p>
+              <p className="text-sm font-body font-semibold text-charcoal-deep">
+                {[owner.firstName, owner.lastName].filter(Boolean).join(' ') || 'You'}
+              </p>
               <p className="text-xs text-greige">{owner.email} · Account Owner</p>
             </div>
             <Badge variant="gold">Owner</Badge>
@@ -259,7 +294,10 @@ export default function RegisterPage() {
             <div key={member.id} className="border border-sand-light rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-parchment">
                 <p className="text-sm font-body font-semibold text-charcoal-deep">Family Member {idx + 1}</p>
-                <button onClick={() => removeMember(member.id)} className="p-1 text-greige hover:text-error-DEFAULT rounded transition-colors">
+                <button
+                  onClick={() => removeMember(member.id)}
+                  className="p-1 text-greige hover:text-error-DEFAULT rounded transition-colors"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -295,7 +333,6 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Optional own account */}
                 <div>
                   <button
                     onClick={() => updateMember(member.id, 'hasAccount', !member.hasAccount)}
@@ -356,25 +393,30 @@ export default function RegisterPage() {
         <div className="space-y-4">
           <div>
             <h2 className="font-display text-xl text-charcoal-deep mb-0.5">Review your details</h2>
-            <p className="text-xs text-greige font-body">Confirm before creating your family account.</p>
+            <p className="text-xs text-greige font-body">Confirm before creating your account.</p>
           </div>
 
           <div className="bg-parchment rounded-xl p-4 space-y-3">
             <p className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wide">Account Owner</p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center text-sm font-body font-semibold text-gold-deep">
-                {owner.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'AC'}
+                {[owner.firstName[0], owner.lastName[0]].filter(Boolean).join('').toUpperCase() || 'AC'}
               </div>
               <div>
-                <p className="text-sm font-body font-semibold text-charcoal-deep">{owner.name}</p>
+                <p className="text-sm font-body font-semibold text-charcoal-deep">
+                  {[owner.firstName, owner.lastName].filter(Boolean).join(' ')}
+                </p>
                 <p className="text-xs text-greige">{owner.email} · {ROLES[owner.role]?.label}</p>
+                <p className="text-xs text-greige">{owner.phone}</p>
               </div>
             </div>
           </div>
 
           {members.length > 0 && (
             <div className="bg-parchment rounded-xl p-4 space-y-3">
-              <p className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wide">Family Members ({members.length})</p>
+              <p className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wide">
+                Family Members ({members.length})
+              </p>
               <div className="space-y-2">
                 {members.map((m) => (
                   <div key={m.id} className="flex items-center gap-3">
@@ -399,7 +441,9 @@ export default function RegisterPage() {
           )}
 
           <div className="bg-ivory-warm border border-sand-light rounded-xl p-3 text-xs text-greige font-body">
-            By creating this account, you agree to our Terms of Service and Privacy Policy. A verification email will be sent to <span className="font-medium text-charcoal-deep">{owner.email}</span>.
+            By creating this account, you agree to our Terms of Service and Privacy Policy.
+            A verification email will be sent to{' '}
+            <span className="font-medium text-charcoal-deep">{owner.email}</span>.
           </div>
 
           <div className="flex gap-2">
@@ -408,7 +452,7 @@ export default function RegisterPage() {
             </Button>
             <Button className="flex-1" onClick={handleSubmit} isLoading={isLoading} size="lg">
               <UserPlus className="w-4 h-4" />
-              {isLoading ? 'Creating account...' : 'Create Family Account'}
+              {isLoading ? 'Creating account...' : 'Create Account'}
             </Button>
           </div>
         </div>
