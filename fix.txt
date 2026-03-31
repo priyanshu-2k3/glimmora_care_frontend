@@ -1,0 +1,24 @@
+family account management does not work properly for admin
+data intake option should be avilavle with health vault
+family profile and account is same so only allow one management link and one profile switching link
+keep emergenccy access and content manager in same
+also access control
+show audit logs with system
+remove display settings and give just a button for light and dark mode option
+remove organisation for settings and also add male and female at time of signup and location
+
+
+change health vault to patient vault in doctors and show each profile as card and then show their all doctors and only show whose consent i have
+swith upload option in doctor inside patient vault inside the exact patient
+remove family profiles in doctor 
+remove doctors health twin
+
+
+
+change admin to super admin
+remove health vault and data intake from super admin
+remove family features and keep as manage users
+remove intelligence
+consider removing ai management
+remove ai assistant from super admin
+remove offline sync
