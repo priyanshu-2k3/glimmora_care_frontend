@@ -21,7 +21,6 @@ const TABS = [
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
   { id: 'security',      label: 'Security',      icon: <Lock className="w-4 h-4" /> },
   { id: 'sessions',      label: 'Sessions',      icon: <Smartphone className="w-4 h-4" /> },
-  { id: 'display',       label: 'Display',       icon: <Monitor className="w-4 h-4" /> },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -234,12 +233,6 @@ export default function SettingsPage() {
                     disabled={isDemo}
                   />
                   <Input
-                    label="Organization"
-                    value={profileForm.organization}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, organization: e.target.value }))}
-                    disabled={isDemo}
-                  />
-                  <Input
                     label="Location"
                     value={profileForm.location}
                     onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
@@ -435,27 +428,6 @@ export default function SettingsPage() {
               </Card>
             )}
 
-            {/* ─── Display ─── */}
-            {activeTab === 'display' && (
-              <Card>
-                <CardContent className="space-y-4">
-                  {[
-                    { label: 'Dark Mode',     desc: 'Use dark colour scheme' },
-                    { label: 'Compact View',  desc: 'Show more data with reduced spacing' },
-                    { label: 'Animations',    desc: 'Enable UI transition animations' },
-                    { label: 'High Contrast', desc: 'Improve text readability' },
-                  ].map((item, i) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-sand-light last:border-0">
-                      <div>
-                        <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
-                        <p className="text-xs text-greige">{item.desc}</p>
-                      </div>
-                      <Toggle checked={i === 2} onChange={() => {}} />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
           </>
         )}
       </Tabs>

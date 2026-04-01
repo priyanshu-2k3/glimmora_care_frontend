@@ -19,7 +19,8 @@ const ROLE_OPTIONS: { role: Role; label: string; description: string }[] = [
   { role: 'doctor',      label: 'Doctor',               description: 'Dr. Arjun Mehta — Patient care & intelligence' },
   { role: 'ngo_worker',  label: 'NGO Field Worker',     description: 'Sunita Devi — Field health programs' },
   { role: 'gov_analyst', label: 'Government Analyst',   description: 'Rajesh Kumar IAS — Population intelligence' },
-  { role: 'admin',       label: 'Administrator',        description: 'Admin Console — Full system access' },
+  { role: 'admin',       label: 'Admin',                description: 'Neha Kapoor — Operational management' },
+  { role: 'super_admin', label: 'Super Admin',          description: 'Admin Console — Full system control' },
 ]
 
 type LoginMode = 'real' | 'demo'

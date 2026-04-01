@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -49,6 +49,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const [darkMode, setDarkMode] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const currentNav = NAV_ITEMS.find(
@@ -106,6 +107,15 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           />
           <kbd className="hidden lg:block text-[10px] text-greige bg-sand-light px-1 py-0.5 rounded font-body shrink-0">⌘K</kbd>
         </div>
+
+        {/* Light/Dark toggle */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-2 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment/60 transition-all duration-200"
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
 
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>

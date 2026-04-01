@@ -5,13 +5,15 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
-  Activity, Globe, WifiOff, Settings, LogOut, ChevronDown,
+  Activity, Globe, WifiOff, Settings, LogOut, ChevronDown, ChevronRight,
   Users, AlertTriangle, Bell, User, Heart, Baby,
   UserCheck, FileCheck, Lock, ClipboardList, Sparkles,
+  UserPlus, RefreshCw, Share2, Smartphone,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProfile } from '@/context/ProfileContext'
 import { NAV_ITEMS, ROLES } from '@/lib/constants'
+import { ADMIN_SIDEBAR_SECTIONS, type SidebarItem } from '@/config/sidebar-config'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/components/ui/Avatar'
 import type { Role } from '@/types/auth'
@@ -21,6 +23,7 @@ const ICONS: Record<string, React.ElementType> = {
   LayoutDashboard, Upload, Shield, Brain, Bot,
   MessageSquare, Activity, Globe, WifiOff, Settings,
   Users, AlertTriangle, Bell, User, UserCheck, FileCheck, Lock, ClipboardList,
+  UserPlus, RefreshCw, Share2, Smartphone,
 }
 
 const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
@@ -31,15 +34,75 @@ const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
   sibling: Users,
 }
 
-const NAV_SECTIONS = [
+/* Sections for non-admin roles (unchanged from original) */
+const DEFAULT_NAV_SECTIONS = [
   { label: null, hrefs: ['/dashboard'] },
-  { label: 'HEALTH', hrefs: ['/intake', '/vault', '/twin', '/profiles'] },
-  { label: 'FAMILY & CONSENT', hrefs: ['/family', '/family/members', '/emergency', '/consent', '/access', '/logs'] },
-  { label: 'INTELLIGENCE', hrefs: ['/intelligence', '/assistants', '/agents'] },
+  { label: 'HEALTH', hrefs: ['/vault', '/twin'] },
+  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/emergency', '/consent', '/access', '/logs'] },
+  { label: 'MANAGEMENT', hrefs: ['/manage-users'] },
+  { label: 'TOOLS', hrefs: ['/assistants'] },
   { label: 'COMMUNITY', hrefs: ['/population', '/offline'] },
   { label: 'SYSTEM', hrefs: ['/notifications', '/settings'] },
 ]
 
+/* ── Admin nested nav item renderer ────────────────────────────────────────── */
+function AdminNavItem({ item, pathname, onClose, depth = 0 }: { item: SidebarItem; pathname: string; onClose?: () => void; depth?: number }) {
+  const [expanded, setExpanded] = useState(
+    item.children ? item.children.some((c) => pathname === c.href || pathname.startsWith(c.href + '/')) : false
+  )
+  const Icon = ICONS[item.icon]
+  const isActive = pathname === item.href || (item.children && pathname.startsWith(item.href + '/'))
+  const hasChildren = item.children && item.children.length > 0
+
+  if (hasChildren) {
+    return (
+      <div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className={cn(
+            'relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-body font-medium transition-all duration-200 group',
+            isActive ? 'bg-charcoal-deep/5 text-charcoal-deep' : 'text-stone hover:text-charcoal-deep hover:bg-parchment/70'
+          )}
+        >
+          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-gold-deep" />}
+          {Icon && <Icon className={cn('w-4 h-4 shrink-0 transition-colors', isActive ? 'text-gold-deep' : 'text-greige group-hover:text-stone')} />}
+          <span className="flex-1 text-left">{item.label}</span>
+          <ChevronRight className={cn('w-3.5 h-3.5 text-greige transition-transform duration-200', expanded && 'rotate-90')} />
+        </button>
+        {expanded && (
+          <div className="ml-4 mt-0.5 space-y-0.5 border-l border-sand-light/50 pl-2">
+            {item.children!.map((child) => (
+              <AdminNavItem key={child.href} item={child} pathname={pathname} onClose={onClose} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className={cn(
+        'relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-body font-medium transition-all duration-200 group',
+        pathname === item.href
+          ? 'bg-charcoal-deep/5 text-charcoal-deep'
+          : 'text-stone hover:text-charcoal-deep hover:bg-parchment/70'
+      )}
+    >
+      {pathname === item.href && depth === 0 && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-gold-deep" />
+      )}
+      {Icon && (
+        <Icon className={cn('w-4 h-4 shrink-0 transition-colors', pathname === item.href ? 'text-gold-deep' : 'text-greige group-hover:text-stone')} />
+      )}
+      <span className="flex-1">{item.label}</span>
+    </Link>
+  )
+}
+
+/* ── Main Sidebar ──────────────────────────────────────────────────────────── */
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -54,9 +117,78 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
   if (!user) return null
 
-  const navItems = NAV_ITEMS.filter((item) =>
-    item.roles.includes(user.role as Role)
-  )
+  const isAdmin = user.role === 'admin'
+
+  /* For admin role, use the dedicated sidebar config with nested menus */
+  if (isAdmin) {
+    return (
+      <div className="flex flex-col h-full bg-white border-r border-sand-light">
+        {/* Logo */}
+        <div className="px-5 py-4 border-b border-sand-light">
+          <Link href="/admin" onClick={onClose} className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-charcoal-deep flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-gold-soft" />
+            </div>
+            <div>
+              <h1 className="font-display text-lg text-charcoal-deep tracking-tight leading-none">
+                Glimmora<span className="text-gold-deep italic">Care</span>
+              </h1>
+              <p className="text-[9px] text-greige font-body uppercase tracking-widest mt-0.5">
+                Admin Console
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Admin nested navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 px-3">
+          {ADMIN_SIDEBAR_SECTIONS.map((section) => (
+            <div key={section.label ?? 'main'} className="mb-5">
+              {section.label && (
+                <p className="text-[10px] font-body font-semibold text-greige/70 uppercase tracking-widest px-3 mb-1.5">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {section.items.map((item) => (
+                  <AdminNavItem key={item.href} item={item} pathname={pathname} onClose={onClose} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* User profile */}
+        <div className="p-3 border-t border-sand-light">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-parchment/70 transition-colors cursor-default">
+            <Avatar name={user.name} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
+              <p className="text-[10px] font-body text-greige capitalize">{ROLES[user.role as Role]?.label}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-greige hover:text-error-DEFAULT hover:bg-error-soft/10 rounded-md transition-all duration-200"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Default sidebar for all other roles ─── */
+  const navItems = NAV_ITEMS
+    .filter((item) => item.roles.includes(user.role as Role))
+    .map((item) => {
+      // Doctor: rename Health Vault → Patient Vault
+      if (item.href === '/vault' && user.role === 'doctor') {
+        return { ...item, label: 'Patient Vault' }
+      }
+      return item
+    })
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-sand-light">
@@ -135,7 +267,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-3">
-        {NAV_SECTIONS.map((section) => {
+        {DEFAULT_NAV_SECTIONS.map((section) => {
           const sectionItems = navItems.filter((item) =>
             section.hrefs.includes(item.href)
           )

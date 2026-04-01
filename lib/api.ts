@@ -38,7 +38,7 @@ export function backendRoleToFrontend(backendRole: string): Role {
     doctor:     'doctor',
     ngo:        'ngo_worker',
     government: 'gov_analyst',
-    admin:      'admin',
+    admin:      'super_admin',   // backend "admin" → frontend "super_admin" (renamed)
   }
   return (map[backendRole] ?? 'patient') as Role
 }
@@ -49,7 +49,8 @@ export function frontendRoleToBackend(role: Role): string {
     doctor:      'doctor',
     ngo_worker:  'ngo',
     gov_analyst: 'government',
-    admin:       'admin',
+    admin:       'admin',        // new restricted admin — maps to backend "admin"
+    super_admin: 'admin',        // super_admin also maps to backend "admin"
   }
   return map[role]
 }

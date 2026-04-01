@@ -47,6 +47,7 @@ const ROLE_TO_PERSONA: Record<Role, Persona> = {
   ngo_worker: 'ngo',
   gov_analyst: 'government',
   admin: 'doctor',
+  super_admin: 'doctor',
 }
 
 function TypingIndicator() {
