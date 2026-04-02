@@ -22,120 +22,152 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
     color: 'bg-gold-deep text-ivory-cream',
   },
   admin: {
-    label: 'Administrator',
+    label: 'Admin',
+    description: 'Operational management — team, consent, and logs',
+    color: 'bg-charcoal-deep text-ivory-cream',
+  },
+  super_admin: {
+    label: 'Super Admin',
     description: 'Full system access including agents and governance',
     color: 'bg-noir text-ivory-cream',
   },
 }
 
+/* ── Navigation items ─────────────────────────────────────────────────────────
+   "super_admin" = the old Administrator role (full access, renamed)
+   "admin"       = new restricted operational role
+   All other roles (patient, doctor, ngo_worker, gov_analyst) are UNCHANGED.
+   ──────────────────────────────────────────────────────────────────────────── */
+
 export const NAV_ITEMS = [
+  /* ── Dashboard (everyone) ─── */
   {
     href: '/dashboard',
     label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
+    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
   },
-  {
-    href: '/intake',
-    label: 'Data Intake',
-    icon: 'Upload',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
-  },
+
+  /* ── Health (patient + doctor only — merged Data Intake into Vault for patient) ─── */
   {
     href: '/vault',
     label: 'Health Vault',
     icon: 'Shield',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
-  },
-  {
-    href: '/profiles',
-    label: 'Family Profiles',
-    icon: 'User',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
+    roles: ['patient', 'doctor'] as Role[],
   },
   {
     href: '/twin',
     label: 'Health Twin',
     icon: 'Activity',
-    roles: ['patient', 'doctor'] as Role[],
+    roles: ['patient'] as Role[],
   },
+
+  /* ── Patient family (single link, no duplicates) ─── */
   {
     href: '/family',
     label: 'Family Account',
     icon: 'Users',
-    roles: ['patient', 'admin'] as Role[],
+    roles: ['patient'] as Role[],
   },
   {
-    href: '/family/members',
-    label: 'Manage Members',
-    icon: 'UserCheck',
-    roles: ['patient', 'admin'] as Role[],
+    href: '/profiles',
+    label: 'Manage Profiles',
+    icon: 'User',
+    roles: ['patient'] as Role[],
+  },
+
+  /* ── Consent & access ─── */
+  {
+    href: '/consent',
+    label: 'Consent Manager',
+    icon: 'FileCheck',
+    roles: ['patient', 'doctor', 'super_admin'] as Role[],
   },
   {
     href: '/emergency',
     label: 'Emergency Access',
     icon: 'AlertTriangle',
-    roles: ['patient', 'admin'] as Role[],
-  },
-  {
-    href: '/consent',
-    label: 'Consent Manager',
-    icon: 'FileCheck',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
+    roles: ['patient', 'super_admin'] as Role[],
   },
   {
     href: '/access',
     label: 'Access Control',
     icon: 'Lock',
-    roles: ['patient', 'admin'] as Role[],
+    roles: ['patient', 'super_admin'] as Role[],
   },
   {
     href: '/logs',
-    label: 'Audit Logs',
+    label: 'Logs',
     icon: 'ClipboardList',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
+
+  /* ── Super Admin only ─── */
   {
-    href: '/intelligence',
-    label: 'Intelligence',
-    icon: 'Brain',
-    roles: ['doctor', 'admin'] as Role[],
+    href: '/manage-users',
+    label: 'Manage Users',
+    icon: 'Users',
+    roles: ['super_admin'] as Role[],
   },
-  {
-    href: '/agents',
-    label: 'Agents',
-    icon: 'Bot',
-    roles: ['admin'] as Role[],
-  },
-  {
-    href: '/assistants',
-    label: 'AI Assistant',
-    icon: 'MessageSquare',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
-  },
+
+  /* ── Community (NGO + Gov unchanged) ─── */
   {
     href: '/population',
     label: 'Population',
     icon: 'Globe',
-    roles: ['ngo_worker', 'gov_analyst', 'admin'] as Role[],
+    roles: ['ngo_worker', 'gov_analyst'] as Role[],
   },
   {
     href: '/offline',
     label: 'Offline Sync',
     icon: 'WifiOff',
-    roles: ['ngo_worker', 'admin'] as Role[],
+    roles: ['ngo_worker'] as Role[],
   },
+  {
+    href: '/assistants',
+    label: 'AI Assistant',
+    icon: 'MessageSquare',
+    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst'] as Role[],
+  },
+
+  /* ── Admin operational routes ─── */
+  {
+    href: '/admin',
+    label: 'Admin Panel',
+    icon: 'LayoutDashboard',
+    roles: ['admin'] as Role[],
+  },
+  {
+    href: '/admin/manage-team',
+    label: 'Manage Team',
+    icon: 'Users',
+    roles: ['admin'] as Role[],
+  },
+  {
+    href: '/admin/doctor-management',
+    label: 'Doctor Management',
+    icon: 'UserCheck',
+    roles: ['admin'] as Role[],
+  },
+  {
+    href: '/admin/settings',
+    label: 'Admin Settings',
+    icon: 'Settings',
+    roles: ['admin'] as Role[],
+  },
+
+  /* ── System ─── */
   {
     href: '/notifications',
     label: 'Notifications',
     icon: 'Bell',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
+    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
   },
   {
     href: '/settings',
     label: 'Settings',
     icon: 'Settings',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin'] as Role[],
+    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
   },
 ]
 

@@ -720,6 +720,7 @@ export default function DashboardPage() {
       {user.role === 'ngo_worker'  && <NgoView     userName={user.name} />}
       {user.role === 'gov_analyst' && <GovView     userName={user.name} />}
       {user.role === 'admin'       && <AdminView   userName={user.name} />}
+      {user.role === 'super_admin' && <AdminView   userName={user.name} />}
     </div>
   )
 }

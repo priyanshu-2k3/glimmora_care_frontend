@@ -40,6 +40,12 @@ interface FamilyMemberForm {
   hasAccount: boolean
 }
 
+const GENDER_OPTIONS = [
+  { value: '', label: 'Select gender' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+]
+
 interface OwnerForm {
   firstName: string
   lastName: string
@@ -49,6 +55,8 @@ interface OwnerForm {
   confirmPassword: string
   role: Role
   organization: string
+  gender: string
+  location: string
 }
 
 const STEPS = [
@@ -73,6 +81,8 @@ export default function RegisterPage() {
     confirmPassword: '',
     role: 'patient',
     organization: '',
+    gender: '',
+    location: '',
   })
 
   const [members, setMembers] = useState<FamilyMemberForm[]>([])
@@ -222,6 +232,22 @@ export default function RegisterPage() {
                 />
               </div>
             )}
+            <div className="col-span-2 sm:col-span-1">
+              <Select
+                label="Gender"
+                options={GENDER_OPTIONS}
+                value={owner.gender}
+                onChange={(e) => setOwner((p) => ({ ...p, gender: e.target.value }))}
+              />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Input
+                label="Location"
+                placeholder="City, State"
+                value={owner.location}
+                onChange={(e) => setOwner((p) => ({ ...p, location: e.target.value }))}
+              />
+            </div>
             <div className="col-span-2">
               <Input
                 label="Password"
