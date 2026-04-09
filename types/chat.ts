@@ -1,4 +1,4 @@
-export type Persona = 'patient' | 'doctor' | 'ngo' | 'government'
+export type Persona = 'patient' | 'doctor' | 'admin' | 'super_admin'
 
 export interface ChatMessage {
   id: string

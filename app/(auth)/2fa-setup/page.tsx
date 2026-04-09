@@ -3,18 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, Smartphone, Key, Check, Copy, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Shield, Smartphone, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
+import { authApi, ApiError } from '@/lib/api'
 
 type Step = 'choose' | 'app' | 'sms' | 'verify' | 'done'
 type Method = 'app' | 'sms'
-
-// Mock TOTP secret
-const MOCK_SECRET = 'JBSWY3DPEHPK3PXP'
-const MOCK_QR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZhZjhmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iIzZiN2E4YSI+W1FSIENvZGUgUGxhY2Vob2xkZXJdPC90ZXh0Pjwvc3ZnPg=='
 
 export default function TwoFASetupPage() {
   const router = useRouter()
@@ -24,20 +21,70 @@ export default function TwoFASetupPage() {
   const [phone, setPhone] = useState('')
   const [copied, setCopied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // TOTP data from backend
+  const [totpSecret, setTotpSecret] = useState('')
+  const [totpQr, setTotpQr] = useState('')
+  const [backupCodes, setBackupCodes] = useState<string[]>([])
 
   function copySecret() {
-    navigator.clipboard.writeText(MOCK_SECRET).catch(() => {})
+    navigator.clipboard.writeText(totpSecret).catch(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleStartTotp() {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await authApi.twofa.totpSetup()
+      setTotpSecret(data.secret)
+      setTotpQr(data.qr_uri)
+      setBackupCodes(data.backup_codes ?? [])
+      setStep('app')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to initiate 2FA setup.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleStartSms() {
+    setStep('sms')
+  }
+
+  async function handleSendSms() {
+    if (phone.length < 8) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      await authApi.twofa.smsSetup(phone)
+      setStep('verify')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to send verification code.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault()
     if (otp.length < 6) return
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setIsLoading(false)
-    setStep('done')
+    setError(null)
+    try {
+      if (method === 'app') {
+        await authApi.twofa.totpVerify(otp)
+      } else {
+        await authApi.twofa.smsVerify(otp)
+      }
+      setStep('done')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Invalid verification code.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -46,6 +93,13 @@ export default function TwoFASetupPage() {
         <Shield className="w-4 h-4 text-gold-soft" />
         <span className="text-xs text-greige font-body uppercase tracking-widest">Two-Factor Authentication</span>
       </div>
+
+      {error && (
+        <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+          <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+        </div>
+      )}
 
       {/* Step: choose method */}
       {step === 'choose' && (
@@ -76,7 +130,12 @@ export default function TwoFASetupPage() {
               </button>
             ))}
           </div>
-          <Button className="w-full" onClick={() => setStep(method)} size="lg">
+          <Button
+            className="w-full"
+            onClick={() => { setError(null); method === 'app' ? handleStartTotp() : handleStartSms() }}
+            isLoading={isLoading}
+            size="lg"
+          >
             Continue
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -86,7 +145,7 @@ export default function TwoFASetupPage() {
         </>
       )}
 
-      {/* Step: authenticator app */}
+      {/* Step: authenticator app — show QR + secret */}
       {step === 'app' && (
         <>
           <div className="mb-5">
@@ -94,32 +153,41 @@ export default function TwoFASetupPage() {
             <p className="text-sm text-greige font-body">Open your authenticator app and scan this code.</p>
           </div>
           <div className="flex justify-center mb-4">
-            <div className="w-40 h-40 bg-parchment border border-sand-light rounded-xl flex items-center justify-center">
-              <div className="text-center">
-                <div className="grid grid-cols-5 gap-1 mb-2">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <div key={i} className={cn('w-5 h-5 rounded-sm', Math.random() > 0.5 ? 'bg-charcoal-deep' : 'bg-ivory-warm')} />
-                  ))}
-                </div>
-                <p className="text-[10px] text-greige">QR Code</p>
+            {totpQr ? (
+              <img src={totpQr} alt="TOTP QR Code" className="w-40 h-40 rounded-xl border border-sand-light" />
+            ) : (
+              <div className="w-40 h-40 bg-parchment border border-sand-light rounded-xl flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-greige animate-spin" />
               </div>
-            </div>
+            )}
           </div>
           <p className="text-xs text-greige font-body text-center mb-2">Or enter this key manually:</p>
           <div className="flex items-center gap-2 bg-parchment rounded-lg px-3 py-2 mb-5">
-            <code className="flex-1 text-xs font-mono text-charcoal-deep tracking-widest">{MOCK_SECRET}</code>
-            <button onClick={copySecret} className="text-greige hover:text-gold-deep transition-colors">
+            <code className="flex-1 text-xs font-mono text-charcoal-deep tracking-widest break-all">{totpSecret}</code>
+            <button onClick={copySecret} className="text-greige hover:text-gold-deep transition-colors shrink-0">
               {copied ? <Check className="w-4 h-4 text-success-DEFAULT" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
+          {backupCodes.length > 0 && (
+            <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3 mb-4">
+              <p className="text-xs font-body font-semibold text-warning-DEFAULT mb-2">Save these backup codes</p>
+              <div className="grid grid-cols-2 gap-1">
+                {backupCodes.map((c) => (
+                  <code key={c} className="text-xs font-mono text-charcoal-deep">{c}</code>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
-            <Button className="flex-1" onClick={() => setStep('verify')}>I've scanned the code <ArrowRight className="w-4 h-4" /></Button>
+            <Button className="flex-1" onClick={() => setStep('verify')}>
+              I&apos;ve scanned the code <ArrowRight className="w-4 h-4" />
+            </Button>
           </div>
         </>
       )}
 
-      {/* Step: SMS */}
+      {/* Step: SMS phone entry */}
       {step === 'sms' && (
         <>
           <div className="mb-5">
@@ -131,19 +199,19 @@ export default function TwoFASetupPage() {
             type="tel"
             placeholder="+91 98765 43210"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => { setPhone(e.target.value); setError(null) }}
             hint="Include country code"
           />
           <div className="flex gap-2 mt-5">
             <Button variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
-            <Button className="flex-1" onClick={() => setStep('verify')} disabled={phone.length < 8}>
+            <Button className="flex-1" onClick={handleSendSms} isLoading={isLoading} disabled={phone.length < 8}>
               Send verification code <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </>
       )}
 
-      {/* Step: verify */}
+      {/* Step: verify code */}
       {step === 'verify' && (
         <>
           <div className="mb-5">
@@ -160,13 +228,12 @@ export default function TwoFASetupPage() {
               maxLength={6}
               placeholder="123456"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              hint="Demo: any 6-digit code works"
+              onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setError(null) }}
             />
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => setStep(method)}><ArrowLeft className="w-4 h-4" /></Button>
               <Button type="submit" className="flex-1" isLoading={isLoading} disabled={otp.length < 6}>
-                {isLoading ? 'Verifying...' : 'Enable 2FA'}
+                {isLoading ? 'Verifying…' : 'Enable 2FA'}
               </Button>
             </div>
           </form>
@@ -179,9 +246,9 @@ export default function TwoFASetupPage() {
           <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-success-DEFAULT" />
           </div>
-          <h2 className="font-display text-xl text-charcoal-deep mb-2">2FA enabled!</h2>
+          <h2 className="font-display text-xl text-charcoal-deep mb-2">2FA Enabled!</h2>
           <p className="text-sm text-greige font-body mb-6">Your account is now protected with two-factor authentication.</p>
-          <Button className="w-full" onClick={() => router.push('/dashboard')}>Continue to Dashboard</Button>
+          <Button className="w-full" onClick={() => router.push('/settings')}>Back to Settings</Button>
         </div>
       )}
     </Card>

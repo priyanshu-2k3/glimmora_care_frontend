@@ -8,8 +8,6 @@
 export enum UserRole {
   PATIENT = 'patient',
   DOCTOR = 'doctor',
-  NGO = 'ngo_worker',
-  GOVERNMENT_ANALYST = 'gov_analyst',
   ADMIN = 'admin',
   SUPER_ADMIN = 'super_admin',
 }

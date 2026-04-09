@@ -15,12 +15,10 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
 const ROLE_OPTIONS: { role: Role; label: string; description: string }[] = [
-  { role: 'patient',     label: 'Patient',              description: 'Priya Sharma — View your health records' },
-  { role: 'doctor',      label: 'Doctor',               description: 'Dr. Arjun Mehta — Patient care & intelligence' },
-  { role: 'ngo_worker',  label: 'NGO Field Worker',     description: 'Sunita Devi — Field health programs' },
-  { role: 'gov_analyst', label: 'Government Analyst',   description: 'Rajesh Kumar IAS — Population intelligence' },
-  { role: 'admin',       label: 'Admin',                description: 'Neha Kapoor — Operational management' },
-  { role: 'super_admin', label: 'Super Admin',          description: 'Admin Console — Full system control' },
+  { role: 'patient',     label: 'Patient',    description: 'Priya Sharma — View your health records' },
+  { role: 'doctor',      label: 'Doctor',     description: 'Dr. Arjun Mehta — Patient care & intelligence' },
+  { role: 'admin',       label: 'Admin',      description: 'Neha Kapoor — Operational management' },
+  { role: 'super_admin', label: 'Super Admin', description: 'Admin Console — Full system control' },
 ]
 
 type LoginMode = 'real' | 'demo'
@@ -44,8 +42,12 @@ export default function LoginPage() {
   async function handleRealLogin(e: React.FormEvent) {
     e.preventDefault()
     try {
-      await login({ email, password })
-      router.push('/dashboard')
+      const loggedInUser = await login({ email, password })
+      if (loggedInUser?.emailVerified === false) {
+        router.push('/verify-email')
+      } else {
+        router.push('/dashboard')
+      }
     } catch {
       // error is set in context
     }

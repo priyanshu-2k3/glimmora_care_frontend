@@ -47,11 +47,6 @@ export default function VaultPage() {
   if (user.role === 'patient') {
     records = records.filter((r) => r.patientId === 'pat_001')
   }
-  // NGO worker: only village patients
-  else if (user.role === 'ngo_worker') {
-    const villagePatientIds = MOCK_PATIENTS.filter((p) => p.village).map((p) => p.id)
-    records = records.filter((r) => villagePatientIds.includes(r.patientId))
-  }
   // Doctor/Admin: filter by selected patient if not "all"
   else if (canViewAll && selectedPatientId !== 'all') {
     records = records.filter((r) => r.patientId === selectedPatientId)

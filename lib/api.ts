@@ -3,8 +3,10 @@
  * Wraps the FastAPI backend at http://127.0.0.1:8000/api/v1
  *
  * Role mapping:
- *   frontend  ngo_worker  ↔  backend  ngo
- *   frontend  gov_analyst ↔  backend  government
+ *   frontend  patient    ↔  backend  patient
+ *   frontend  doctor     ↔  backend  doctor
+ *   frontend  admin      ↔  backend  admin
+ *   frontend  super_admin ↔ backend  admin (same backend role, elevated frontend permissions)
  */
 
 import type { Role } from '@/types/auth'
@@ -36,21 +38,18 @@ export function backendRoleToFrontend(backendRole: string): Role {
   const map: Record<string, Role> = {
     patient:    'patient',
     doctor:     'doctor',
-    ngo:        'ngo_worker',
-    government: 'gov_analyst',
-    admin:      'super_admin',   // backend "admin" → frontend "super_admin" (renamed)
+    admin:      'admin',
+    super_admin: 'super_admin',
   }
   return (map[backendRole] ?? 'patient') as Role
 }
 
 export function frontendRoleToBackend(role: Role): string {
   const map: Record<Role, string> = {
-    patient:     'patient',
-    doctor:      'doctor',
-    ngo_worker:  'ngo',
-    gov_analyst: 'government',
-    admin:       'admin',        // new restricted admin — maps to backend "admin"
-    super_admin: 'admin',        // super_admin also maps to backend "admin"
+    patient:    'patient',
+    doctor:     'doctor',
+    admin:      'admin',
+    super_admin: 'super_admin',
   }
   return map[role]
 }
@@ -496,6 +495,131 @@ export const familyApi = {
       body: JSON.stringify({ token }),
       auth: false,
     }),
+}
+
+// ─── Organisation API ──────────────────────────────────────────────────────────
+
+export interface OrgOut {
+  id: string
+  name: string
+  admin_id: string
+  address: string | null
+  phone: string | null
+  website: string | null
+  created_at: string | null
+}
+
+export interface DoctorOut {
+  user_id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  location: string | null
+  patient_count: number
+}
+
+export interface DoctorInviteOut {
+  id: string
+  org_id: string
+  email: string
+  status: string
+  expires_at: string | null
+}
+
+export interface AssignmentOut {
+  id: string
+  patient_id: string
+  doctor_id: string
+  org_id: string
+  assigned_at: string | null
+  assigned_by: string | null
+}
+
+export interface PatientOut {
+  patient_id: string
+  email: string | null
+  first_name: string | null
+  last_name: string | null
+  assigned_doctor_id: string | null
+  assigned_doctor_name: string | null
+}
+
+export interface DoctorOrgOut {
+  org_id: string
+  org_name: string
+}
+
+export interface AssignedDoctorOut {
+  doctor_id: string
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  organization: string | null
+}
+
+export const orgApi = {
+  /** Admin: create organisation */
+  create: (name: string) =>
+    apiFetch<OrgOut>('/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  /** Admin + doctor: get my organisation */
+  getMine: () =>
+    apiFetch<OrgOut>('/organizations/mine'),
+
+  /** Admin: update organisation details */
+  update: (data: Partial<{ name: string; address: string; phone: string; website: string }>) =>
+    apiFetch<OrgOut>('/organizations/mine', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  /** Admin: invite a doctor by email */
+  inviteDoctor: (email: string) =>
+    apiFetch<DoctorInviteOut>('/organizations/mine/invite-doctor', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Admin: list all doctor invites */
+  listDoctorInvites: () =>
+    apiFetch<DoctorInviteOut[]>('/organizations/mine/doctor-invites'),
+
+  /** Admin: list all doctors in org */
+  listDoctors: () =>
+    apiFetch<DoctorOut[]>('/organizations/mine/doctors'),
+
+  /** Admin: assign a patient to a doctor */
+  assignPatient: (patientId: string, doctorId: string) =>
+    apiFetch<AssignmentOut>('/organizations/mine/assign-patient', {
+      method: 'POST',
+      body: JSON.stringify({ patient_id: patientId, doctor_id: doctorId }),
+    }),
+
+  /** Admin: list all patients in org */
+  listPatients: () =>
+    apiFetch<PatientOut[]>('/organizations/mine/patients'),
+
+  /** Doctor: accept org invite */
+  joinOrg: (token: string) =>
+    apiFetch<DoctorOrgOut>('/doctor/join-org', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+
+  /** Doctor: get my org */
+  getDoctorOrg: () =>
+    apiFetch<DoctorOrgOut | null>('/doctor/org'),
+
+  /** Doctor: list my assigned patients */
+  getDoctorPatients: () =>
+    apiFetch<PatientOut[]>('/doctor/patients'),
+
+  /** Patient: get my assigned doctor */
+  getMyDoctor: () =>
+    apiFetch<AssignedDoctorOut>('/patient/doctor'),
 }
 
 export default apiFetch

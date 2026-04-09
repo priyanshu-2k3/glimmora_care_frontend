@@ -11,16 +11,6 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
     description: 'Access patient records, trends, and consultation briefs',
     color: 'bg-charcoal-warm text-ivory-cream',
   },
-  ngo_worker: {
-    label: 'NGO Field Worker',
-    description: 'Manage village-level health programs and offline data',
-    color: 'bg-success-DEFAULT text-ivory-cream',
-  },
-  gov_analyst: {
-    label: 'Government Analyst',
-    description: 'Population health intelligence and district dashboards',
-    color: 'bg-gold-deep text-ivory-cream',
-  },
   admin: {
     label: 'Admin',
     description: 'Operational management — team, consent, and logs',
@@ -34,9 +24,7 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
 }
 
 /* ── Navigation items ─────────────────────────────────────────────────────────
-   "super_admin" = the old Administrator role (full access, renamed)
-   "admin"       = new restricted operational role
-   All other roles (patient, doctor, ngo_worker, gov_analyst) are UNCHANGED.
+   Roles: patient, doctor, admin, super_admin
    ──────────────────────────────────────────────────────────────────────────── */
 
 export const NAV_ITEMS = [
@@ -45,10 +33,10 @@ export const NAV_ITEMS = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
 
-  /* ── Health (patient + doctor only — merged Data Intake into Vault for patient) ─── */
+  /* ── Health (patient + doctor only) ─── */
   {
     href: '/vault',
     label: 'Health Vault',
@@ -62,7 +50,7 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
 
-  /* ── Patient family (single link, no duplicates) ─── */
+  /* ── Patient family ─── */
   {
     href: '/family',
     label: 'Family Account',
@@ -74,6 +62,32 @@ export const NAV_ITEMS = [
     label: 'Manage Profiles',
     icon: 'User',
     roles: ['patient'] as Role[],
+  },
+  {
+    href: '/my-doctor',
+    label: 'My Doctor',
+    icon: 'Stethoscope',
+    roles: ['patient'] as Role[],
+  },
+
+  /* ── Organisation (admin + doctor) ─── */
+  {
+    href: '/organization',
+    label: 'Organisation',
+    icon: 'Building2',
+    roles: ['admin', 'super_admin', 'doctor'] as Role[],
+  },
+  {
+    href: '/organization/doctors',
+    label: 'Manage Doctors',
+    icon: 'Stethoscope',
+    roles: ['admin', 'super_admin'] as Role[],
+  },
+  {
+    href: '/organization/patients',
+    label: 'Manage Patients',
+    icon: 'UserCheck',
+    roles: ['admin', 'super_admin'] as Role[],
   },
 
   /* ── Consent & access ─── */
@@ -102,32 +116,12 @@ export const NAV_ITEMS = [
     roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
 
-  /* ── Super Admin only ─── */
-  {
-    href: '/manage-users',
-    label: 'Manage Users',
-    icon: 'Users',
-    roles: ['super_admin'] as Role[],
-  },
-
-  /* ── Community (NGO + Gov unchanged) ─── */
-  {
-    href: '/population',
-    label: 'Population',
-    icon: 'Globe',
-    roles: ['ngo_worker', 'gov_analyst'] as Role[],
-  },
-  {
-    href: '/offline',
-    label: 'Offline Sync',
-    icon: 'WifiOff',
-    roles: ['ngo_worker'] as Role[],
-  },
+  /* ── AI Assistant (patient + doctor) ─── */
   {
     href: '/assistants',
     label: 'AI Assistant',
     icon: 'MessageSquare',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst'] as Role[],
+    roles: ['patient', 'doctor'] as Role[],
   },
 
   /* ── Admin operational routes ─── */
@@ -135,19 +129,19 @@ export const NAV_ITEMS = [
     href: '/admin',
     label: 'Admin Panel',
     icon: 'LayoutDashboard',
-    roles: ['admin'] as Role[],
+    roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/admin/manage-team',
     label: 'Manage Team',
     icon: 'Users',
-    roles: ['admin'] as Role[],
+    roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/admin/doctor-management',
     label: 'Doctor Management',
     icon: 'UserCheck',
-    roles: ['admin'] as Role[],
+    roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/admin/settings',
@@ -156,18 +150,38 @@ export const NAV_ITEMS = [
     roles: ['admin'] as Role[],
   },
 
+  /* ── Super Admin only ─── */
+  {
+    href: '/manage-users',
+    label: 'Manage Users',
+    icon: 'Users',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/agents',
+    label: 'Agents',
+    icon: 'Bot',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/intelligence',
+    label: 'Intelligence',
+    icon: 'TrendingUp',
+    roles: ['super_admin', 'doctor'] as Role[],
+  },
+
   /* ── System ─── */
   {
     href: '/notifications',
     label: 'Notifications',
     icon: 'Bell',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
   {
     href: '/settings',
     label: 'Settings',
     icon: 'Settings',
-    roles: ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
 ]
 

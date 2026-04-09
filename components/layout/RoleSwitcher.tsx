@@ -7,7 +7,7 @@ import { ROLES } from '@/lib/constants'
 import type { Role } from '@/types/auth'
 import { cn } from '@/lib/utils'
 
-const ROLES_LIST: Role[] = ['patient', 'doctor', 'ngo_worker', 'gov_analyst', 'admin', 'super_admin']
+const ROLES_LIST: Role[] = ['patient', 'doctor', 'admin', 'super_admin']
 
 export function RoleSwitcher() {
   const { user, demoLogin } = useAuth()
