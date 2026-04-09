@@ -1,4 +1,4 @@
-export type Role = 'patient' | 'doctor' | 'ngo_worker' | 'gov_analyst' | 'admin' | 'super_admin'
+export type Role = 'patient' | 'doctor' | 'admin' | 'super_admin'
 
 export interface User {
   id: string
@@ -14,6 +14,8 @@ export interface User {
   accessToken?: string
   /** family id for patient accounts */
   familyId?: string | null
+  /** whether the user's email has been verified */
+  emailVerified?: boolean
 }
 
 export interface AuthSession {

@@ -468,7 +468,8 @@ const VILLAGE_DATA = [
   { name: 'Pen',     target: 41, color: C.violet.bg },
 ]
 
-function NgoView({ userName }: { userName: string }) {
+// NgoView and GovView removed — roles ngo_worker and gov_analyst no longer in use
+function _NgoViewUnused({ userName }: { userName: string }) {
   const villagePatients = MOCK_PATIENTS.filter((p: { village?: string }) => p.village)
   const [anim, setAnim] = useState([0, 0, 0])
   const ref = useRef<HTMLDivElement>(null)
@@ -528,7 +529,7 @@ function NgoView({ userName }: { userName: string }) {
   )
 }
 
-// ─── Gov view ─────────────────────────────────────────────────────────────────
+// ─── Gov view (unused — gov_analyst role removed) ─────────────────────────────
 
 const GOV_DISTRICTS = [
   { name: 'Nashik',     coverage: 78, risk: 'moderate' as const, patients: 312 },
@@ -551,7 +552,7 @@ const GOV_PIE = [
   { name: 'Elevated', value: 3, color: C.coral.bg },
 ]
 
-function GovView({ userName }: { userName: string }) {
+function _GovViewUnused({ userName }: { userName: string }) {
   const [dAnim, setDAnim] = useState<number[]>(GOV_DISTRICTS.map(() => 0))
   const ref = useRef<HTMLDivElement>(null)
 
@@ -717,8 +718,6 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in">
       {user.role === 'patient'     && <PatientView userName={user.name} />}
       {user.role === 'doctor'      && <DoctorView  userName={user.name} />}
-      {user.role === 'ngo_worker'  && <NgoView     userName={user.name} />}
-      {user.role === 'gov_analyst' && <GovView     userName={user.name} />}
       {user.role === 'admin'       && <AdminView   userName={user.name} />}
       {user.role === 'super_admin' && <AdminView   userName={user.name} />}
     </div>

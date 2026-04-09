@@ -1,6 +1,6 @@
-import type { ChatResponse } from '@/types/chat'
-import type { Persona } from '@/types/chat'
+import type { ChatResponse, Persona } from '@/types/chat'
 
+// Legacy mock responses — kept as fallback if Gemini is unavailable
 export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
   patient: [
     {
@@ -25,13 +25,6 @@ export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
       sourceMarkers: ['Hemoglobin', 'Ferritin', 'Vitamin D'],
     },
     {
-      keywords: ['cholesterol', 'lipid', 'triglycerides', 'ldl', 'hdl'],
-      response: "Your total cholesterol is 218 mg/dL (normal: below 200) and triglycerides are 180 mg/dL (normal: below 150). These have been rising over the past year. Your LDL is 142 mg/dL, which is also above the typical reference range. Your doctor can help interpret what this means for your specific health context.",
-      confidenceScore: 82,
-      disclaimer: 'This is informational only.',
-      sourceMarkers: ['Cholesterol', 'LDL', 'Triglycerides'],
-    },
-    {
       keywords: ['records', 'history', 'reports', 'vault'],
       response: "You have 3 health records in your vault: an Annual Metabolic Panel (Feb 2025), a CBC & Thyroid Panel (Oct 2024), and a Blood Pressure reading (Jan 2025). All records are encrypted with AES-256. You can view them in the Health Vault section.",
       confidenceScore: 99,
@@ -40,7 +33,7 @@ export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
     },
     {
       keywords: ['hello', 'hi', 'help', 'start'],
-      response: "Hello! I'm your GlimmoraCare health assistant. I can help you understand your health records, explain trends in your data, and provide informational summaries of your test results. Remember — I provide informational context only, not medical advice. What would you like to know about your health records?",
+      response: "Hello! I'm your GlimmoraCare health assistant. I can help you understand your health records, explain trends in your data, and provide informational summaries of your test results. Remember — I provide informational context only, not medical advice. What would you like to know?",
       confidenceScore: 99,
       disclaimer: 'I provide informational context only, not medical advice.',
       sourceMarkers: [],
@@ -49,14 +42,14 @@ export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
   doctor: [
     {
       keywords: ['priya', 'pat_001', 'sharma'],
-      response: "Patient: Priya Sharma, 38F. Key findings: HbA1c trending upward (5.6% → 6.4% over 12 months, confidence: 87%). Hemoglobin low at 11.2 g/dL with ferritin 8 ng/mL. TSH mildly elevated at 4.8 mIU/L. Systolic BP: 136 mmHg (trend rising). Recommended discussion points: glycemic monitoring, iron and thyroid evaluation, cardiovascular risk assessment. Data completeness: 82%.",
+      response: "Patient: Priya Sharma, 38F. Key findings: HbA1c trending upward (5.6% → 6.4% over 12 months, confidence: 87%). Hemoglobin low at 11.2 g/dL with ferritin 8 ng/mL. TSH mildly elevated at 4.8 mIU/L. Systolic BP: 136 mmHg (trend rising). Recommended discussion points: glycemic monitoring, iron and thyroid evaluation. Data completeness: 82%.",
       confidenceScore: 89,
       disclaimer: 'All AI outputs are non-diagnostic. Clinical judgment takes precedence.',
       sourceMarkers: ['HbA1c', 'Hemoglobin', 'TSH', 'Systolic BP'],
     },
     {
       keywords: ['ramesh', 'pat_002', 'patel'],
-      response: "Patient: Ramesh Patel, 55M. High-priority markers: HbA1c at 7.8% (18-month rising trend, confidence: 93%). Creatinine at 1.4 mg/dL (rising). Uric acid elevated at 7.8 mg/dL. Systolic BP: 148 mmHg. Risk trajectory: HIGH. Multiple metabolic and renal markers elevated simultaneously. Doctor brief: 5 abnormal markers across metabolic, cardiac, and renal categories.",
+      response: "Patient: Ramesh Patel, 55M. High-priority markers: HbA1c at 7.8% (18-month rising trend, confidence: 93%). Creatinine at 1.4 mg/dL (rising). Uric acid elevated at 7.8 mg/dL. Systolic BP: 148 mmHg. Risk trajectory: HIGH. Multiple metabolic and renal markers elevated simultaneously.",
       confidenceScore: 93,
       disclaimer: 'All AI outputs are non-diagnostic. Clinical judgment takes precedence.',
       sourceMarkers: ['HbA1c', 'Creatinine', 'Uric Acid', 'Systolic BP'],
@@ -69,13 +62,6 @@ export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
       sourceMarkers: [],
     },
     {
-      keywords: ['correlation', 'pattern', 'trend', 'analysis'],
-      response: "Multi-marker correlation analysis across patient cohort:\n\n• HbA1c ↔ Fasting Glucose: r=0.92 (strong positive)\n• Systolic ↔ Diastolic BP: r=0.88 (strong positive)\n• LDL ↔ Total Cholesterol: r=0.95 (strong positive)\n• HDL ↔ Triglycerides: r=-0.63 (moderate negative)\n\nThese correlations are computed from current patient dataset. Not predictive of individual outcomes.",
-      confidenceScore: 85,
-      disclaimer: 'Statistical correlations only. Not predictive of individual clinical outcomes.',
-      sourceMarkers: ['HbA1c', 'Cholesterol', 'BP'],
-    },
-    {
       keywords: ['hello', 'hi', 'help', 'start'],
       response: "Hello, Doctor. I can help you access patient summaries, consultation briefs, longitudinal trend analysis, and multi-marker correlations. All outputs are non-diagnostic and confidence-scored. Which patient or analysis would you like to review?",
       confidenceScore: 99,
@@ -83,56 +69,49 @@ export const CHAT_RESPONSES: Record<Persona, ChatResponse[]> = {
       sourceMarkers: [],
     },
   ],
-  ngo: [
+  admin: [
     {
-      keywords: ['wadgaon', 'village', 'screening', 'coverage'],
-      response: "Wadgaon Village — Current Status:\n• Active patients: 3\n• Screening coverage: 68%\n• Hemoglobin screening gap: 2 pending patients\n• Last sync: 2025-02-28\n\nAlert: Low hemoglobin cluster detected (3 cases below 10 g/dL in last 30 days). Outreach recommended. This is an aggregated informational observation.",
-      confidenceScore: 84,
-      disclaimer: 'Aggregated population data only. No individual identifiers included.',
-      sourceMarkers: ['Hemoglobin'],
+      keywords: ['consent', 'requests', 'pending'],
+      response: "Consent Management Summary:\n• Pending requests: 3\n• Approved this week: 7\n• Expired consents: 2 (action required)\n\nDoctor-initiated requests awaiting patient approval are listed in the Consent Manager. Expired consents should be reviewed for renewal or revocation.",
+      confidenceScore: 90,
+      disclaimer: 'Operational summary based on available system data.',
+      sourceMarkers: [],
     },
     {
-      keywords: ['maternal', 'pregnancy', 'anemia', 'mother'],
-      response: "Maternal Health Summary — Raigad District:\n• Patients tracked: 3\n• Average hemoglobin: 10.2 g/dL (below recommended)\n• BP screening compliance: 78%\n• Follow-up rate: 65%\n\nInformational signals: Low hemoglobin pattern across 2 villages. Screening gap identified. All data is anonymized and aggregated.",
-      confidenceScore: 86,
-      disclaimer: 'Aggregated data only. Not individual diagnostic assessments.',
-      sourceMarkers: ['Hemoglobin', 'BP'],
-    },
-    {
-      keywords: ['sync', 'offline', 'pending', 'upload'],
-      response: "Offline Sync Status:\n• Records pending sync: 3\n• Last successful sync: 2025-03-05 16:00\n• Local storage used: 2.4 MB of 10 GB\n• Conflicts detected: 0\n\nAll records are encrypted locally. Background sync will trigger when connectivity is restored.",
-      confidenceScore: 99,
-      disclaimer: '',
+      keywords: ['doctor', 'assignment', 'team'],
+      response: "Doctor Assignment Status:\n• Active assignments: 12\n• Unassigned patients: 4\n• Pending reassignment requests: 1\n\nDr. Kavita Rao has capacity for 2 more patients. Dr. Ravi Kulkarni is currently on leave. Visit Doctor Management to process assignments.",
+      confidenceScore: 88,
+      disclaimer: 'Operational data only.',
       sourceMarkers: [],
     },
     {
       keywords: ['hello', 'hi', 'help', 'start'],
-      response: "Hello! I'm your GlimmoraCare field assistant. I can help you with village health data, screening gaps, maternal health monitoring, and sync status. All population data is anonymized. What would you like to check?",
+      response: "Hello! I'm your GlimmoraCare operations assistant. I can help with consent management, doctor assignments, team coordination, and audit log reviews. What would you like to manage today?",
       confidenceScore: 99,
-      disclaimer: 'Population-level data only. No individual identifiers.',
+      disclaimer: 'Operational assistant only.',
       sourceMarkers: [],
     },
   ],
-  government: [
+  super_admin: [
     {
-      keywords: ['nashik', 'district', 'population', 'coverage'],
-      response: "Nashik District — Population Health Summary:\n• Total registered patients: 1,240\n• Screened: 892 (72% coverage)\n• At risk (elevated markers): 234 (19%)\n• Maternal health gap: 22 pending screenings\n\nDistrict risk intensity: MODERATE. Screening coverage is above state average. Data is fully anonymized and aggregated.",
-      confidenceScore: 91,
-      disclaimer: 'Aggregated anonymized data only. No individual patient information.',
+      keywords: ['platform', 'system', 'health', 'status'],
+      response: "Platform Health Summary:\n• Total users: 8 (4 patients, 2 doctors, 1 admin, 1 super admin)\n• Records in vault: 14\n• AI confidence average: 87%\n• Agent uptime: 99.8%\n• Backend API: Online\n• Last system check: 2025-04-09\n\nAll systems operational. No critical alerts.",
+      confidenceScore: 95,
+      disclaimer: 'System status summary. Not a guarantee of individual component health.',
       sourceMarkers: [],
     },
     {
-      keywords: ['trend', 'seasonal', 'pattern', 'monthly'],
-      response: "Seasonal Pattern Analysis — Maharashtra Division:\n• March–May: Screening participation drops 15% (peak farming season)\n• Oct–Nov: Glycemic marker deviations increase 12% (festive season pattern)\n• Maternal screenings: Lowest in June–July\n\nThese are population-level informational observations. No individual data is included.",
-      confidenceScore: 78,
-      disclaimer: 'Aggregated trend analysis only. Not predictive of specific outcomes.',
+      keywords: ['agent', 'intelligence', 'preventive'],
+      response: "Agent Status Overview:\n• Data Integrity Agent: Active (97% task success)\n• Preventive Intelligence Agent: Active (94% success)\n• Doctor Prep Agent: Active (89% success)\n\nTotal tasks processed (last 7 days): 47. No critical failures. Agent logs available in the Agents dashboard.",
+      confidenceScore: 92,
+      disclaimer: 'Aggregated agent performance metrics.',
       sourceMarkers: [],
     },
     {
       keywords: ['hello', 'hi', 'help', 'start'],
-      response: "Hello. I provide population-level health intelligence for district and state planning. I can assist with coverage metrics, risk clustering, seasonal patterns, and screening gap analysis. All data is fully anonymized and aggregated. What district or metric would you like to review?",
+      response: "Hello, Super Admin. I have full platform intelligence available — patient trends, system health, agent performance, user management, and governance metrics. All outputs are confidence-scored. What would you like to review?",
       confidenceScore: 99,
-      disclaimer: 'Aggregated anonymized population data only.',
+      disclaimer: 'System-level intelligence assistant.',
       sourceMarkers: [],
     },
   ],
@@ -145,7 +124,7 @@ export function getResponse(persona: Persona, input: string): ChatResponse {
   return (
     match ?? {
       keywords: [],
-      response: "I don't have specific data on that query right now. Please try asking about specific health markers (like HbA1c, blood pressure, cholesterol), patient summaries, or population health metrics.",
+      response: "I don't have specific data on that query right now. Please try asking about specific health markers, patient summaries, or platform metrics.",
       confidenceScore: 60,
       disclaimer: 'Informational context only. Not a substitute for professional advice.',
       sourceMarkers: [],

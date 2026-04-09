@@ -38,23 +38,6 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
     '/settings',
   ],
 
-  [UserRole.NGO]: [
-    '/dashboard',
-    '/assistants',
-    '/population',
-    '/offline',
-    '/notifications',
-    '/settings',
-  ],
-
-  [UserRole.GOVERNMENT_ANALYST]: [
-    '/dashboard',
-    '/assistants',
-    '/population',
-    '/notifications',
-    '/settings',
-  ],
-
   [UserRole.ADMIN]: [
     '/dashboard',
     '/admin',
@@ -77,9 +60,8 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
     '/intelligence',
     '/agents',
     '/assistants',
-    '/population',
-    '/offline',
     '/admin',
+    '/manage-users',
     '/notifications',
     '/settings',
   ],

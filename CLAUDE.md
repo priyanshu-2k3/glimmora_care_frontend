@@ -1,5 +1,28 @@
 # GlimmoraCare — Claude Code Project Rules
 
+## Feature Tracking (REQUIRED — Update as You Work)
+
+Two living documents must be kept up to date at all times:
+
+### `doc/feature_list.csv`
+Every time you build, modify, or integrate a feature:
+1. Open `doc/feature_list.csv`
+2. Find the row for the affected feature
+3. Update the relevant % column(s):
+   - **Frontend %** — UI exists and renders correctly (0/50/100)
+   - **Backend %** — API endpoint exists with correct response shape (0/50/100)
+   - **Integration %** — Frontend is calling the real API, not mock data (0/50/100)
+4. Update the **Notes** column if anything notable changed
+
+### `doc/API_SCHEMA.md`
+Every time an API endpoint is created or integrated:
+1. Find the endpoint section in `doc/API_SCHEMA.md`
+2. Change its status marker: `❌ Missing` → `⚠️ Incomplete` → `✅ Done`
+3. Update the request/response schema if it changed
+4. Update the "Used by" file reference if new frontend files use it
+
+**Rule:** Never finish a coding task without updating these two files. The feature list and API schema are the single source of truth for project progress.
+
 ## Project Identity
 - **Project:** GlimmoraCare Phase 1 — Preventive Intelligence Engine
 - **Type:** Frontend-only Next.js application with mock data (no database, no real AI)

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Info, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useMockChat } from '@/hooks/useMockChat'
+import { useGeminiChat } from '@/hooks/useGeminiChat'
 import type { Persona } from '@/types/chat'
 import { ROLES } from '@/lib/constants'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
@@ -19,35 +19,33 @@ const PERSONA_CONFIG: Record<Persona, { label: string; description: string; colo
     label: 'Patient Assistant',
     description: 'Explains your health records in simple language',
     color: 'bg-azure-whisper text-sapphire-deep',
-    starterPrompts: ['What does my HbA1c trend mean?', 'Why is my hemoglobin low?', 'Show my blood pressure history', 'What records do I have?'],
+    starterPrompts: ['What does my HbA1c trend mean?', 'Why is my hemoglobin low?', 'Explain my blood pressure readings', 'What should I track for diabetes prevention?'],
   },
   doctor: {
     label: 'Doctor Assistant',
     description: 'Structured patient summaries and consultation briefs',
     color: 'bg-parchment text-charcoal-deep',
-    starterPrompts: ["Priya Sharma's summary", "Ramesh Patel's brief", 'Show correlation analysis', 'Today\'s consultation briefs'],
+    starterPrompts: ["Priya Sharma's clinical summary", "Ramesh Patel's risk brief", 'Show HbA1c correlation analysis', "Today's consultation preparation"],
   },
-  ngo: {
-    label: 'NGO Field Assistant',
-    description: 'Village health data, screening gaps, sync status',
-    color: 'bg-success-soft/10 text-success-DEFAULT',
-    starterPrompts: ['Wadgaon village status', 'Maternal health summary', 'Offline sync status', 'Screening coverage'],
-  },
-  government: {
-    label: 'Government Intelligence',
-    description: 'Aggregated district and population insights',
+  admin: {
+    label: 'Admin Assistant',
+    description: 'Operational management and team coordination',
     color: 'bg-champagne text-gold-deep',
-    starterPrompts: ['Nashik district summary', 'Seasonal health patterns', 'Population coverage metrics'],
+    starterPrompts: ['Pending consent requests summary', 'Doctor assignment status', 'Team activity this week', 'Audit log highlights'],
+  },
+  super_admin: {
+    label: 'System Intelligence',
+    description: 'Full platform oversight and governance insights',
+    color: 'bg-charcoal-warm/10 text-charcoal-deep',
+    starterPrompts: ['Platform health summary', 'Agent performance status', 'User growth metrics', 'System compliance overview'],
   },
 }
 
 const ROLE_TO_PERSONA: Record<Role, Persona> = {
-  patient: 'patient',
-  doctor: 'doctor',
-  ngo_worker: 'ngo',
-  gov_analyst: 'government',
-  admin: 'doctor',
-  super_admin: 'doctor',
+  patient:    'patient',
+  doctor:     'doctor',
+  admin:      'admin',
+  super_admin: 'super_admin',
 }
 
 function TypingIndicator() {
@@ -71,7 +69,7 @@ export default function AssistantsPage() {
   const { user } = useAuth()
   const defaultPersona: Persona = user?.role ? ROLE_TO_PERSONA[user.role as Role] : 'patient'
   const [activePersona, setActivePersona] = useState<Persona>(defaultPersona)
-  const { messages, isTyping, sendMessage, clearMessages } = useMockChat(activePersona)
+  const { messages, isTyping, sendMessage, clearMessages } = useGeminiChat(activePersona)
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const config = PERSONA_CONFIG[activePersona]

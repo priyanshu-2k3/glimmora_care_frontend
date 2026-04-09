@@ -16,18 +16,15 @@ const MOCK_ALL_USERS = [
   { id: '2', name: 'Neha Kapoor', email: 'neha.kapoor@glimmora.care', role: 'admin', status: 'active' },
   { id: '3', name: 'Priya Sharma', email: 'priya.sharma@example.com', role: 'patient', status: 'active' },
   { id: '4', name: 'Vikram Sharma', email: 'vikram.sharma@example.com', role: 'patient', status: 'active' },
-  { id: '5', name: 'Sunita Devi', email: 'sunita.devi@healthfoundation.org', role: 'ngo_worker', status: 'active' },
-  { id: '6', name: 'Rajesh Kumar IAS', email: 'rajesh.kumar@health.gov.in', role: 'gov_analyst', status: 'active' },
-  { id: '7', name: 'Dr. Kavita Rao', email: 'kavita.rao@cityhospital.in', role: 'doctor', status: 'active' },
+  { id: '5', name: 'Dr. Kavita Rao', email: 'kavita.rao@cityhospital.in', role: 'doctor', status: 'active' },
   { id: '8', name: 'Dr. Ravi Kulkarni', email: 'ravi.kulkarni@cityhospital.in', role: 'doctor', status: 'inactive' },
 ]
 
 const ROLE_VARIANT: Record<string, 'info' | 'gold' | 'success' | 'warning' | 'dark'> = {
   doctor: 'info',
   admin: 'gold',
+  super_admin: 'dark',
   patient: 'success',
-  ngo_worker: 'warning',
-  gov_analyst: 'dark',
 }
 
 export default function ManageUsersPage() {

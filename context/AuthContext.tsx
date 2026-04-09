@@ -19,7 +19,7 @@ import {
 interface AuthContextValue {
   user: User | null
   isAuthenticated: boolean
-  login: (credentials: LoginCredentials) => Promise<void>
+  login: (credentials: LoginCredentials) => Promise<User>
   demoLogin: (role: Role) => Promise<void>
   register: (credentials: RegisterCredentials) => Promise<void>
   logout: () => Promise<void>
@@ -47,6 +47,7 @@ function backendUserToUser(b: BackendUser, accessToken?: string): User {
     lastLogin: new Date().toISOString(),
     accessToken,
     familyId: b.family_id ?? null,
+    emailVerified: b.email_verified,
   }
 }
 
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       persistUser(loggedInUser)
+      return loggedInUser
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.status === 401 ? 'Invalid email or password.' : err.detail)

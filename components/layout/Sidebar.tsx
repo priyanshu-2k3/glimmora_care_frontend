@@ -8,7 +8,7 @@ import {
   Activity, Globe, WifiOff, Settings, LogOut, ChevronDown, ChevronRight,
   Users, AlertTriangle, Bell, User, Heart, Baby,
   UserCheck, FileCheck, Lock, ClipboardList, Sparkles,
-  UserPlus, RefreshCw, Share2, Smartphone,
+  UserPlus, RefreshCw, Share2, Smartphone, Building2, Stethoscope, TrendingUp,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProfile } from '@/context/ProfileContext'
@@ -23,7 +23,7 @@ const ICONS: Record<string, React.ElementType> = {
   LayoutDashboard, Upload, Shield, Brain, Bot,
   MessageSquare, Activity, Globe, WifiOff, Settings,
   Users, AlertTriangle, Bell, User, UserCheck, FileCheck, Lock, ClipboardList,
-  UserPlus, RefreshCw, Share2, Smartphone,
+  UserPlus, RefreshCw, Share2, Smartphone, Building2, Stethoscope, TrendingUp,
 }
 
 const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
@@ -38,9 +38,10 @@ const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
 const DEFAULT_NAV_SECTIONS = [
   { label: null, hrefs: ['/dashboard'] },
   { label: 'HEALTH', hrefs: ['/vault', '/twin'] },
-  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/emergency', '/consent', '/access', '/logs'] },
+  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor', '/emergency', '/consent', '/access', '/logs'] },
+  { label: 'ORGANISATION', hrefs: ['/organization', '/organization/doctors', '/organization/patients'] },
   { label: 'MANAGEMENT', hrefs: ['/manage-users'] },
-  { label: 'TOOLS', hrefs: ['/assistants'] },
+  { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },
   { label: 'COMMUNITY', hrefs: ['/population', '/offline'] },
   { label: 'SYSTEM', hrefs: ['/notifications', '/settings'] },
 ]

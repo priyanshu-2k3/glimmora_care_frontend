@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${cormorant.variable} ${inter.variable} antialiased font-body bg-ivory-cream text-charcoal-deep`}>
+      <body suppressHydrationWarning className={`${cormorant.variable} ${inter.variable} antialiased font-body bg-ivory-cream text-charcoal-deep`}>
         <AuthProvider>
           <ProfileProvider>
             {children}
