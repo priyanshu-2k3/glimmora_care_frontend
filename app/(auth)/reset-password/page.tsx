@@ -13,12 +13,19 @@ import { cn } from '@/lib/utils'
 function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Support both legacy token-link flow and new email+otp flow
+  const token = searchParams.get('token') ?? ''
+  const email = searchParams.get('email') ?? ''
+  const otp   = searchParams.get('otp') ?? ''
+
+  const isOtpFlow = Boolean(email && otp)
+
   const [form, setForm] = useState({ password: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const token = searchParams.get('token') ?? ''
 
   const rules = [
     { label: 'At least 8 characters',    ok: form.password.length >= 8 },
@@ -33,7 +40,11 @@ function ResetPasswordForm() {
     setIsLoading(true)
     setError(null)
     try {
-      await authApi.resetPassword(token, form.password)
+      if (isOtpFlow) {
+        await authApi.resetPasswordWithOtp(email, otp, form.password)
+      } else {
+        await authApi.resetPassword(token, form.password)
+      }
       setDone(true)
       setTimeout(() => router.push('/login'), 2000)
     } catch (err) {
@@ -76,7 +87,7 @@ function ResetPasswordForm() {
             </div>
           )}
 
-          {!token && (
+          {!isOtpFlow && !token && (
             <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3 mb-4">
               <p className="text-xs font-body text-warning-DEFAULT">
                 No reset token found. Please use the link from your email.
@@ -92,7 +103,7 @@ function ResetPasswordForm() {
               value={form.password}
               onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
               rightIcon={
-                <button type="button" onClick={() => setShowPw(!showPw)}>
+                <button type="button" onClick={() => setShowPw(!showPw)} className="text-greige hover:text-stone transition-colors">
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               }

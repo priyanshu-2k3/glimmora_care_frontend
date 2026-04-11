@@ -368,7 +368,37 @@ export const authApi = {
 
     disable: () =>
       apiFetch<{ message: string }>('/auth/2fa', { method: 'DELETE' }),
+
+    emailSetup: () =>
+      apiFetch<{ message: string }>('/auth/2fa/email/setup', { method: 'POST' }),
+
+    emailVerify: (code: string) =>
+      apiFetch<{ message: string }>('/auth/2fa/email/verify', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
   },
+
+  verifyEmailCode: (code: string) =>
+    apiFetch<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+      auth: false,
+    }),
+
+  verifyResetOtp: (email: string, otp: string) =>
+    apiFetch<{ message: string }>('/auth/verify-reset-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+      auth: false,
+    }),
+
+  resetPasswordWithOtp: (email: string, otp: string, new_password: string) =>
+    apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, new_password }),
+      auth: false,
+    }),
 }
 
 // ─── Profile API ──────────────────────────────────────────────────────────────

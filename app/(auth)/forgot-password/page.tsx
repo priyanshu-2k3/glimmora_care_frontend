@@ -2,32 +2,54 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Mail, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
+import { Mail, Shield, ArrowLeft, CheckCircle, AlertCircle, KeyRound } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { authApi, ApiError } from '@/lib/api'
 
+type Step = 'email' | 'otp' | 'done'
+
 export default function ForgotPasswordPage() {
+  const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSendEmail(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
     try {
       await authApi.forgotPassword(email)
-      setSent(true)
+      setStep('otp')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail)
       } else {
-        // Backend says "if email exists, we send" — non-blocking; treat connection error gracefully
-        setSent(true) // still show success to avoid email enumeration
+        // Treat connection error gracefully — avoid email enumeration
+        setStep('otp')
       }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    if (otp.length < 4) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      await authApi.verifyResetOtp(email, otp)
+      setStep('done')
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? (err.status === 400 ? 'Invalid or expired code.' : err.detail)
+          : 'Could not connect to server.',
+      )
     } finally {
       setIsLoading(false)
     }
@@ -40,27 +62,12 @@ export default function ForgotPasswordPage() {
         <span className="text-xs text-greige font-body uppercase tracking-widest">Account Recovery</span>
       </div>
 
-      {sent ? (
-        <div className="text-center py-4">
-          <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-7 h-7 text-success-DEFAULT" />
-          </div>
-          <h2 className="font-display text-xl text-charcoal-deep mb-2">Reset link sent</h2>
-          <p className="text-sm text-greige font-body mb-6">
-            If <span className="font-medium text-charcoal-deep">{email}</span> is registered, you'll receive a password reset link shortly. Check your inbox and spam folder.
-          </p>
-          <Button variant="outline" onClick={() => setSent(false)} className="w-full">
-            Try again
-          </Button>
-          <Link href="/login" className="block mt-4 text-sm text-gold-deep hover:text-gold-muted font-body transition-colors">
-            Back to sign in
-          </Link>
-        </div>
-      ) : (
+      {/* Step 1 — enter email */}
+      {step === 'email' && (
         <>
           <div className="mb-6">
             <h2 className="font-display text-xl text-charcoal-deep mb-1">Forgot your password?</h2>
-            <p className="text-sm text-greige font-body">Enter your email and we'll send you a reset link.</p>
+            <p className="text-sm text-greige font-body">Enter your email and we'll send you a reset code.</p>
           </div>
 
           {error && (
@@ -70,7 +77,7 @@ export default function ForgotPasswordPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSendEmail} className="space-y-4">
             <Input
               label="Email Address"
               type="email"
@@ -82,7 +89,7 @@ export default function ForgotPasswordPage() {
 
             <Button type="submit" className="w-full" isLoading={isLoading} size="lg">
               <Mail className="w-4 h-4" />
-              {isLoading ? 'Sending reset link...' : 'Send Reset Link'}
+              {isLoading ? 'Sending code...' : 'Send Reset Code'}
             </Button>
           </form>
 
@@ -91,6 +98,72 @@ export default function ForgotPasswordPage() {
             Back to sign in
           </Link>
         </>
+      )}
+
+      {/* Step 2 — enter OTP */}
+      {step === 'otp' && (
+        <>
+          <div className="mb-6">
+            <h2 className="font-display text-xl text-charcoal-deep mb-1">Enter reset code</h2>
+            <p className="text-sm text-greige font-body">
+              We sent a code to <span className="font-medium text-charcoal-deep">{email}</span>. Enter it below to continue.
+            </p>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
+              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <Input
+              label="Reset Code"
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
+              placeholder="123456"
+              value={otp}
+              onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setError(null) }}
+              hint="Check your email inbox and spam folder"
+            />
+
+            <Button type="submit" className="w-full" isLoading={isLoading} size="lg" disabled={otp.length < 4}>
+              <KeyRound className="w-4 h-4" />
+              {isLoading ? 'Verifying...' : 'Verify Code'}
+            </Button>
+          </form>
+
+          <button
+            className="flex items-center justify-center gap-1.5 mt-5 w-full text-sm text-greige hover:text-charcoal-deep font-body transition-colors"
+            onClick={() => { setStep('email'); setOtp(''); setError(null) }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Change email
+          </button>
+        </>
+      )}
+
+      {/* Step 3 — success, redirect to reset-password */}
+      {step === 'done' && (
+        <div className="text-center py-4">
+          <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-7 h-7 text-success-DEFAULT" />
+          </div>
+          <h2 className="font-display text-xl text-charcoal-deep mb-2">Code verified!</h2>
+          <p className="text-sm text-greige font-body mb-6">
+            Now set your new password for <span className="font-medium text-charcoal-deep">{email}</span>.
+          </p>
+          <Link
+            href={`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`}
+            className="block"
+          >
+            <Button className="w-full" size="lg">
+              Set New Password →
+            </Button>
+          </Link>
+        </div>
       )}
     </Card>
   )

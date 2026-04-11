@@ -3,25 +3,25 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, Smartphone, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
+import { Shield, Mail, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2, Download } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { authApi, ApiError } from '@/lib/api'
 
-type Step = 'choose' | 'app' | 'sms' | 'verify' | 'done'
-type Method = 'app' | 'sms'
+type Step = 'choose' | 'app' | 'email' | 'verify' | 'done'
+type Method = 'app' | 'email'
 
 export default function TwoFASetupPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('choose')
   const [method, setMethod] = useState<Method>('app')
   const [otp, setOtp] = useState('')
-  const [phone, setPhone] = useState('')
   const [copied, setCopied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   // TOTP data from backend
   const [totpSecret, setTotpSecret] = useState('')
@@ -34,13 +34,35 @@ export default function TwoFASetupPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function downloadBackupCodes() {
+    const content = [
+      'GlimmoraCare — 2FA Backup Codes',
+      'Keep these codes safe. Each can be used once.',
+      '',
+      ...backupCodes,
+    ].join('\n')
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'glimmora-backup-codes.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleStartTotp() {
     setIsLoading(true)
     setError(null)
     try {
       const data = await authApi.twofa.totpSetup()
       setTotpSecret(data.secret)
-      setTotpQr(data.qr_uri)
+      // Ensure QR is treated as data URI if it contains base64 content
+      const qr = data.qr_uri
+      setTotpQr(
+        qr.startsWith('data:') ? qr :
+        qr.startsWith('iVBOR') || qr.startsWith('/9j/') ? `data:image/png;base64,${qr}` :
+        qr
+      )
       setBackupCodes(data.backup_codes ?? [])
       setStep('app')
     } catch (err) {
@@ -50,16 +72,16 @@ export default function TwoFASetupPage() {
     }
   }
 
-  async function handleStartSms() {
-    setStep('sms')
+  async function handleStartEmail() {
+    setStep('email')
   }
 
-  async function handleSendSms() {
-    if (phone.length < 8) return
+  async function handleSendEmailOtp() {
     setIsLoading(true)
     setError(null)
     try {
-      await authApi.twofa.smsSetup(phone)
+      await authApi.twofa.emailSetup()
+      setEmailSent(true)
       setStep('verify')
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Failed to send verification code.')
@@ -77,7 +99,7 @@ export default function TwoFASetupPage() {
       if (method === 'app') {
         await authApi.twofa.totpVerify(otp)
       } else {
-        await authApi.twofa.smsVerify(otp)
+        await authApi.twofa.emailVerify(otp)
       }
       setStep('done')
     } catch (err) {
@@ -110,8 +132,8 @@ export default function TwoFASetupPage() {
           </div>
           <div className="space-y-3 mb-5">
             {[
-              { id: 'app' as Method, icon: Key, label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
-              { id: 'sms' as Method, icon: Smartphone, label: 'SMS / Text Message', desc: 'Receive OTP via your registered mobile number' },
+              { id: 'app' as Method,   icon: Key,   label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
+              { id: 'email' as Method, icon: Mail,  label: 'Email OTP',         desc: 'Receive a one-time code to your registered email' },
             ].map((opt) => (
               <button
                 key={opt.id}
@@ -132,7 +154,7 @@ export default function TwoFASetupPage() {
           </div>
           <Button
             className="w-full"
-            onClick={() => { setError(null); method === 'app' ? handleStartTotp() : handleStartSms() }}
+            onClick={() => { setError(null); method === 'app' ? handleStartTotp() : handleStartEmail() }}
             isLoading={isLoading}
             size="lg"
           >
@@ -154,7 +176,12 @@ export default function TwoFASetupPage() {
           </div>
           <div className="flex justify-center mb-4">
             {totpQr ? (
-              <img src={totpQr} alt="TOTP QR Code" className="w-40 h-40 rounded-xl border border-sand-light" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={totpQr}
+                alt="TOTP QR Code"
+                className="w-40 h-40 rounded-xl border border-sand-light"
+              />
             ) : (
               <div className="w-40 h-40 bg-parchment border border-sand-light rounded-xl flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-greige animate-spin" />
@@ -170,7 +197,16 @@ export default function TwoFASetupPage() {
           </div>
           {backupCodes.length > 0 && (
             <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3 mb-4">
-              <p className="text-xs font-body font-semibold text-warning-DEFAULT mb-2">Save these backup codes</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-body font-semibold text-warning-DEFAULT">Save these backup codes</p>
+                <button
+                  onClick={downloadBackupCodes}
+                  className="flex items-center gap-1 text-xs text-warning-DEFAULT hover:text-gold-deep font-body transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-1">
                 {backupCodes.map((c) => (
                   <code key={c} className="text-xs font-mono text-charcoal-deep">{c}</code>
@@ -187,25 +223,21 @@ export default function TwoFASetupPage() {
         </>
       )}
 
-      {/* Step: SMS phone entry */}
-      {step === 'sms' && (
+      {/* Step: email OTP setup */}
+      {step === 'email' && (
         <>
           <div className="mb-5">
-            <h2 className="font-display text-xl text-charcoal-deep mb-1">Enter your phone number</h2>
-            <p className="text-sm text-greige font-body">We'll send a 6-digit code to this number each time you sign in.</p>
+            <h2 className="font-display text-xl text-charcoal-deep mb-1">Email OTP Setup</h2>
+            <p className="text-sm text-greige font-body">We'll send a one-time code to your registered email each time you sign in.</p>
           </div>
-          <Input
-            label="Mobile Number"
-            type="tel"
-            placeholder="+91 98765 43210"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setError(null) }}
-            hint="Include country code"
-          />
-          <div className="flex gap-2 mt-5">
+          <div className="bg-parchment rounded-xl p-4 mb-5 text-sm text-greige font-body">
+            <p>A verification code will be sent to your account email to confirm this method.</p>
+          </div>
+          <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
-            <Button className="flex-1" onClick={handleSendSms} isLoading={isLoading} disabled={phone.length < 8}>
-              Send verification code <ArrowRight className="w-4 h-4" />
+            <Button className="flex-1" onClick={handleSendEmailOtp} isLoading={isLoading}>
+              <Mail className="w-4 h-4" />
+              Send OTP to email
             </Button>
           </div>
         </>
@@ -217,7 +249,9 @@ export default function TwoFASetupPage() {
           <div className="mb-5">
             <h2 className="font-display text-xl text-charcoal-deep mb-1">Enter verification code</h2>
             <p className="text-sm text-greige font-body">
-              {method === 'app' ? 'Enter the 6-digit code from your authenticator app.' : `Enter the code sent to ${phone}.`}
+              {method === 'app'
+                ? 'Enter the 6-digit code from your authenticator app.'
+                : 'Enter the code sent to your email.'}
             </p>
           </div>
           <form onSubmit={handleVerify} className="space-y-4">
@@ -231,7 +265,7 @@ export default function TwoFASetupPage() {
               onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setError(null) }}
             />
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setStep(method)}><ArrowLeft className="w-4 h-4" /></Button>
+              <Button type="button" variant="outline" onClick={() => setStep(method === 'app' ? 'app' : 'email')}><ArrowLeft className="w-4 h-4" /></Button>
               <Button type="submit" className="flex-1" isLoading={isLoading} disabled={otp.length < 6}>
                 {isLoading ? 'Verifying…' : 'Enable 2FA'}
               </Button>

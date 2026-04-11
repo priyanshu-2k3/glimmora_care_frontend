@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Monitor, Shield, Save, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check } from 'lucide-react'
+import { User, Bell, Lock, Monitor, Shield, Save, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -69,15 +69,49 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
 
+  // Notifications tab
+  const [notifToggles, setNotifToggles] = useState<Record<string, boolean>>({
+    'Preventive Alerts':  true,
+    'Consent Requests':   true,
+    'Family Activity':    true,
+    'Sync Status Updates': true,
+    'Agent Activity':     false,
+    'New Health Records': false,
+    'Weekly Summary':     false,
+  })
+
   // Password tab
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false })
   const [pwSaving, setPwSaving] = useState(false)
   const [pwSuccess, setPwSuccess] = useState(false)
   const [pwError, setPwError] = useState<string | null>(null)
 
+  // Security options toggles
+  const [securityToggles, setSecurityToggles] = useState<Record<string, boolean>>({
+    'Two-Factor Authentication': false,
+    'Session Timeout':           true,
+    'Login Alerts':              true,
+  })
+  const [twofaEnabled, setTwofaEnabled] = useState(false)
+  const [twofaMethod, setTwofaMethod] = useState<string | null>(null)
+  const [twofaLoading, setTwofaLoading] = useState(false)
+
   // Sessions tab
   const [sessions, setSessions] = useState<BackendSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
+
+  // Fetch 2FA status on mount
+  useEffect(() => {
+    if (!user?.accessToken) return
+    authApi.twofa.status()
+      .then((data) => {
+        setTwofaEnabled(data.enabled)
+        setTwofaMethod(data.method)
+        setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': data.enabled }))
+      })
+      .catch(() => {})
+  }, [user?.accessToken])
 
   // Sync profile form when user changes
   useEffect(() => {
@@ -181,11 +215,18 @@ export default function SettingsPage() {
   const isDemo = !user.accessToken
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Settings</h1>
-        <p className="text-sm text-greige font-body mt-1">Manage your account and preferences</p>
+    <div className="max-w-2xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Settings</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Settings</h1>
+        <p className="text-sm text-stone font-body mt-2">Manage your account, preferences and security</p>
       </div>
+
+      <div className="space-y-6">
 
       {isDemo && (
         <div className="flex items-center gap-2 bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3">
@@ -259,13 +300,16 @@ export default function SettingsPage() {
                     { label: 'Agent Activity',        desc: 'Alerts when autonomous agents take significant actions' },
                     { label: 'New Health Records',    desc: 'Notify when new records are added to your vault' },
                     { label: 'Weekly Summary',        desc: 'Weekly digest of your health trends and insights' },
-                  ].map((item, i) => (
+                  ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between py-2 border-b border-sand-light last:border-0">
                       <div>
                         <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
                         <p className="text-xs text-greige">{item.desc}</p>
                       </div>
-                      <Toggle checked={i < 4} onChange={() => {}} />
+                      <Toggle
+                        checked={notifToggles[item.label] ?? false}
+                        onChange={() => setNotifToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
+                      />
                     </div>
                   ))}
                 </CardContent>
@@ -297,27 +341,42 @@ export default function SettingsPage() {
                     <div className="space-y-3">
                       <Input
                         label="Current Password"
-                        type="password"
+                        type={showPw.current ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={pwForm.current}
                         onChange={(e) => { setPwForm((p) => ({ ...p, current: e.target.value })); setPwError(null) }}
                         disabled={isDemo}
+                        rightIcon={
+                          <button type="button" onClick={() => setShowPw((p) => ({ ...p, current: !p.current }))} className="text-greige hover:text-stone transition-colors">
+                            {showPw.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        }
                       />
                       <Input
                         label="New Password"
-                        type="password"
+                        type={showPw.next ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={pwForm.next}
                         onChange={(e) => { setPwForm((p) => ({ ...p, next: e.target.value })); setPwError(null) }}
                         disabled={isDemo}
+                        rightIcon={
+                          <button type="button" onClick={() => setShowPw((p) => ({ ...p, next: !p.next }))} className="text-greige hover:text-stone transition-colors">
+                            {showPw.next ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        }
                       />
                       <Input
                         label="Confirm New Password"
-                        type="password"
+                        type={showPw.confirm ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={pwForm.confirm}
                         onChange={(e) => { setPwForm((p) => ({ ...p, confirm: e.target.value })); setPwError(null) }}
                         disabled={isDemo}
+                        rightIcon={
+                          <button type="button" onClick={() => setShowPw((p) => ({ ...p, confirm: !p.confirm }))} className="text-greige hover:text-stone transition-colors">
+                            {showPw.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        }
                       />
                     </div>
                     {!isDemo && (
@@ -330,17 +389,57 @@ export default function SettingsPage() {
                   {/* Security options */}
                   <div className="pt-4 border-t border-sand-light space-y-3">
                     <p className="text-sm font-body font-medium text-charcoal-deep">Security Options</p>
+                    {/* 2FA toggle — wired to real API */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-body font-medium text-charcoal-deep">Two-Factor Authentication</p>
+                        <p className="text-xs text-greige">
+                          {twofaEnabled
+                            ? `Enabled via ${twofaMethod ?? '2FA'}`
+                            : 'Add extra security via OTP on login'}
+                        </p>
+                        {!twofaEnabled && !isDemo && (
+                          <button
+                            className="text-xs text-gold-deep hover:text-gold-muted font-body mt-0.5 transition-colors"
+                            onClick={() => router.push('/2fa-setup')}
+                          >
+                            Set up 2FA →
+                          </button>
+                        )}
+                      </div>
+                      <Toggle
+                        checked={twofaEnabled}
+                        onChange={async () => {
+                          if (isDemo) return
+                          if (twofaEnabled) {
+                            setTwofaLoading(true)
+                            try {
+                              await authApi.twofa.disable()
+                              setTwofaEnabled(false)
+                              setTwofaMethod(null)
+                              setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': false }))
+                            } catch { /* ignore */ }
+                            setTwofaLoading(false)
+                          } else {
+                            router.push('/2fa-setup')
+                          }
+                        }}
+                      />
+                    </div>
+                    {/* Other security toggles */}
                     {[
-                      { label: 'Two-Factor Authentication', desc: 'Add extra security via OTP on login' },
-                      { label: 'Session Timeout',           desc: 'Auto-logout after 30 minutes of inactivity' },
-                      { label: 'Login Alerts',              desc: 'Email notification on new login attempts' },
+                      { label: 'Session Timeout', desc: 'Auto-logout after 30 minutes of inactivity' },
+                      { label: 'Login Alerts',    desc: 'Email notification on new login attempts' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
                           <p className="text-xs text-greige">{item.desc}</p>
                         </div>
-                        <Toggle checked={true} onChange={() => {}} />
+                        <Toggle
+                          checked={securityToggles[item.label] ?? true}
+                          onChange={() => setSecurityToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
+                        />
                       </div>
                     ))}
                   </div>
@@ -431,6 +530,7 @@ export default function SettingsPage() {
           </>
         )}
       </Tabs>
+      </div>
     </div>
   )
 }
