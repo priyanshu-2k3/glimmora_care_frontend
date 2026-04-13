@@ -10,6 +10,8 @@ export interface User {
   location?: string
   createdAt: string
   lastLogin?: string
+  phone_number?: string
+  gender?: string
   /** populated from JWT access token after real login */
   accessToken?: string
   /** family id for patient accounts */

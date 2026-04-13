@@ -157,6 +157,7 @@ export interface BackendUser {
   role: string
   organization?: string | null
   location?: string | null
+  gender?: string | null
   profile_photo?: string | null
   is_active: boolean
   email_verified: boolean
@@ -268,6 +269,7 @@ export const authApi = {
     email?: string
     organization?: string | null
     location?: string | null
+    gender?: string | null
     profile_photo?: string | null
   }) =>
     apiFetch<BackendUser>('/auth/me', {

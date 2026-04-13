@@ -64,6 +64,8 @@ export default function SettingsPage() {
     email: user?.email ?? '',
     organization: user?.organization ?? '',
     location: user?.location ?? '',
+    phone: user?.phone_number ?? '',
+    gender: user?.gender ?? '',
   })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
@@ -121,6 +123,8 @@ export default function SettingsPage() {
         email: user.email ?? '',
         organization: user.organization ?? '',
         location: user.location ?? '',
+        phone: user.phone_number ?? '',
+        gender: user.gender ?? '',
       })
     }
   }, [user?.id])
@@ -166,6 +170,7 @@ export default function SettingsPage() {
         email: profileForm.email !== user.email ? profileForm.email : undefined,
         organization: profileForm.organization || null,
         location: profileForm.location || null,
+        gender: profileForm.gender || null,
       })
       await refreshUser()
       setProfileSaved(true)
@@ -260,12 +265,23 @@ export default function SettingsPage() {
                       <p className="text-xs font-body text-error-DEFAULT">{profileError}</p>
                     </div>
                   )}
-                  <Input
-                    label="Full Name"
-                    value={profileForm.name}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
-                    disabled={isDemo}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label="Full Name"
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                      disabled={isDemo}
+                    />
+                    <Input
+                      label="Phone Number"
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                      disabled={true}
+                      hint="Contact support to change your phone number"
+                    />
+                  </div>
                   <Input
                     label="Email Address"
                     type="email"
@@ -273,12 +289,43 @@ export default function SettingsPage() {
                     onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
                     disabled={isDemo}
                   />
-                  <Input
-                    label="Location"
-                    value={profileForm.location}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
-                    disabled={isDemo}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label="Organisation"
+                      placeholder="Hospital / Clinic name"
+                      value={profileForm.organization}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, organization: e.target.value }))}
+                      disabled={isDemo}
+                    />
+                    <Input
+                      label="Location"
+                      placeholder="City, State"
+                      value={profileForm.location}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
+                      disabled={isDemo}
+                    />
+                  </div>
+                  {user.role === 'patient' && (
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-body font-medium text-stone">Gender</label>
+                      <select
+                        value={profileForm.gender}
+                        onChange={(e) => setProfileForm((p) => ({ ...p, gender: e.target.value }))}
+                        disabled={isDemo}
+                        className={cn(
+                          'w-full rounded-xl border border-sand-light bg-white px-3 py-2.5 text-sm font-body text-charcoal-deep',
+                          'focus:outline-none focus:ring-2 focus:ring-gold-soft focus:border-gold-soft transition-colors',
+                          isDemo && 'opacity-50 cursor-not-allowed bg-parchment',
+                        )}
+                      >
+                        <option value="">Prefer not to say</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="non_binary">Non-binary</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  )}
                   {!isDemo && (
                     <Button onClick={handleProfileSave} isLoading={profileSaving} disabled={profileSaving}>
                       {profileSaved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
