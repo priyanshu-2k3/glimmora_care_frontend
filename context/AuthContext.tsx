@@ -42,6 +42,8 @@ function backendUserToUser(b: BackendUser, accessToken?: string): User {
     role: backendRoleToFrontend(b.role),
     organization: b.organization ?? undefined,
     location: b.location ?? undefined,
+    phone_number: b.phone_number ?? undefined,
+    gender: b.gender ?? undefined,
     avatar: b.profile_photo ?? undefined,
     createdAt: b.created_at ?? new Date().toISOString(),
     lastLogin: new Date().toISOString(),

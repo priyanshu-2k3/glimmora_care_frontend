@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, CheckCircle, RefreshCw, AlertCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { authApi, ApiError } from '@/lib/api'
 
@@ -15,11 +16,18 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
 
+  // Auto-verify via link token
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const didVerify = useRef(false)
 
+  // Manual OTP entry
+  const [code, setCode] = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState<string | null>(null)
+
+  // Resend
   const [resendLoading, setResendLoading] = useState(false)
   const [resendDone, setResendDone] = useState(false)
   const [resendError, setResendError] = useState<string | null>(null)
@@ -51,6 +59,26 @@ function VerifyEmailContent() {
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
     return () => clearTimeout(t)
   }, [cooldown])
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    if (code.length !== 6) return
+    setOtpLoading(true)
+    setOtpError(null)
+    try {
+      await authApi.verifyEmailCode(code)
+      setVerified(true)
+      setTimeout(() => router.push('/dashboard'), 2500)
+    } catch (err) {
+      setOtpError(
+        err instanceof ApiError
+          ? (err.status === 400 ? 'Invalid or expired code. Please request a new one.' : err.detail)
+          : 'Could not connect to server.',
+      )
+    } finally {
+      setOtpLoading(false)
+    }
+  }
 
   async function handleResend() {
     setResendLoading(true)
@@ -105,7 +133,7 @@ function VerifyEmailContent() {
             <p className="text-xs text-error-DEFAULT mt-0.5">{verifyError}</p>
           </div>
         </div>
-        <p className="text-sm text-greige font-body mb-4">Request a new verification link below.</p>
+        <p className="text-sm text-greige font-body mb-4">Request a new verification code below.</p>
         <Button variant="outline" className="w-full" onClick={handleResend} disabled={resendLoading || cooldown > 0} isLoading={resendLoading}>
           <RefreshCw className="w-4 h-4" />
           {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend verification email'}
@@ -123,15 +151,41 @@ function VerifyEmailContent() {
         <div className="w-14 h-14 bg-gold-whisper rounded-full flex items-center justify-center mx-auto mb-4 border border-gold-soft/40">
           <Mail className="w-6 h-6 text-gold-deep" />
         </div>
-        <h2 className="font-display text-xl text-charcoal-deep mb-1">Check your email</h2>
+        <h2 className="font-display text-xl text-charcoal-deep mb-1">Verify your email</h2>
         <p className="text-sm text-greige font-body">
-          We've sent a verification link to your email address. Click the link to activate your account.
+          Enter the 6-digit code we sent to your email address, or click the link in the email to verify automatically.
         </p>
       </div>
 
+      {/* OTP entry form */}
+      <form onSubmit={handleVerifyCode} className="space-y-4 mb-5">
+        <Input
+          label="Verification Code"
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder="123456"
+          value={code}
+          onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setOtpError(null) }}
+          hint="6-digit code from your email"
+        />
+        {otpError && (
+          <p className="text-xs text-error-DEFAULT font-body">{otpError}</p>
+        )}
+        <Button
+          type="submit"
+          className="w-full"
+          isLoading={otpLoading}
+          disabled={otpLoading || code.length !== 6}
+          size="lg"
+        >
+          {otpLoading ? 'Verifying…' : 'Verify Email'}
+        </Button>
+      </form>
+
       <div className="bg-parchment rounded-xl p-3 text-xs text-greige font-body mb-5 space-y-1">
-        <p>The link expires in <span className="font-medium text-charcoal-deep">24 hours</span>.</p>
-        <p>Check spam / junk if you don't see it.</p>
+        <p>The code expires in <span className="font-medium text-charcoal-deep">24 hours</span>.</p>
+        <p>Check spam / junk if you don't see the email.</p>
       </div>
 
       {resendError && <p className="text-xs text-error-DEFAULT font-body text-center mb-2">{resendError}</p>}

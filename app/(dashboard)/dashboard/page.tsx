@@ -14,6 +14,8 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { MOCK_PATIENTS } from '@/data/patients'
 import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
+import { intakeApi } from '@/lib/api'
+import type { HealthRecord } from '@/types/intake'
 import { formatDate, cn } from '@/lib/utils'
 import type { Role } from '@/types/auth'
 
@@ -221,7 +223,15 @@ function WelcomeBanner({ name, role, chips }: {
 // ─── Patient view ─────────────────────────────────────────────────────────────
 
 function PatientView({ userName }: { userName: string }) {
-  const myRecords = MOCK_HEALTH_RECORDS.filter((r) => r.patientId === 'pat_001')
+  const [apiRecords, setApiRecords] = useState<HealthRecord[]>([])
+  const mockRecords = MOCK_HEALTH_RECORDS.filter((r) => r.patientId === 'pat_001')
+
+  useEffect(() => {
+    intakeApi.getRecords().then(setApiRecords).catch(() => {})
+  }, [])
+
+  // Merge: real records first, then mock records not duplicated
+  const myRecords = apiRecords.length > 0 ? apiRecords : mockRecords
   const abnormal  = myRecords.flatMap((r) => r.markers.filter((m) => m.isAbnormal))
   const [overall, setOverall] = useState(0)
   const [anim, setAnim]       = useState<number[]>(COMPLETENESS_ITEMS.map(() => 0))
