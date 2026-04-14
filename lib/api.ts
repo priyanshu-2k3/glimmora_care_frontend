@@ -10,6 +10,16 @@
  */
 
 import type { Role } from '@/types/auth'
+import type {
+  BulkConfirmResponse,
+  BulkPreviewResponse,
+  ConfirmResponse,
+  HealthRecord,
+  ManualEntryData,
+  ManualEntryResponse,
+  MarkerIn,
+  UploadResponse,
+} from '@/types/intake'
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000'
 export const API_BASE = `${API_HOST}/api/v1`
@@ -652,6 +662,93 @@ export const orgApi = {
   /** Patient: get my assigned doctor */
   getMyDoctor: () =>
     apiFetch<AssignedDoctorOut>('/patient/doctor'),
+}
+
+// ─── Intake API ───────────────────────────────────────────────────────────────
+export const intakeApi = {
+  /** Upload a lab report file and run Gemini OCR */
+  upload: async (file: File, patientId: string): Promise<UploadResponse> => {
+    const token = getAccessToken()
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('patient_id', patientId)
+    const res = await fetch(`${API_BASE}/intake/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Upload failed' }))
+      throw new ApiError(res.status, err.detail ?? 'Upload failed')
+    }
+    return res.json()
+  },
+
+  /** Confirm a draft record after user review */
+  confirm: (recordId: string, markers: MarkerIn[], title: string, notes?: string | null) =>
+    apiFetch<ConfirmResponse>('/intake/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ recordId, markers, title, notes }),
+    }),
+
+  /** Create a record from manual form entry */
+  manual: (data: ManualEntryData) =>
+    apiFetch<ManualEntryResponse>('/intake/manual', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** List health records (doctor/admin can pass patientId; patients always see own) */
+  getRecords: (patientId?: string) =>
+    apiFetch<HealthRecord[]>(`/intake/records${patientId ? `?patient_id=${patientId}` : ''}`),
+
+  /** Get a single health record by ID */
+  getRecord: (id: string) =>
+    apiFetch<HealthRecord>(`/intake/records/${id}`),
+
+  /** Share a record with another user by email */
+  shareRecord: (recordId: string, email: string, scope: string[]) =>
+    apiFetch<unknown>(`/intake/records/${recordId}/share`, {
+      method: 'POST',
+      body: JSON.stringify({ email, scope }),
+    }),
+
+  /** List all consent entries for a record */
+  getConsents: (recordId: string) =>
+    apiFetch<unknown[]>(`/intake/records/${recordId}/consents`),
+
+  /** Revoke a specific consent */
+  revokeConsent: (recordId: string, consentId: string) =>
+    apiFetch<unknown>(`/intake/records/${recordId}/consents/${consentId}`, {
+      method: 'DELETE',
+    }),
+}
+
+// ─── Bulk Import API ──────────────────────────────────────────────────────────
+export const bulkImportApi = {
+  /** Upload CSV/Excel file and get a preview of parsed rows */
+  preview: async (file: File): Promise<BulkPreviewResponse> => {
+    const token = getAccessToken()
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch(`${API_BASE}/bulk-import/preview`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Preview failed' }))
+      throw new ApiError(res.status, err.detail ?? 'Preview failed')
+    }
+    return res.json()
+  },
+
+  /** Confirm and save bulk import rows */
+  confirm: (rows: ManualEntryData[]) =>
+    apiFetch<BulkConfirmResponse>('/bulk-import/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }),
 }
 
 export default apiFetch
