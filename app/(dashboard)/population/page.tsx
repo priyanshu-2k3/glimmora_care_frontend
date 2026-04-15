@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { Globe, Users, TrendingUp, AlertTriangle, Baby, Heart } from 'lucide-react'
+import { Globe, Users, TrendingUp, AlertTriangle, Baby, Heart, ChevronRight } from 'lucide-react'
 import { POPULATION_DATA } from '@/data/population'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -82,11 +82,22 @@ export default function PopulationPage() {
   }, [])
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Population Intelligence</h1>
-        <p className="text-sm text-greige font-body mt-1">Aggregated anonymized data only · No individual identifiers · Maharashtra Division</p>
+    <div className="max-w-5xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Population</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+          Population Intelligence
+        </h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
+          Aggregated anonymized data only · No individual identifiers · Maharashtra Division
+        </p>
       </div>
+
+      <div className="space-y-6">
 
       {/* Privacy notice */}
       <div className="flex items-center gap-2 bg-parchment border border-sand-light rounded-xl px-4 py-3">
@@ -298,6 +309,7 @@ export default function PopulationPage() {
           </>
         )}
       </Tabs>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Bot, Activity, Pause, Loader2, AlertCircle, RotateCcw, Zap, ShieldCheck, TrendingUp } from 'lucide-react'
+import { Bot, Activity, Pause, Loader2, AlertCircle, RotateCcw, Zap, ShieldCheck, TrendingUp, ChevronRight } from 'lucide-react'
 import { MOCK_AGENTS } from '@/data/agents'
 import type { Agent, AgentStatus, ActivitySeverity } from '@/types/agent'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
@@ -102,11 +102,22 @@ export default function AgentsPage() {
   const allActivities = MOCK_AGENTS.flatMap((a) => a.activities).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Autonomous Agent Framework</h1>
-        <p className="text-sm text-greige font-body mt-1">5 controlled automation agents operating within governance boundaries</p>
+    <div className="max-w-5xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Agents</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+          Autonomous Agents
+        </h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
+          5 controlled automation agents operating within ethical governance boundaries
+        </p>
       </div>
+
+      <div className="space-y-6">
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4">
@@ -167,6 +178,7 @@ export default function AgentsPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, Eye, EyeOff, TrendingUp } from 'lucide-react'
+import { Activity, Eye, EyeOff, TrendingUp, ChevronRight } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area
@@ -98,11 +98,22 @@ export default function TwinPage() {
   const currentRisk = twin?.riskTrajectory.filter((d) => !d.predicted).at(-1)?.value ?? 0
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Digital Health Twin</h1>
-        <p className="text-sm text-greige font-body mt-1">Longitudinal health representation · Non-diagnostic · Confidence-scored</p>
+    <div className="max-w-5xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Digital Twin</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+          Digital Health Twin
+        </h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
+          Longitudinal health representation · Non-diagnostic · Confidence-scored
+        </p>
       </div>
+
+      <div className="space-y-6">
 
       {/* Patient selector */}
       {user?.role !== 'patient' && (
@@ -276,6 +287,7 @@ export default function TwinPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }

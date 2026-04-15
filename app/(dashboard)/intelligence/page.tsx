@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Brain, TrendingUp, LinkIcon, AlertTriangle } from 'lucide-react'
+import { Brain, TrendingUp, LinkIcon, AlertTriangle, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { MOCK_PATIENTS } from '@/data/patients'
 import { getTrajectoryByPatient, getInsightsByPatient, CORRELATIONS } from '@/data/risk-models'
@@ -38,13 +38,22 @@ export default function IntelligencePage() {
   const abnormalCount = allMarkers.filter((m) => m.isAbnormal).length
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-body text-2xl font-bold text-charcoal-deep">AGI Preventive Intelligence</h1>
-          <p className="text-sm text-greige font-body mt-1">Longitudinal trend modeling · Non-diagnostic · Confidence-scored</p>
+    <div className="max-w-5xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Intelligence</span>
         </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+          Preventive Intelligence
+        </h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
+          Longitudinal trend modeling · Non-diagnostic insights · Confidence-scored risk analysis
+        </p>
       </div>
+
+      <div className="space-y-6">
 
       {/* Disclaimer banner */}
       <div className="flex items-start gap-2 bg-azure-whisper border border-sapphire-mist/20 rounded-xl px-4 py-3">
@@ -200,6 +209,7 @@ export default function IntelligencePage() {
           </>
         )}
       </Tabs>
+      </div>
     </div>
   )
 }

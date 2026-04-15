@@ -10,7 +10,6 @@ import {
 import type { Role } from '@/types/auth'
 import { ROLES } from '@/lib/constants'
 import { useAuth } from '@/context/AuthContext'
-import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
@@ -19,27 +18,27 @@ import { cn } from '@/lib/utils'
 const ROLE_OPTIONS = (Object.keys(ROLES) as Role[]).map((r) => ({ value: r, label: ROLES[r].label }))
 
 const GENDER_OPTIONS = [
-  { value: '', label: 'Select gender' },
-  { value: 'male', label: 'Male' },
+  { value: '',       label: 'Select gender' },
+  { value: 'male',   label: 'Male' },
   { value: 'female', label: 'Female' },
 ]
 
 interface OwnerForm {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  password: string
+  firstName:       string
+  lastName:        string
+  email:           string
+  phone:           string
+  password:        string
   confirmPassword: string
-  role: Role
-  organization: string
-  gender: string
-  location: string
+  role:            Role
+  organization:    string
+  gender:          string
+  location:        string
 }
 
 const STEPS = [
   { id: 1, label: 'Your Details', icon: User },
-  { id: 2, label: 'Review', icon: Check },
+  { id: 2, label: 'Review',       icon: Check },
 ]
 
 export default function RegisterPage() {
@@ -49,23 +48,16 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [owner, setOwner] = useState<OwnerForm>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    role: 'patient',
-    organization: '',
-    gender: '',
-    location: '',
+    firstName: '', lastName: '', email: '', phone: '',
+    password: '', confirmPassword: '', role: 'patient',
+    organization: '', gender: '', location: '',
   })
 
   const pwRules = [
-    { label: 'At least 8 characters',  ok: owner.password.length >= 8 },
-    { label: 'Contains uppercase',      ok: /[A-Z]/.test(owner.password) },
-    { label: 'Contains number',         ok: /\d/.test(owner.password) },
-    { label: 'Passwords match',         ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
+    { label: 'At least 8 characters', ok: owner.password.length >= 8 },
+    { label: 'Contains uppercase',     ok: /[A-Z]/.test(owner.password) },
+    { label: 'Contains number',        ok: /\d/.test(owner.password) },
+    { label: 'Passwords match',        ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
   ]
 
   const step1Valid =
@@ -77,11 +69,11 @@ export default function RegisterPage() {
     try {
       await register({
         firstName: owner.firstName,
-        lastName: owner.lastName,
-        email: owner.email,
-        phone: owner.phone,
-        password: owner.password,
-        role: owner.role,
+        lastName:  owner.lastName,
+        email:     owner.email,
+        phone:     owner.phone,
+        password:  owner.password,
+        role:      owner.role,
       })
       router.push('/verify-email')
     } catch {
@@ -92,37 +84,58 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <div className="flex items-center gap-2 mb-5">
-        <Shield className="w-4 h-4 text-gold-soft" />
-        <span className="text-xs text-greige font-body uppercase tracking-widest">Create Account</span>
+    <div>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-1.5 mb-4">
+          <Shield className="w-3.5 h-3.5 text-gold-deep/60" />
+          <span className="text-[10px] text-greige font-body uppercase tracking-widest">Create Account</span>
+        </div>
+        <h2 className="font-display text-3xl text-charcoal-deep tracking-tight leading-tight">Join GlimmoraCare</h2>
+        <p className="text-sm text-stone font-body mt-1">Secure, encrypted health records from day one</p>
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-0 p-1 bg-parchment rounded-2xl mb-6">
         {STEPS.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-2 flex-1">
-            <div className={cn(
-              'w-7 h-7 rounded-full flex items-center justify-center text-xs font-body font-semibold shrink-0 transition-all',
-              step > s.id  ? 'bg-success-DEFAULT text-ivory-cream' :
-              step === s.id ? 'bg-gold-deep text-ivory-cream' :
-                              'bg-parchment text-greige border border-sand-light',
-            )}>
-              {step > s.id ? <Check className="w-3.5 h-3.5" /> : s.id}
+          <div key={s.id} className="flex items-center flex-1 last:flex-none">
+            <div className="flex items-center gap-2 flex-1">
+              <div
+                className={cn(
+                  'w-7 h-7 rounded-full flex items-center justify-center text-xs font-body font-semibold shrink-0 transition-all duration-300',
+                  step > s.id  ? 'bg-gold-deep text-ivory-cream' :
+                  step === s.id ? 'bg-charcoal-deep text-ivory-cream' :
+                                  'bg-white text-greige border border-sand-light',
+                )}
+              >
+                {step > s.id ? <Check className="w-3.5 h-3.5" /> : s.id}
+              </div>
+              <span
+                className={cn(
+                  'text-xs font-body hidden sm:block flex-1',
+                  step === s.id ? 'text-charcoal-deep font-medium' : step > s.id ? 'text-gold-deep' : 'text-greige',
+                )}
+              >
+                {s.label}
+              </span>
             </div>
-            <span className={cn('text-xs font-body hidden sm:block', step === s.id ? 'text-charcoal-deep font-medium' : 'text-greige')}>
-              {s.label}
-            </span>
-            {i < STEPS.length - 1 && <div className={cn('flex-1 h-px', step > s.id ? 'bg-success-DEFAULT' : 'bg-sand-light')} />}
+            {i < STEPS.length - 1 && (
+              <div
+                className={cn(
+                  'flex-1 h-px mx-2 transition-all duration-500',
+                  step > s.id ? 'bg-gold-deep' : 'bg-sand-light',
+                )}
+              />
+            )}
           </div>
         ))}
       </div>
 
       {/* Error banner (shown on step 2) */}
       {error && step === 2 && (
-        <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+        <div className="flex items-start gap-2.5 bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-3.5 mb-5">
           <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+          <p className="text-xs font-body text-error-DEFAULT leading-relaxed">{error}</p>
         </div>
       )}
 
@@ -130,29 +143,25 @@ export default function RegisterPage() {
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <h2 className="font-display text-xl text-charcoal-deep mb-0.5">Your Details</h2>
+            <h3 className="font-display text-xl text-charcoal-deep mb-0.5">Your Details</h3>
             <p className="text-xs text-greige font-body">You'll be the account owner and family admin.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Input
-                label="First Name"
-                placeholder="Priya"
-                value={owner.firstName}
-                onChange={(e) => setOwner((p) => ({ ...p, firstName: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                label="Last Name"
-                placeholder="Sharma"
-                value={owner.lastName}
-                onChange={(e) => setOwner((p) => ({ ...p, lastName: e.target.value }))}
-                required
-              />
-            </div>
+            <Input
+              label="First Name"
+              placeholder="Priya"
+              value={owner.firstName}
+              onChange={(e) => setOwner((p) => ({ ...p, firstName: e.target.value }))}
+              required
+            />
+            <Input
+              label="Last Name"
+              placeholder="Sharma"
+              value={owner.lastName}
+              onChange={(e) => setOwner((p) => ({ ...p, lastName: e.target.value }))}
+              required
+            />
             <div className="col-span-2">
               <Input
                 label="Email Address"
@@ -215,7 +224,11 @@ export default function RegisterPage() {
                 value={owner.password}
                 onChange={(e) => setOwner((p) => ({ ...p, password: e.target.value }))}
                 rightIcon={
-                  <button type="button" onClick={() => setShowPw(!showPw)}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="cursor-pointer text-greige hover:text-stone transition-colors"
+                  >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 }
@@ -233,11 +246,18 @@ export default function RegisterPage() {
           </div>
 
           {owner.password && (
-            <div className="bg-parchment rounded-xl p-3 grid grid-cols-2 gap-1.5">
+            <div className="bg-parchment border border-sand-light rounded-2xl p-3.5 grid grid-cols-2 gap-2">
               {pwRules.map((rule) => (
-                <div key={rule.label} className="flex items-center gap-1.5">
-                  <div className={cn('w-3.5 h-3.5 rounded-full shrink-0', rule.ok ? 'bg-success-DEFAULT' : 'bg-sand-DEFAULT')} />
-                  <span className={cn('text-[11px] font-body', rule.ok ? 'text-success-DEFAULT' : 'text-greige')}>
+                <div key={rule.label} className="flex items-center gap-2">
+                  <div
+                    className={cn(
+                      'w-4 h-4 rounded-full shrink-0 flex items-center justify-center',
+                      rule.ok ? 'bg-gold-deep' : 'bg-sand-light',
+                    )}
+                  >
+                    {rule.ok && <Check className="w-2.5 h-2.5 text-ivory-cream" />}
+                  </div>
+                  <span className={cn('text-[11px] font-body', rule.ok ? 'text-charcoal-deep' : 'text-greige')}>
                     {rule.label}
                   </span>
                 </div>
@@ -245,7 +265,12 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <Button className="w-full" disabled={!step1Valid} onClick={() => setStep(2)} size="lg">
+          <Button
+            className="w-full mt-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+            disabled={!step1Valid}
+            onClick={() => setStep(2)}
+            size="lg"
+          >
             Continue to Review
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -256,37 +281,48 @@ export default function RegisterPage() {
       {step === 2 && (
         <div className="space-y-4">
           <div>
-            <h2 className="font-display text-xl text-charcoal-deep mb-0.5">Review your details</h2>
+            <h3 className="font-display text-xl text-charcoal-deep mb-0.5">Review your details</h3>
             <p className="text-xs text-greige font-body">Confirm before creating your account.</p>
           </div>
 
-          <div className="bg-parchment rounded-xl p-4 space-y-3">
-            <p className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wide">Account Owner</p>
+          <div className="bg-gradient-to-r from-ivory-cream to-white border border-sand-light rounded-2xl p-4">
+            <p className="text-[10px] font-body font-semibold text-gold-deep uppercase tracking-widest mb-3">
+              Account Owner
+            </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center text-sm font-body font-semibold text-gold-deep">
+              <div className="w-11 h-11 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center text-sm font-display font-semibold text-charcoal-deep shrink-0">
                 {[owner.firstName[0], owner.lastName[0]].filter(Boolean).join('').toUpperCase() || 'AC'}
               </div>
-              <div>
-                <p className="text-sm font-body font-semibold text-charcoal-deep">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-body font-semibold text-charcoal-deep truncate">
                   {[owner.firstName, owner.lastName].filter(Boolean).join(' ')}
                 </p>
-                <p className="text-xs text-greige">{owner.email} · {ROLES[owner.role]?.label}</p>
-                <p className="text-xs text-greige">{owner.phone}</p>
+                <p className="text-xs text-greige font-body truncate">
+                  {owner.email} · {ROLES[owner.role]?.label}
+                </p>
+                <p className="text-xs text-greige font-body">{owner.phone}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-ivory-warm border border-sand-light rounded-xl p-3 text-xs text-greige font-body">
-            By creating this account, you agree to our Terms of Service and Privacy Policy.
-            A verification email will be sent to{' '}
-            <span className="font-medium text-charcoal-deep">{owner.email}</span>.
+          <div className="bg-azure-whisper border border-sapphire-mist/20 rounded-2xl p-3.5">
+            <p className="text-[11px] text-sapphire-deep font-body leading-relaxed">
+              By creating this account, you agree to our Terms of Service and Privacy Policy.
+              A verification email will be sent to{' '}
+              <span className="font-semibold">{owner.email}</span>.
+            </p>
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(1)}>
+            <Button variant="outline" onClick={() => setStep(1)} size="lg">
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <Button className="flex-1" onClick={handleSubmit} isLoading={isLoading} size="lg">
+            <Button
+              className="flex-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+              onClick={handleSubmit}
+              isLoading={isLoading}
+              size="lg"
+            >
               <UserPlus className="w-4 h-4" />
               {isLoading ? 'Creating account...' : 'Create Account'}
             </Button>
@@ -296,10 +332,10 @@ export default function RegisterPage() {
 
       <p className="mt-5 text-center text-xs text-greige font-body">
         Already have an account?{' '}
-        <Link href="/login" className="text-gold-deep hover:text-gold-muted transition-colors">
-          Sign in
+        <Link href="/login" className="text-gold-deep hover:text-gold-muted font-medium transition-colors">
+          Sign in →
         </Link>
       </p>
-    </Card>
+    </div>
   )
 }

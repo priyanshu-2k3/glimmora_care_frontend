@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Info, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Send, Bot, User, Info, AlertTriangle, RotateCcw, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
 import type { Persona } from '@/types/chat'
@@ -94,11 +94,20 @@ export default function AssistantsPage() {
   const personas = Object.entries(PERSONA_CONFIG) as [Persona, typeof PERSONA_CONFIG[Persona]][]
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">AI Assistant</h1>
-        <p className="text-sm text-greige font-body mt-1">Persona-based intelligence assistant · Non-diagnostic · Confidence-scored</p>
+    <div className="max-w-4xl mx-auto animate-fade-in">
+      <div className="mb-6">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Assistant</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">AI Assistant</h1>
+        <p className="text-sm text-stone font-body mt-2">
+          Persona-based intelligence · Non-diagnostic · Confidence-scored
+        </p>
       </div>
+
+      <div className="space-y-4">
 
       {/* Disclaimer */}
       <div className="flex items-start gap-2 bg-warning-soft/25 border border-warning-soft/60 rounded-xl px-4 py-3">
@@ -221,6 +230,7 @@ export default function AssistantsPage() {
           </div>
         </div>
       </Card>
+      </div>
     </div>
   )
 }
