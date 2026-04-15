@@ -4,9 +4,9 @@
 
 Two living documents must be kept up to date at all times:
 
-### `doc/feature_list.csv`
+### `D:\BAAREZ\Glimmora Care\doc\feature_list.csv`
 Every time you build, modify, or integrate a feature:
-1. Open `doc/feature_list.csv`
+1. Open `D:\BAAREZ\Glimmora Care\doc\feature_list.csv`
 2. Find the row for the affected feature
 3. Update the relevant % column(s):
    - **Frontend %** — UI exists and renders correctly (0/50/100)
@@ -25,15 +25,15 @@ Every time an API endpoint is created or integrated:
 
 ## Project Identity
 - **Project:** GlimmoraCare Phase 1 — Preventive Intelligence Engine
-- **Type:** Frontend-only Next.js application with mock data (no database, no real AI)
+- **Type:** Next.js frontend fully integrated with FastAPI backend at http://127.0.0.1:8000/api/v1
 - **Stack:** Next.js 16.1.6, React 19, TypeScript 5, Tailwind CSS 4
 
 ## Absolute Rules
 
 ### Architecture
-- **Frontend only** — never create API routes or server actions that connect to real databases
-- **Mock data only** — all data lives in `data/*.ts` files; never fetch from external APIs
-- **No real AI** — all AI responses are pre-scripted in `data/chat-responses.ts`
+- **Real API** — all data is fetched from the FastAPI backend via `lib/api.ts`
+- **No mock data for auth/health features** — `data/*.ts` is only for demo/fallback users
+- **Real AI** — Gemini 2.5 Flash via backend `/api/v1/chat`
 - App directory lives at root `app/` (NOT `src/app/`) — path alias `@/*` maps to project root
 
 ### Tailwind / Styling
@@ -77,9 +77,9 @@ Gradients: bg-ivory-flow, bg-gold-whisper, bg-intelligence-depth, bg-noir-editor
 - Minimum 8-10 patient records, 20+ health records in mock data
 
 ### Authentication (Mock)
-- Mock auth via `context/AuthContext.tsx` + localStorage
-- 5 roles: `patient`, `doctor`, `ngo_worker`, `gov_analyst`, `admin`
-- Login selects a pre-built user from `data/users.ts` — no real credential validation
+- Real auth via `context/AuthContext.tsx` — JWT access + refresh tokens in localStorage
+- 5 roles: `patient`, `doctor`, `admin`, `super_admin` (ngo_worker / gov_analyst are frontend-only demo roles)
+- `demoLogin()` uses `data/users.ts` mock users; `login()` hits real backend POST /auth/login
 - Always check auth in dashboard layout and redirect to `/login` if missing
 
 ### AI/Chat Conventions

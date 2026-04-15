@@ -138,9 +138,10 @@ function VerifyEmailContent() {
           <RefreshCw className="w-4 h-4" />
           {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend verification email'}
         </Button>
-        <Link href="/login" className="block text-center text-xs text-greige hover:text-gold-deep font-body transition-colors mt-4">
-          Back to sign in
-        </Link>
+        <p className="text-xs text-greige font-body text-center mt-2">
+          You must be signed in to resend.{' '}
+          <Link href="/login" className="text-gold-deep hover:underline font-body">Sign in first →</Link>
+        </p>
       </Card>
     )
   }

@@ -3,15 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, Mail, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2, Download } from 'lucide-react'
+import { Shield, Mail, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2, Download, Smartphone } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { authApi, ApiError } from '@/lib/api'
 
-type Step = 'choose' | 'app' | 'email' | 'verify' | 'done'
-type Method = 'app' | 'email'
+type Step = 'choose' | 'app' | 'sms' | 'email' | 'verify' | 'done'
+type Method = 'app' | 'sms' | 'email'
 
 export default function TwoFASetupPage() {
   const router = useRouter()
@@ -22,6 +22,7 @@ export default function TwoFASetupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+  const [smsPhone, setSmsPhone] = useState('')
 
   // TOTP data from backend
   const [totpSecret, setTotpSecret] = useState('')
@@ -76,6 +77,23 @@ export default function TwoFASetupPage() {
     setStep('email')
   }
 
+  async function handleStartSms() {
+    if (!smsPhone.trim() || smsPhone.trim().length < 8) {
+      setError('Enter a valid phone number')
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      await authApi.twofa.smsSetup(smsPhone.trim())
+      setStep('verify')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to send OTP')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   async function handleSendEmailOtp() {
     setIsLoading(true)
     setError(null)
@@ -98,6 +116,8 @@ export default function TwoFASetupPage() {
     try {
       if (method === 'app') {
         await authApi.twofa.totpVerify(otp)
+      } else if (method === 'sms') {
+        await authApi.twofa.smsVerify(otp)
       } else {
         await authApi.twofa.emailVerify(otp)
       }
@@ -132,8 +152,9 @@ export default function TwoFASetupPage() {
           </div>
           <div className="space-y-3 mb-5">
             {[
-              { id: 'app' as Method,   icon: Key,   label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
-              { id: 'email' as Method, icon: Mail,  label: 'Email OTP',         desc: 'Receive a one-time code to your registered email' },
+              { id: 'app' as Method,   icon: Key,        label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
+              { id: 'sms' as Method,   icon: Smartphone, label: 'SMS / Phone',       desc: 'Get a one-time code on your phone number' },
+              { id: 'email' as Method, icon: Mail,       label: 'Email OTP',         desc: 'Receive a one-time code to your registered email' },
             ].map((opt) => (
               <button
                 key={opt.id}
@@ -154,7 +175,7 @@ export default function TwoFASetupPage() {
           </div>
           <Button
             className="w-full"
-            onClick={() => { setError(null); method === 'app' ? handleStartTotp() : handleStartEmail() }}
+            onClick={() => { setError(null); if (method === 'app') { handleStartTotp() } else if (method === 'sms') { setStep('sms') } else { handleStartEmail() } }}
             isLoading={isLoading}
             size="lg"
           >
@@ -223,6 +244,35 @@ export default function TwoFASetupPage() {
         </>
       )}
 
+      {/* Step: SMS setup */}
+      {step === 'sms' && (
+        <>
+          <div className="mb-5">
+            <h2 className="font-display text-xl text-charcoal-deep mb-1">SMS Authentication</h2>
+            <p className="text-sm text-greige font-body">Enter your phone number. We'll send a one-time code each time you sign in.</p>
+          </div>
+          <Input
+            label="Phone Number"
+            type="tel"
+            placeholder="+91 98765 43210"
+            value={smsPhone}
+            onChange={(e) => { setSmsPhone(e.target.value); setError(null) }}
+          />
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
+            <Button
+              className="flex-1"
+              onClick={handleStartSms}
+              isLoading={isLoading}
+              disabled={isLoading || smsPhone.trim().length < 8}
+            >
+              <Smartphone className="w-4 h-4" />
+              Send OTP
+            </Button>
+          </div>
+        </>
+      )}
+
       {/* Step: email OTP setup */}
       {step === 'email' && (
         <>
@@ -251,6 +301,8 @@ export default function TwoFASetupPage() {
             <p className="text-sm text-greige font-body">
               {method === 'app'
                 ? 'Enter the 6-digit code from your authenticator app.'
+                : method === 'sms'
+                ? 'Enter the OTP sent to your phone.'
                 : 'Enter the code sent to your email.'}
             </p>
           </div>
@@ -265,7 +317,7 @@ export default function TwoFASetupPage() {
               onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setError(null) }}
             />
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setStep(method === 'app' ? 'app' : 'email')}><ArrowLeft className="w-4 h-4" /></Button>
+              <Button type="button" variant="outline" onClick={() => setStep(method === 'app' ? 'app' : method === 'sms' ? 'sms' : 'email')}><ArrowLeft className="w-4 h-4" /></Button>
               <Button type="submit" className="flex-1" isLoading={isLoading} disabled={otp.length < 6}>
                 {isLoading ? 'Verifying…' : 'Enable 2FA'}
               </Button>
