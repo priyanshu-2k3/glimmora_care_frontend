@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { WifiOff, Wifi, RefreshCw, CheckCircle, AlertTriangle, Clock, HardDrive } from 'lucide-react'
+import { WifiOff, Wifi, RefreshCw, CheckCircle, AlertTriangle, Clock, HardDrive, ChevronRight } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -52,11 +52,22 @@ export default function OfflinePage() {
   const storagePercent = (storageUsed / storageTotal) * 100
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Offline Village Mode</h1>
-        <p className="text-sm text-greige font-body mt-1">Tablet-based offline data collection with encrypted local storage and delta sync</p>
+    <div className="max-w-3xl mx-auto animate-fade-in">
+      <div className="mb-8">
+        <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+          <span>GlimmoraCare</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gold-deep">Offline Mode</span>
+        </div>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+          Offline Village Mode
+        </h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
+          Tablet-based offline data collection with encrypted local storage and delta sync
+        </p>
       </div>
+
+      <div className="space-y-6">
 
       {/* Sync status card */}
       <Card>
@@ -233,6 +244,7 @@ export default function OfflinePage() {
           <p className="text-sm font-body text-success-DEFAULT font-medium">All records synced. Local storage is up to date.</p>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -3,22 +3,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, LogIn, Shield, ChevronDown, Zap, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Shield, Zap, AlertCircle, User, Stethoscope, Settings, Crown } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import type { Role } from '@/types/auth'
-import { ROLES } from '@/lib/constants'
 import { MOCK_USERS } from '@/data/users'
-import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
-const ROLE_OPTIONS: { role: Role; label: string; description: string }[] = [
-  { role: 'patient',     label: 'Patient',    description: 'Priya Sharma — View your health records' },
-  { role: 'doctor',      label: 'Doctor',     description: 'Dr. Arjun Mehta — Patient care & intelligence' },
-  { role: 'admin',       label: 'Admin',      description: 'Neha Kapoor — Operational management' },
-  { role: 'super_admin', label: 'Super Admin', description: 'Admin Console — Full system control' },
+const ROLE_OPTIONS: { role: Role; label: string; description: string; icon: React.ElementType; color: string }[] = [
+  { role: 'patient',     label: 'Patient',     description: 'Priya Sharma',    icon: User,        color: 'bg-azure-whisper border-sapphire-mist/40 text-sapphire-deep' },
+  { role: 'doctor',      label: 'Doctor',      description: 'Dr. Arjun Mehta', icon: Stethoscope, color: 'bg-champagne border-gold-soft/40 text-gold-deep' },
+  { role: 'admin',       label: 'Admin',       description: 'Neha Kapoor',     icon: Settings,    color: 'bg-parchment border-sand-light text-stone' },
+  { role: 'super_admin', label: 'Super Admin', description: 'System Console',  icon: Crown,       color: 'bg-charcoal-deep/5 border-charcoal-deep/20 text-charcoal-deep' },
 ]
 
 type LoginMode = 'real' | 'demo'
@@ -60,19 +57,26 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <div className="flex items-center gap-2 mb-5">
-        <Shield className="w-4 h-4 text-gold-soft" />
-        <span className="text-xs text-greige font-body uppercase tracking-widest">Secure Login</span>
+    <div>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-1.5 mb-4">
+          <Shield className="w-3.5 h-3.5 text-gold-deep/60" />
+          <span className="text-[10px] text-greige font-body uppercase tracking-widest">Secure Portal</span>
+        </div>
+        <h2 className="font-display text-3xl text-charcoal-deep tracking-tight leading-tight">Welcome back</h2>
+        <p className="text-sm text-stone font-body mt-1">Sign in to your GlimmoraCare account</p>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex gap-1 p-1 bg-parchment rounded-xl mb-5">
+      <div className="flex gap-1 p-1 bg-parchment rounded-2xl mb-6">
         <button
           onClick={() => { setMode('real'); clearError() }}
           className={cn(
-            'flex-1 py-1.5 text-xs font-body font-medium rounded-lg transition-all',
-            mode === 'real' ? 'bg-ivory-cream text-charcoal-deep shadow-sm' : 'text-greige hover:text-charcoal-deep',
+            'flex-1 py-2 text-xs font-body font-medium rounded-xl transition-all duration-200',
+            mode === 'real'
+              ? 'bg-white text-charcoal-deep shadow-sm border border-sand-light'
+              : 'text-greige hover:text-stone'
           )}
         >
           Sign In
@@ -80,8 +84,10 @@ export default function LoginPage() {
         <button
           onClick={() => { setMode('demo'); clearError() }}
           className={cn(
-            'flex-1 py-1.5 text-xs font-body font-medium rounded-lg transition-all flex items-center justify-center gap-1',
-            mode === 'demo' ? 'bg-ivory-cream text-charcoal-deep shadow-sm' : 'text-greige hover:text-charcoal-deep',
+            'flex-1 py-2 text-xs font-body font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5',
+            mode === 'demo'
+              ? 'bg-white text-charcoal-deep shadow-sm border border-sand-light'
+              : 'text-greige hover:text-stone'
           )}
         >
           <Zap className="w-3 h-3" />
@@ -89,11 +95,11 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {/* Error banner */}
+      {/* Error */}
       {error && (
-        <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
+        <div className="flex items-start gap-2.5 bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-3.5 mb-5">
           <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+          <p className="text-xs font-body text-error-DEFAULT leading-relaxed">{error}</p>
         </div>
       )}
 
@@ -108,7 +114,6 @@ export default function LoginPage() {
             onChange={(e) => { setEmail(e.target.value); handleFieldChange() }}
             required
           />
-
           <Input
             label="Password"
             type={showPassword ? 'text' : 'password'}
@@ -117,13 +122,17 @@ export default function LoginPage() {
             onChange={(e) => { setPassword(e.target.value); handleFieldChange() }}
             required
             rightIcon={
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="cursor-pointer">
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="cursor-pointer text-greige hover:text-stone transition-colors">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             }
           />
-
-          <Button type="submit" className="w-full mt-2" isLoading={isLoading} size="lg">
+          <Button
+            type="submit"
+            className="w-full mt-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+            isLoading={isLoading}
+            size="lg"
+          >
             <LogIn className="w-4 h-4" />
             {isLoading ? 'Signing in...' : 'Sign In'}
           </Button>
@@ -134,52 +143,68 @@ export default function LoginPage() {
       {mode === 'demo' && (
         <form onSubmit={handleDemoLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-body font-medium text-charcoal-warm mb-1.5">
-              Login as
-            </label>
-            <div className="relative">
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as Role)}
-                className="w-full bg-ivory-warm border border-sand-DEFAULT rounded-xl px-4 py-2.5 text-sm font-body text-charcoal-deep appearance-none cursor-pointer focus:outline-none focus:border-gold-soft focus:ring-1 focus:ring-gold-soft/30 transition-all duration-200 pr-10"
-              >
-                {ROLE_OPTIONS.map((opt) => (
-                  <option key={opt.role} value={opt.role}>
-                    {opt.label} — {opt.description}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-greige pointer-events-none" />
+            <p className="text-xs font-body font-medium text-stone mb-3">Select a role to explore</p>
+            <div className="grid grid-cols-2 gap-2">
+              {ROLE_OPTIONS.map((opt) => {
+                const Icon = opt.icon
+                const isSelected = selectedRole === opt.role
+                return (
+                  <button
+                    key={opt.role}
+                    type="button"
+                    onClick={() => setSelectedRole(opt.role)}
+                    className={cn(
+                      'relative text-left p-3 rounded-2xl border transition-all duration-200',
+                      isSelected
+                        ? 'border-gold-deep bg-gold-whisper shadow-sm'
+                        : 'border-sand-light bg-ivory-warm hover:border-gold-soft/60 hover:bg-champagne/30'
+                    )}
+                  >
+                    <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center mb-2', opt.color.split(' ').slice(0, 2).join(' '))}>
+                      <Icon className={cn('w-3.5 h-3.5', opt.color.split(' ')[2])} />
+                    </div>
+                    <p className={cn('text-xs font-body font-semibold leading-tight', isSelected ? 'text-charcoal-deep' : 'text-stone')}>{opt.label}</p>
+                    <p className="text-[10px] text-greige font-body mt-0.5 truncate">{opt.description}</p>
+                    {isSelected && (
+                      <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-gold-deep" />
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           {selectedUser && (
-            <div className="bg-parchment rounded-xl p-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gold-whisper flex items-center justify-center text-xs font-body font-semibold text-charcoal-deep border border-gold-soft/40 shrink-0">
-                {selectedUser.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+            <div className="bg-parchment border border-sand-light rounded-2xl p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gold-whisper flex items-center justify-center text-xs font-display font-semibold text-charcoal-deep border border-gold-soft/40 shrink-0">
+                {selectedUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-body font-medium text-charcoal-deep truncate">{selectedUser.name}</p>
-                <p className="text-xs text-greige truncate">{selectedUser.organization || selectedUser.location}</p>
+                <p className="text-[11px] text-greige font-body truncate">{selectedUser.organization || selectedUser.location}</p>
               </div>
-              <Badge variant="gold">{ROLES[selectedUser.role].label}</Badge>
             </div>
           )}
 
-          <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-xl p-3">
-            <p className="text-xs text-warning-DEFAULT font-body">
-              Demo mode uses mock data — no real account needed. To test real auth, create an account first.
+          <div className="bg-warning-soft/60 border border-warning-DEFAULT/15 rounded-2xl p-3.5">
+            <p className="text-[11px] text-warning-DEFAULT font-body leading-relaxed">
+              Demo mode uses mock data — no real account required.
             </p>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={isLoading} size="lg">
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+            isLoading={isLoading}
+            size="lg"
+          >
             <Zap className="w-4 h-4" />
             {isLoading ? 'Loading demo...' : 'Enter Demo'}
           </Button>
         </form>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-5 flex items-center justify-between border-t border-sand-light pt-4">
         <Link href="/forgot-password" className="text-xs text-greige hover:text-gold-deep font-body transition-colors">
           Forgot password?
         </Link>
@@ -188,12 +213,12 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <p className="mt-4 text-center text-xs text-greige font-body">
+      <p className="mt-3.5 text-center text-xs text-greige font-body">
         New to GlimmoraCare?{' '}
-        <Link href="/register" className="text-gold-deep hover:text-gold-muted transition-colors">
-          Create account
+        <Link href="/register" className="text-gold-deep hover:text-gold-muted font-medium transition-colors">
+          Create account →
         </Link>
       </p>
-    </Card>
+    </div>
   )
 }

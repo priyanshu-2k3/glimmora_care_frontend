@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -79,7 +79,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   if (!user) return null
 
   return (
-    <header className="h-14 bg-white border-b border-sand-light flex items-center px-5 gap-4 sticky top-0 z-10">
+    <header className="h-14 bg-white/95 backdrop-blur-sm border-b border-sand-light/60 shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex items-center px-5 gap-4 sticky top-0 z-10">
       {/* Mobile menu */}
       <button
         onClick={onMenuClick}
@@ -90,9 +90,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       {/* Page title */}
       <div className="flex-1 min-w-0">
-        <h2 className="text-sm font-body font-semibold text-charcoal-deep leading-none truncate">
-          {pageTitle}
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-body text-greige hidden md:block">GlimmoraCare</span>
+          <ChevronRight className="w-3.5 h-3.5 text-greige/50 hidden md:block" />
+          <h2 className="text-sm font-body font-semibold text-charcoal-deep leading-none truncate">{pageTitle}</h2>
+        </div>
       </div>
 
       {/* Actions */}
@@ -128,7 +130,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-gold-deep rounded-full" />
+              <span className="absolute top-1.5 right-1.5 min-w-[14px] h-3.5 bg-gold-deep text-ivory-cream text-[8px] font-bold font-body rounded-full flex items-center justify-center px-0.5">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             )}
           </button>
 
@@ -217,11 +221,13 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <div className="w-px h-5 bg-sand-light mx-1" />
 
         {/* User */}
-        <div className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-parchment/60 transition-colors cursor-default">
-          <Avatar name={user.name} size="sm" />
-          <div className="hidden sm:block leading-tight">
-            <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
-            <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+        <div className="bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 hover:border-gold-soft/40 hover:bg-champagne/20 transition-all duration-200 cursor-default">
+          <div className="flex items-center gap-2">
+            <Avatar name={user.name} size="sm" />
+            <div className="hidden sm:block leading-tight">
+              <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
+              <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+            </div>
           </div>
         </div>
       </div>
