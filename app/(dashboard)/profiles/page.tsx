@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
-import type { ProfileRelation } from '@/types/profile'
+import type { Profile, ProfileRelation } from '@/types/profile'
 
 const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
   self: User,
@@ -31,9 +31,18 @@ const RELATION_OPTIONS = [
 const BLOOD_OPTIONS = ['A+', 'A−', 'B+', 'B−', 'O+', 'O−', 'AB+', 'AB−'].map((v) => ({ value: v, label: v }))
 
 export default function ProfilesPage() {
-  const { profiles, activeProfile, switchProfile, canSwitchProfile, createProfile, deleteProfile } = useProfile()
+  const { profiles, activeProfile, switchProfile, canSwitchProfile, createProfile, updateProfile, deleteProfile } = useProfile()
   const [showCreate, setShowCreate] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
+  const [editForm, setEditForm] = useState<{ name: string; dob: string; bloodGroup: string; gender: 'male' | 'female' | 'other'; relation: ProfileRelation }>({ name: '', dob: '', bloodGroup: 'B+', gender: 'female', relation: 'spouse' })
   const [form, setForm] = useState<{ name: string; dob: string; bloodGroup: string; gender: 'male' | 'female' | 'other'; relation: ProfileRelation }>({ name: '', dob: '', bloodGroup: 'B+', gender: 'female', relation: 'spouse' })
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingProfile) return
+    await updateProfile(editingProfile.id, editForm)
+    setEditingProfile(null)
+  }
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -110,7 +119,13 @@ export default function ProfilesPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
-                  <button className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors">
+                  <button
+                    onClick={() => {
+                      setEditingProfile(profile)
+                      setEditForm({ name: profile.name, dob: profile.dob, bloodGroup: profile.bloodGroup, gender: profile.gender, relation: profile.relation })
+                    }}
+                    className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors"
+                  >
                     <Pencil className="w-4 h-4" />
                   </button>
                 </div>
@@ -165,6 +180,56 @@ export default function ProfilesPage() {
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="flex-1">Create Profile</Button>
                 <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit profile form */}
+      {editingProfile && (
+        <Card className="border-gold-soft/40">
+          <CardHeader>
+            <CardTitle className="font-body text-lg">Edit Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <Input
+                label="Full Name"
+                placeholder="e.g. Rohit Sharma"
+                value={editForm.name}
+                onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                required
+              />
+              <Select
+                label="Relation"
+                options={RELATION_OPTIONS}
+                value={editForm.relation}
+                onChange={(e) => setEditForm((p) => ({ ...p, relation: e.target.value as ProfileRelation }))}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={editForm.dob}
+                  onChange={(e) => setEditForm((p) => ({ ...p, dob: e.target.value }))}
+                />
+                <Select
+                  label="Blood Group"
+                  options={BLOOD_OPTIONS}
+                  value={editForm.bloodGroup}
+                  onChange={(e) => setEditForm((p) => ({ ...p, bloodGroup: e.target.value }))}
+                />
+              </div>
+              <Select
+                label="Gender"
+                options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]}
+                value={editForm.gender}
+                onChange={(e) => setEditForm((p) => ({ ...p, gender: e.target.value as 'male' | 'female' | 'other' }))}
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setEditingProfile(null)}>Cancel</Button>
+                <Button type="submit" className="flex-1">Save Changes</Button>
               </div>
             </form>
           </CardContent>

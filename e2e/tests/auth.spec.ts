@@ -8,46 +8,10 @@
  *  - Logout: button[title="Sign out"] in Sidebar
  */
 
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { registerUser, loginUser, apiRequest, testUser } from '../helpers/api'
 import { getDevOtp, getUserId, closeDb } from '../helpers/db'
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-/** Inject access + refresh tokens into localStorage so AuthContext rehydrates */
-async function injectTokens(
-  page: Page,
-  accessToken: string,
-  refreshToken: string,
-  extras: { id?: string; name?: string; email?: string; role?: string } = {},
-) {
-  await page.addInitScript(
-    ({ at, rt, id, name, email, role }) => {
-      localStorage.setItem('gc_access_token', at)
-      localStorage.setItem('gc_refresh_token', rt)
-      localStorage.setItem(
-        'glimmora_care_user',
-        JSON.stringify({
-          id: id ?? 'placeholder',
-          name: name ?? 'Test User',
-          email: email ?? 'test@glimmora.test',
-          role: role ?? 'patient',
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          accessToken: at,
-        }),
-      )
-    },
-    {
-      at: accessToken,
-      rt: refreshToken,
-      id: extras.id ?? 'placeholder',
-      name: extras.name ?? 'Test User',
-      email: extras.email ?? 'test@glimmora.test',
-      role: extras.role ?? 'patient',
-    },
-  )
-}
+import { injectTokens } from '../helpers/auth'
 
 // ── Teardown ──────────────────────────────────────────────────────────────────
 
