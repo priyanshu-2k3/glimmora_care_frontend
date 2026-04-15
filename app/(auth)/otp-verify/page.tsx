@@ -114,7 +114,8 @@ export default function OtpVerifyPage() {
 
       localStorage.setItem('glimmora_care_user', JSON.stringify(newUser))
       sessionStorage.removeItem(PHONE_SESSION_KEY)
-      router.push('/dashboard')
+      // Use full navigation so AuthContext rehydrates from localStorage on the new page
+      window.location.href = '/dashboard'
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.status === 400 ? 'Invalid or expired OTP. Please try again.' : err.detail)

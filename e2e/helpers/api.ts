@@ -64,13 +64,18 @@ export async function apiRequest(
   })
 }
 
-/** Generate a unique test user. */
-export function testUser(suffix: string = Date.now().toString()) {
+// Run-unique prefix so repeated test runs don't collide on the same email/phone
+const RUN_TS = Date.now().toString().slice(-7)
+
+/** Generate a unique test user for this test run. */
+export function testUser(suffix: string = RUN_TS) {
+  // Derive a fully-numeric phone suffix (strip non-digits, fall back to RUN_TS)
+  const numericSuffix = (suffix.replace(/\D/g, '') + RUN_TS).slice(-10)
   return {
     firstName: 'Test',
     lastName: 'User',
-    email: `test_${suffix}@glimmora.test`,
-    phone: `+91${suffix.slice(-10).padStart(10, '9')}`,
+    email: `gc_${suffix}_${RUN_TS}@example.com`,
+    phone: `+91${numericSuffix.padStart(10, '9')}`,
     password: 'TestPass123!',
   }
 }

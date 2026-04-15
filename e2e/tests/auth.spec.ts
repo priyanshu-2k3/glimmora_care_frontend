@@ -120,7 +120,7 @@ test('T03: email OTP verification succeeds', async ({ page }) => {
 
   // Expect "Email verified!" heading OR dashboard redirect
   await expect(
-    page.locator('h2:has-text("Email verified!"), text="Email verified"'),
+    page.locator('h2:has-text("Email verified!")'),
   ).toBeVisible({ timeout: 15_000 })
 })
 
