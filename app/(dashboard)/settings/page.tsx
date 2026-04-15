@@ -527,6 +527,7 @@ export default function SettingsPage() {
                     return (
                       <div
                         key={session.id}
+                        data-testid="session-card"
                         className={cn(
                           'flex items-start gap-3 p-4 rounded-xl border transition-colors',
                           session.is_current
