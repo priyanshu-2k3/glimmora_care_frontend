@@ -47,7 +47,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
 
   // Only patients have profiles/families; non-patients and demo users skip API calls
-  const isRealPatient = !!user?.accessToken && user.role === 'patient'
+  const isRealUser = !!user?.accessToken && (user.role === 'patient' || user.role === 'doctor')
 
   const canSwitchProfile = (() => {
     if (!user || !family) return false
@@ -58,7 +58,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   })()
 
   const reloadProfiles = useCallback(async () => {
-    if (!isRealPatient) return
+    if (!isRealUser) return
     setIsLoading(true)
     try {
       const [list, activeRes] = await Promise.all([
@@ -78,11 +78,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [isRealPatient])
+  }, [isRealUser])
 
   // Load family data — also handles case where familyId is stale/missing in localStorage
   const loadFamily = useCallback(async () => {
-    if (!isRealPatient) return
+    if (!isRealUser) return
     try {
       let familyId = user?.familyId ?? null
       // If familyId missing from cached user, fetch fresh from /auth/me
@@ -100,10 +100,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-  }, [isRealPatient, user?.familyId])
+  }, [isRealUser, user?.familyId])
 
   useEffect(() => {
-    if (user && isRealPatient) {
+    if (user && isRealUser) {
       reloadProfiles()
       loadFamily()
     } else {
@@ -112,11 +112,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setFamily(null)
       setFamilyMembers([])
     }
-  }, [user?.id, user?.familyId, isRealPatient])
+  }, [user?.id, user?.familyId, isRealUser])
 
   const switchProfile = useCallback(async (profileId: string) => {
     if (!canSwitchProfile) return
-    if (isRealPatient) {
+    if (isRealUser) {
       try {
         const res = await profileApi.switchProfile(profileId)
         // Store the new token that includes the pid claim
@@ -127,13 +127,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     setActiveProfileId(profileId)
     localStorage.setItem(STORAGE_KEY, profileId)
-  }, [canSwitchProfile, isRealPatient])
+  }, [canSwitchProfile, isRealUser])
 
   const createProfile = useCallback(async (
     data: Omit<Profile, 'id' | 'userId' | 'isActive' | 'createdAt'>,
   ) => {
     if (!user) return
-    if (isRealPatient) {
+    if (isRealUser) {
       const created = await profileApi.create({
         name: data.name,
         relation: data.relation,
@@ -153,10 +153,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       }])
     }
-  }, [user, isRealPatient])
+  }, [user, isRealUser])
 
   const updateProfile = useCallback(async (id: string, data: Partial<Profile>) => {
-    if (isRealPatient) {
+    if (isRealUser) {
       const updated = await profileApi.update(id, {
         name: data.name,
         relation: data.relation,
@@ -169,15 +169,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     } else {
       setProfiles((prev) => prev.map((p) => p.id === id ? { ...p, ...data } : p))
     }
-  }, [isRealPatient])
+  }, [isRealUser])
 
   const deleteProfile = useCallback(async (id: string) => {
-    if (isRealPatient) {
+    if (isRealUser) {
       await profileApi.delete(id)
     }
     setProfiles((prev) => prev.filter((p) => p.id !== id))
     if (activeProfileId === id) setActiveProfileId(null)
-  }, [isRealPatient, activeProfileId])
+  }, [isRealUser, activeProfileId])
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? null
 

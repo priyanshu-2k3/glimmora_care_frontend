@@ -67,15 +67,23 @@ export async function apiRequest(
 // Run-unique prefix so repeated test runs don't collide on the same email/phone
 const RUN_TS = Date.now().toString().slice(-7)
 
+/** djb2 hash → unsigned 32-bit integer */
+function djb2(s: string): number {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) ^ s.charCodeAt(i)) >>> 0
+  return h
+}
+
 /** Generate a unique test user for this test run. */
 export function testUser(suffix: string = RUN_TS) {
-  // Derive a fully-numeric phone suffix (strip non-digits, fall back to RUN_TS)
-  const numericSuffix = (suffix.replace(/\D/g, '') + RUN_TS).slice(-10)
+  // djb2 hash of suffix+RUN_TS → 10-digit phone starting with 6–9
+  const h = djb2(suffix + RUN_TS)
+  const phoneNum = (h % 4_000_000_000 + 6_000_000_000).toString()
   return {
     firstName: 'Test',
     lastName: 'User',
     email: `gc_${suffix}_${RUN_TS}@example.com`,
-    phone: `+91${numericSuffix.padStart(10, '9')}`,
+    phone: `+91${phoneNum}`,
     password: 'TestPass123!',
   }
 }

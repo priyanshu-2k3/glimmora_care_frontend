@@ -32,7 +32,11 @@ export default function FamilyMembersPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { family, familyMembers, isLoading } = useProfile()
-  const isRealPatient = !!user?.accessToken && user.role === 'patient'
+  const isRealUser = !!user?.accessToken && (user.role === 'patient' || user.role === 'doctor')
+  const isCurrentUserOwner =
+    user?.id === family?.created_by ||
+    family?.member_roles?.[user?.id ?? ''] === 'owner' ||
+    family?.member_roles?.[user?.id ?? ''] === 'admin'
 
   const [editingRole, setEditingRole] = useState<string | null>(null)
   const [pendingRole, setPendingRole] = useState<FamilyRole | null>(null)
@@ -49,13 +53,13 @@ export default function FamilyMembersPage() {
   useEffect(() => { setLocalMembers(familyMembers) }, [familyMembers])
 
   useEffect(() => {
-    if (!isRealPatient || !family) return
+    if (!isRealUser || !family) return
     setLoadingInvites(true)
     familyApi.listInvites()
       .then(setInvites)
       .catch(() => {})
       .finally(() => setLoadingInvites(false))
-  }, [isRealPatient, family?.id])
+  }, [isRealUser, family?.id])
 
   async function changeRole(memberId: string, role: FamilyRole) {
     setSavingRole(true)
@@ -172,14 +176,14 @@ export default function FamilyMembersPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => { if (!isOwner && isRealPatient) { setEditingRole(member.user_id); setPendingRole(roleKey as FamilyRole) } }}
-                      disabled={isOwner || !isRealPatient}
-                      className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-colors', (isOwner || !isRealPatient) ? 'cursor-default' : 'hover:bg-parchment cursor-pointer')}
+                      onClick={() => { if (!isOwner && isCurrentUserOwner) { setEditingRole(member.user_id); setPendingRole(roleKey as FamilyRole) } }}
+                      disabled={isOwner || !isCurrentUserOwner}
+                      className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-colors', (isOwner || !isCurrentUserOwner) ? 'cursor-default' : 'hover:bg-parchment cursor-pointer')}
                     >
                       <meta.icon className={cn('w-3.5 h-3.5', meta.color)} />
                       <span>{meta.label}</span>
                     </button>
-                    {!isOwner && isRealPatient && (
+                    {!isOwner && isCurrentUserOwner && member.user_id !== user?.id && (
                       <button
                         onClick={() => removeMember(member.user_id)}
                         disabled={removingId === member.user_id}
