@@ -47,3 +47,18 @@ export async function getUserId(email: string): Promise<string> {
   if (!doc) throw new Error(`User not found: ${email}`)
   return String(doc._id)
 }
+
+/**
+ * Poll MongoDB for a dev_token on a pending family invite (DEBUG=true only).
+ * Returns the plaintext invite token once it appears (up to 10s).
+ */
+export async function getInviteToken(inviteeEmail: string): Promise<string> {
+  const c = await getClient()
+  const col = c.db(DB_NAME).collection('family_invites')
+  for (let i = 0; i < 20; i++) {
+    const doc = await col.findOne({ email: inviteeEmail, status: 'pending', dev_token: { $exists: true } })
+    if (doc?.dev_token) return String(doc.dev_token)
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  throw new Error(`dev_token not found for invite to ${inviteeEmail}`)
+}

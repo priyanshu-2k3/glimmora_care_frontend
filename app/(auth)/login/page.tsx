@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, LogIn, Shield, Zap, AlertCircle, User, Stethoscope, Settings, Crown } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -20,17 +20,19 @@ const ROLE_OPTIONS: { role: Role; label: string; description: string; icon: Reac
 
 type LoginMode = 'real' | 'demo'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const { login, googleLogin, googleLoginWithRole, demoLogin, isLoading, error, clearError, pendingGoogleRole, user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextUrl = searchParams.get('next') ?? '/dashboard'
 
   // Redirect after Google login completes without needing role selection
   const [googleLoginAttempted, setGoogleLoginAttempted] = useState(false)
   useEffect(() => {
     if (googleLoginAttempted && user && !pendingGoogleRole && !isLoading) {
-      router.push('/dashboard')
+      router.push(nextUrl)
     }
-  }, [googleLoginAttempted, user, pendingGoogleRole, isLoading, router])
+  }, [googleLoginAttempted, user, pendingGoogleRole, isLoading, router, nextUrl])
 
   const [mode, setMode] = useState<LoginMode>('real')
   const [selectedRole, setSelectedRole] = useState<Role>('patient')
@@ -60,7 +62,7 @@ export default function LoginPage() {
   async function handleGoogleRoleSelect(role: Role) {
     const success = await googleLoginWithRole(role)
     if (success) {
-      router.push('/dashboard')
+      router.push(nextUrl)
     }
   }
 
@@ -71,7 +73,7 @@ export default function LoginPage() {
       if (loggedInUser?.emailVerified === false) {
         router.push('/verify-email')
       } else {
-        router.push('/dashboard')
+        router.push(nextUrl)
       }
     } catch {
       // error is set in context
@@ -81,7 +83,7 @@ export default function LoginPage() {
   async function handleDemoLogin(e: React.FormEvent) {
     e.preventDefault()
     await demoLogin(selectedRole)
-    router.push('/dashboard')
+    router.push(nextUrl)
   }
 
   return (
@@ -293,25 +295,41 @@ export default function LoginPage() {
             </div>
             <p className="font-body text-sm text-stone mb-4">Select your role to continue:</p>
             <div className="space-y-2">
-              {(['patient', 'doctor', 'admin'] as const).map((role) => (
+              {([
+                { role: 'patient', label: 'Patient', desc: 'Manage your own health records' },
+                { role: 'doctor', label: 'Doctor', desc: 'View and manage patient records' },
+              ] as const).map(({ role, label, desc }) => (
                 <button
                   key={role}
                   onClick={() => handleGoogleRoleSelect(role)}
                   disabled={isLoading}
                   className={cn(
                     'w-full text-left px-4 py-3 rounded-xl border border-sand-light',
-                    'font-body text-sm text-charcoal-deep capitalize',
+                    'font-body text-sm text-charcoal-deep',
                     'hover:border-gold-soft hover:bg-champagne transition-all duration-200',
                     'disabled:opacity-50'
                   )}
                 >
-                  {role}
+                  <p className="font-semibold">{label}</p>
+                  <p className="text-xs text-greige mt-0.5">{desc}</p>
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-greige font-body mt-4 text-center leading-relaxed">
+              Admin accounts are created by your organisation administrator.<br />
+              You can link Google to an existing admin account via Settings.
+            </p>
           </div>
         </div>
       )}
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

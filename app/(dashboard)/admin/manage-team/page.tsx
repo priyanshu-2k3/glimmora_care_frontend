@@ -1,29 +1,104 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Search, UserPlus, MoreHorizontal } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Users, Search, UserPlus, Mail, Check, AlertCircle } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
+import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { MOCK_TEAM } from '@/data/admin-mock'
-import { formatDate } from '@/lib/utils'
+import { orgApi, type DoctorOut } from '@/lib/api'
 
-const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
-  active: 'success',
-  on_leave: 'warning',
-  inactive: 'error',
-}
+type AddMode = 'invite' | 'direct'
 
 export default function ManageTeamPage() {
+  const [doctors, setDoctors] = useState<DoctorOut[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [addMode, setAddMode] = useState<AddMode>('invite')
 
-  const filtered = MOCK_TEAM.filter((m) =>
-    !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.specialty.toLowerCase().includes(search.toLowerCase())
-  )
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+
+  const [directEmail, setDirectEmail] = useState('')
+  const [directFirst, setDirectFirst] = useState('')
+  const [directLast, setDirectLast] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [addSuccess, setAddSuccess] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+
+  function loadDoctors() {
+    orgApi.listDoctors()
+      .then(setDoctors)
+      .catch(() => setDoctors([]))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    let active = true
+    orgApi.listDoctors()
+      .then((d) => { if (active) setDoctors(d) })
+      .catch(() => { if (active) setDoctors([]) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filtered = doctors.filter((d) => {
+    const name = `${d.first_name ?? ''} ${d.last_name ?? ''}`.toLowerCase()
+    return !search || name.includes(search.toLowerCase()) || d.email.toLowerCase().includes(search.toLowerCase())
+  })
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault()
+    if (!inviteEmail) return
+    setInviteError(null)
+    setInviting(true)
+    try {
+      await orgApi.inviteDoctor(inviteEmail)
+      setInviting(false)
+      setInviteSuccess(true)
+      setTimeout(() => {
+        setInviteSuccess(false)
+        setInviteEmail('')
+        setShowModal(false)
+      }, 2000)
+    } catch (err: unknown) {
+      setInviting(false)
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invite.')
+    }
+  }
+
+  async function handleDirectAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!directEmail || !directFirst || !directLast) {
+      setAddError('All fields are required.')
+      return
+    }
+    setAddError(null)
+    setAdding(true)
+    try {
+      await orgApi.addDoctor({ email: directEmail, first_name: directFirst, last_name: directLast })
+      setAdding(false)
+      setAddSuccess(true)
+      loadDoctors()
+      setTimeout(() => {
+        setAddSuccess(false)
+        setDirectEmail('')
+        setDirectFirst('')
+        setDirectLast('')
+        setShowModal(false)
+      }, 2000)
+    } catch (err: unknown) {
+      setAdding(false)
+      setAddError(err instanceof Error ? err.message : 'Failed to add doctor.')
+    }
+  }
 
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
@@ -34,46 +109,124 @@ export default function ManageTeamPage() {
               <Users className="w-5 h-5 text-gold-soft" />
               Manage Team
             </h1>
-            <p className="text-sm text-greige font-body mt-1">View and manage your team of doctors and staff.</p>
+            <p className="text-sm text-greige font-body mt-1">View and manage your team of doctors.</p>
           </div>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setShowModal(true)}>
             <UserPlus className="w-4 h-4" />
             Add Doctor
           </Button>
         </div>
 
         <Input
-          placeholder="Search by name or specialty..."
+          placeholder="Search by name or email..."
           leftIcon={<Search className="w-4 h-4" />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {filtered.length === 0 ? (
-          <EmptyState icon={Users} title="No team members found" description="Try a different search." />
+        {loading ? (
+          <p className="text-sm text-greige font-body">Loading team...</p>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={Users} title="No doctors found" description="Add a doctor to get started." />
         ) : (
           <div className="space-y-3">
-            {filtered.map((m) => (
-              <Card key={m.id} hover>
+            {filtered.map((d) => (
+              <Card key={d.user_id} hover>
                 <CardContent>
                   <div className="flex items-center gap-4">
-                    <Avatar name={m.name} size="md" />
+                    <Avatar name={`${d.first_name ?? ''} ${d.last_name ?? ''}`} size="md" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-body font-semibold text-charcoal-deep text-sm">{m.name}</p>
-                      <p className="text-xs text-greige">{m.email}</p>
-                      <p className="text-xs text-greige mt-0.5">Joined {formatDate(m.joinedAt)}</p>
+                      <p className="font-body font-semibold text-charcoal-deep text-sm">
+                        {d.first_name ?? ''} {d.last_name ?? ''}
+                      </p>
+                      <p className="text-xs text-greige">{d.email}</p>
+                      {d.location && <p className="text-xs text-greige mt-0.5">{d.location}</p>}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="info">{m.specialty}</Badge>
-                      <Badge variant="gold">{m.patients} patients</Badge>
-                      <Badge variant={STATUS_VARIANT[m.status]} className="capitalize">{m.status.replace('_', ' ')}</Badge>
-                    </div>
+                    <Badge variant="gold">{d.patient_count} patients</Badge>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
+
+        <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Doctor">
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAddMode('invite')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-body font-medium transition-colors ${
+                  addMode === 'invite' ? 'bg-gold-soft text-white' : 'bg-parchment text-charcoal-warm'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5 inline mr-1" />
+                Send Invite
+              </button>
+              <button
+                onClick={() => setAddMode('direct')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-body font-medium transition-colors ${
+                  addMode === 'direct' ? 'bg-gold-soft text-white' : 'bg-parchment text-charcoal-warm'
+                }`}
+              >
+                <UserPlus className="w-3.5 h-3.5 inline mr-1" />
+                Add Directly
+              </button>
+            </div>
+
+            {addMode === 'invite' ? (
+              <form onSubmit={handleInvite} className="space-y-3">
+                <p className="text-xs text-greige font-body">Send an email invite. The doctor joins via the link.</p>
+                {inviteError && (
+                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+                    <p className="text-xs font-body text-error-DEFAULT">{inviteError}</p>
+                  </div>
+                )}
+                {inviteSuccess && (
+                  <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
+                    <Check className="w-4 h-4 text-success-DEFAULT shrink-0" />
+                    <p className="text-xs font-body text-success-DEFAULT">Invite sent!</p>
+                  </div>
+                )}
+                <Input
+                  label="Doctor Email"
+                  type="email"
+                  placeholder="doctor@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null) }}
+                  required
+                />
+                <Button type="submit" isLoading={inviting} disabled={inviting || inviteSuccess} className="w-full">
+                  <Mail className="w-4 h-4" />
+                  {inviteSuccess ? 'Sent!' : 'Send Invite'}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleDirectAdd} className="space-y-3">
+                <p className="text-xs text-greige font-body">Create a doctor account directly. A temporary password will be emailed.</p>
+                {addError && (
+                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+                    <p className="text-xs font-body text-error-DEFAULT">{addError}</p>
+                  </div>
+                )}
+                {addSuccess && (
+                  <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
+                    <Check className="w-4 h-4 text-success-DEFAULT shrink-0" />
+                    <p className="text-xs font-body text-success-DEFAULT">Doctor added!</p>
+                  </div>
+                )}
+                <Input label="First Name" value={directFirst} onChange={(e) => setDirectFirst(e.target.value)} required />
+                <Input label="Last Name" value={directLast} onChange={(e) => setDirectLast(e.target.value)} required />
+                <Input label="Email" type="email" value={directEmail} onChange={(e) => { setDirectEmail(e.target.value); setAddError(null) }} required />
+                <Button type="submit" isLoading={adding} disabled={adding || addSuccess} className="w-full">
+                  <UserPlus className="w-4 h-4" />
+                  {addSuccess ? 'Added!' : 'Add Doctor'}
+                </Button>
+              </form>
+            )}
+          </div>
+        </Modal>
       </div>
     </RoleGuard>
   )

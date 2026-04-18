@@ -54,6 +54,7 @@ function backendUserToUser(b: BackendUser, accessToken?: string): User {
     accessToken,
     familyId: b.family_id ?? null,
     emailVerified: b.email_verified,
+    firebase_uid: b.firebase_uid ?? null,
   }
 }
 

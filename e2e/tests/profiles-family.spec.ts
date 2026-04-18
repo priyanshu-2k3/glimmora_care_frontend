@@ -1,5 +1,5 @@
 /**
- * GlimmoraCare — PROFILES & FAMILY E2E Tests (P01–P05, F01–F04)
+ * GlimmoraCare — PROFILES & FAMILY E2E Tests (P01–P05, F01–F06)
  *
  * Selectors:
  *  - Input ids derived from labels via label.toLowerCase().replace(/\s+/g, '-')
@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test'
 import { registerUser, apiRequest, testUser } from '../helpers/api'
-import { closeDb } from '../helpers/db'
+import { closeDb, getInviteToken } from '../helpers/db'
 import { injectTokens } from '../helpers/auth'
 
 // ── Teardown ─────────────────────────────────────────────────────────────────
@@ -189,9 +189,9 @@ test('P05: switch active profile', async ({ page }) => {
   await profileCard.click()
 
   // "Active Profile" banner should now show "Switch Target"
-  await expect(page.locator('text=Switch Target').first()).toBeVisible({ timeout: 10_000 })
-  // The active profile banner (gold background) should contain the name
-  await expect(page.locator('.bg-gold-whisper, [class*="bg-gold-whisper"]', { hasText: 'Switch Target' }).first()).toBeVisible({ timeout: 10_000 })
+  // Wait for the active profile banner (has "Active Profile" label) to show the switched name
+  await expect(page.locator('text=Active Profile').first()).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('p.font-semibold, p[class*="font-semibold"]', { hasText: 'Switch Target' }).first()).toBeVisible({ timeout: 10_000 })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -350,4 +350,77 @@ test('F04: user can see and accept an incoming family invite', async ({ page }) 
 
   // Invite should disappear from the list (responded) — allow extra time for API + re-render
   await expect(page.locator('button[title="Accept"]')).not.toBeVisible({ timeout: 20_000 })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// F05 — Public invite link: preview shows correct invite details (unauthenticated)
+// ─────────────────────────────────────────────────────────────────────────────
+test('F05: public invite link shows invite preview', async ({ page }) => {
+  // Register owner and invitee
+  const owner = testUser('f05o')
+  const { accessToken: ownerAt } = await registerUser(owner)
+  const invitee = testUser('f05e')
+  await registerUser(invitee)
+
+  // Owner sends invite
+  const inviteRes = await apiRequest('/families/invite', ownerAt, {
+    method: 'POST',
+    body: JSON.stringify({ email: invitee.email, role: 'member' }),
+  })
+  expect([200, 201]).toContain(inviteRes.status)
+
+  // Get plaintext token from DB (stored as dev_token when DEBUG=true)
+  const token = await getInviteToken(invitee.email)
+
+  // Navigate to the public invite page (unauthenticated — no injectTokens)
+  await page.goto(`/invite/${token}`)
+
+  // Invite preview should load with family and role info
+  await expect(page.locator('h2:has-text("You\'re invited to a Family!")')).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('text=member')).toBeVisible({ timeout: 5_000 })
+
+  // Accept Invite button should be present for unauthenticated user
+  await expect(page.locator('button:has-text("Accept Invite")')).toBeVisible({ timeout: 5_000 })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// F06 — Public invite link: logged-in user accepts and is redirected to /family
+// ─────────────────────────────────────────────────────────────────────────────
+test('F06: logged-in user accepts public invite link', async ({ page }) => {
+  // Register owner and invitee
+  const owner = testUser('f06o')
+  const { accessToken: ownerAt } = await registerUser(owner)
+  const invitee = testUser('f06e')
+  const { accessToken: inviteeAt, refreshToken: inviteeRt } = await registerUser(invitee)
+  const inviteeMeRes = await apiRequest('/auth/me', inviteeAt)
+  const inviteeMe = await inviteeMeRes.json()
+
+  // Owner sends invite to invitee
+  const inviteRes = await apiRequest('/families/invite', ownerAt, {
+    method: 'POST',
+    body: JSON.stringify({ email: invitee.email, role: 'member' }),
+  })
+  expect([200, 201]).toContain(inviteRes.status)
+
+  // Get plaintext token from DB
+  const token = await getInviteToken(invitee.email)
+
+  // Log in as invitee and navigate to the public invite link
+  await injectTokens(page, inviteeAt, inviteeRt, {
+    id: inviteeMe.id ?? inviteeMe._id ?? 'placeholder',
+    name: `${inviteeMe.first_name} ${inviteeMe.last_name}`.trim(),
+    email: invitee.email,
+    role: 'patient',
+  })
+  await page.goto(`/invite/${token}`)
+
+  // Invite preview loads for authenticated user
+  await expect(page.locator('h2:has-text("You\'re invited to a Family!")')).toBeVisible({ timeout: 10_000 })
+
+  // "Accept Invite" button (authenticated flow — direct accept, no password)
+  await expect(page.locator('button:has-text("Accept Invite")')).toBeVisible({ timeout: 5_000 })
+  await page.click('button:has-text("Accept Invite")')
+
+  // Success state: "Invite Accepted!" heading
+  await expect(page.locator('h2:has-text("Invite Accepted!")')).toBeVisible({ timeout: 10_000 })
 })

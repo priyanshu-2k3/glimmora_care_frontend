@@ -1,18 +1,18 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Users, UserCheck, FileCheck, ClipboardList, TrendingUp, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { MOCK_TEAM, MOCK_ASSIGNMENTS, MOCK_CONSENT_RECORDS, MOCK_ADMIN_LOGS } from '@/data/admin-mock'
+import { adminApi, type AdminStatsOut, type AuditLogOut } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
 interface StatCardProps {
   icon: React.ElementType
   label: string
-  value: number
+  value: number | string
   href: string
   color: string
 }
@@ -35,12 +35,31 @@ function StatCard({ icon: Icon, label, value, href, color }: StatCardProps) {
   )
 }
 
+const SEVERITY_DOT: Record<string, string> = {
+  critical: 'bg-error-DEFAULT',
+  warning: 'bg-warning-DEFAULT',
+  info: 'bg-success-DEFAULT',
+}
+
 export default function AdminDashboardPage() {
   const { user } = useAuth()
+  const [stats, setStats] = useState<AdminStatsOut | null>(null)
+  const [logs, setLogs] = useState<AuditLogOut[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const activeTeam = MOCK_TEAM.filter((m) => m.status === 'active').length
-  const pendingConsent = MOCK_ASSIGNMENTS.filter((a) => a.consentStatus === 'pending').length
-  const revokedConsent = MOCK_CONSENT_RECORDS.filter((c) => c.status === 'revoked').length
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      adminApi.getStats().catch(() => null),
+      adminApi.getAuditLogs({ limit: 4 }).catch(() => []),
+    ]).then(([s, l]) => {
+      if (!active) return
+      setStats(s)
+      setLogs(Array.isArray(l) ? l : [])
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [])
 
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
@@ -52,15 +71,13 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-greige font-body mt-1">Operational overview of your team and patients.</p>
         </div>
 
-        {/* Stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users} label="Active Doctors" value={activeTeam} href="/admin/manage-team" color="#2563EB" />
-          <StatCard icon={UserCheck} label="Patient Assignments" value={MOCK_ASSIGNMENTS.length} href="/admin/doctor-management" color="#059669" />
-          <StatCard icon={FileCheck} label="Pending Consent" value={pendingConsent} href="/admin/doctor-management/consent" color="#D97706" />
-          <StatCard icon={AlertTriangle} label="Revoked Consent" value={revokedConsent} href="/admin/doctor-management/consent" color="#DC2626" />
+          <StatCard icon={Users} label="Total Doctors" value={loading ? '—' : (stats?.total_doctors ?? 0)} href="/admin/manage-team" color="#2563EB" />
+          <StatCard icon={UserCheck} label="Patient Assignments" value={loading ? '—' : (stats?.total_assignments ?? 0)} href="/admin/doctor-management" color="#059669" />
+          <StatCard icon={FileCheck} label="Total Patients" value={loading ? '—' : (stats?.total_patients ?? 0)} href="/admin/doctor-management" color="#D97706" />
+          <StatCard icon={AlertTriangle} label="New Users (30d)" value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)} href="/admin/doctor-management" color="#DC2626" />
         </div>
 
-        {/* Recent activity */}
         <Card>
           <CardContent>
             <div className="flex items-center justify-between mb-4">
@@ -72,25 +89,27 @@ export default function AdminDashboardPage() {
                 View all logs
               </Link>
             </div>
-            <div className="space-y-3">
-              {MOCK_ADMIN_LOGS.slice(0, 4).map((log) => (
-                <div key={log.id} className="flex items-start gap-3 py-2 border-b border-sand-light/50 last:border-0">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                    log.severity === 'critical' ? 'bg-error-DEFAULT' :
-                    log.severity === 'warning' ? 'bg-warning-DEFAULT' : 'bg-success-DEFAULT'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
-                    <p className="text-xs text-greige">{log.target} · {log.performedBy}</p>
+            {loading ? (
+              <p className="text-xs text-greige font-body">Loading...</p>
+            ) : logs.length === 0 ? (
+              <p className="text-xs text-greige font-body">No activity yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {logs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 py-2 border-b border-sand-light/50 last:border-0">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
+                      <p className="text-xs text-greige">{log.target} · {log.performed_by}</p>
+                    </div>
+                    <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>
                   </div>
-                  <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Quick actions */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/admin/doctor-management/assign">
             <Card hover className="text-center py-6">
@@ -101,21 +120,21 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/admin/doctor-management/consent">
+          <Link href="/admin/manage-team">
             <Card hover className="text-center py-6">
               <CardContent>
-                <FileCheck className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-                <p className="text-sm font-body font-medium text-charcoal-deep">Manage Consent</p>
-                <p className="text-xs text-greige mt-0.5">Review and update consent</p>
+                <Users className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+                <p className="text-sm font-body font-medium text-charcoal-deep">Manage Team</p>
+                <p className="text-xs text-greige mt-0.5">View and add doctors</p>
               </CardContent>
             </Card>
           </Link>
-          <Link href="/admin/doctor-management/share">
+          <Link href="/admin/logs">
             <Card hover className="text-center py-6">
               <CardContent>
                 <TrendingUp className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-                <p className="text-sm font-body font-medium text-charcoal-deep">Share Consent</p>
-                <p className="text-xs text-greige mt-0.5">Grant access to records</p>
+                <p className="text-sm font-body font-medium text-charcoal-deep">Audit Logs</p>
+                <p className="text-xs text-greige mt-0.5">View all admin actions</p>
               </CardContent>
             </Card>
           </Link>

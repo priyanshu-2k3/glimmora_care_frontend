@@ -173,6 +173,7 @@ export interface BackendUser {
   email_verified: boolean
   created_at?: string | null
   family_id?: string | null
+  firebase_uid?: string | null
 }
 
 export interface BackendSession {
