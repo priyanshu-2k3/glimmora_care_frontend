@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, X, Clock, Shield, AlertCircle } from 'lucide-react'
-import { MOCK_CONSENT_REQUESTS, type ConsentRequest } from '@/data/consent'
+import { consentApi, type ConsentRequest } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -26,16 +26,40 @@ function timeAgo(iso: string) {
 }
 
 export default function ConsentRequestsPage() {
-  const [requests, setRequests] = useState<ConsentRequest[]>(MOCK_CONSENT_REQUESTS)
+  const [requests, setRequests] = useState<ConsentRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  function handleApprove(id: string) {
-    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: 'approved' } : r))
+  useEffect(() => {
+    let alive = true
+    consentApi.getIncoming().then((data) => {
+      if (alive) { setRequests(data); setLoading(false) }
+    }).catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  async function handleApprove(id: string) {
+    setActionLoading(id)
+    try {
+      await consentApi.approve(id)
+      setRequests((prev) => prev.filter((r) => r.id !== id))
+    } finally {
+      setActionLoading(null)
+    }
   }
 
-  function handleReject(id: string) {
-    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: 'rejected' } : r))
+  async function handleReject(id: string) {
+    setActionLoading(id)
+    try {
+      await consentApi.reject(id)
+      setRequests((prev) => prev.filter((r) => r.id !== id))
+    } finally {
+      setActionLoading(null)
+    }
   }
+
+  if (loading) return <div className="p-8 text-center text-greige font-body">Loading…</div>
 
   const pending = requests.filter((r) => r.status === 'pending')
   const resolved = requests.filter((r) => r.status !== 'pending')
@@ -63,13 +87,13 @@ export default function ConsentRequestsPage() {
                 onClick={() => setExpanded(expanded === req.id ? null : req.id)}
               >
                 <div className="flex items-start gap-3">
-                  <Avatar name={req.requestedByName} size="md" />
+                  <Avatar name={req.requester_name} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-body font-semibold text-charcoal-deep">{req.requestedByName}</p>
+                      <p className="text-sm font-body font-semibold text-charcoal-deep">{req.requester_name}</p>
                       <Badge variant="warning"><Clock className="w-3 h-3" /> Pending</Badge>
                     </div>
-                    <p className="text-xs text-greige truncate">{req.requestedByOrg} · {timeAgo(req.requestedAt)} · Expires in {req.expiresIn}</p>
+                    <p className="text-xs text-greige truncate">{req.requester_email} · {timeAgo(req.requested_at)}</p>
                   </div>
                 </div>
 
@@ -100,16 +124,25 @@ export default function ConsentRequestsPage() {
                     <div className="bg-ivory-warm border border-sand-light rounded-xl p-3">
                       <p className="text-[11px] text-greige font-body flex items-start gap-1.5">
                         <AlertCircle className="w-3.5 h-3.5 text-gold-soft shrink-0 mt-0.5" />
-                        Approving grants access for {req.expiresIn}. You can revoke at any time from Active Consents.
+                        Approving grants access until{req.expires_at ? ` ${new Date(req.expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ' further notice'}. You can revoke at any time from Active Consents.
                       </p>
                     </div>
 
                     <div className="flex gap-2">
-                      <Button className="flex-1" onClick={() => handleApprove(req.id)}>
+                      <Button
+                        className="flex-1"
+                        onClick={(e) => { e.stopPropagation(); handleApprove(req.id) }}
+                        disabled={actionLoading === req.id}
+                      >
                         <Check className="w-4 h-4" />
                         Approve
                       </Button>
-                      <Button variant="outline" className="flex-1" onClick={() => handleReject(req.id)}>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => { e.stopPropagation(); handleReject(req.id) }}
+                        disabled={actionLoading === req.id}
+                      >
                         <X className="w-4 h-4" />
                         Reject
                       </Button>
@@ -137,10 +170,10 @@ export default function ConsentRequestsPage() {
           {resolved.map((req) => (
             <Card key={req.id}>
               <CardContent className="p-4 flex items-center gap-3">
-                <Avatar name={req.requestedByName} size="md" />
+                <Avatar name={req.requester_name} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{req.requestedByName}</p>
-                  <p className="text-xs text-greige">{req.requestedByOrg} · {timeAgo(req.requestedAt)}</p>
+                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{req.requester_name}</p>
+                  <p className="text-xs text-greige">{req.requester_email} · {timeAgo(req.requested_at)}</p>
                 </div>
                 <Badge variant={req.status === 'approved' ? 'success' : 'error'}>
                   {req.status === 'approved' ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}

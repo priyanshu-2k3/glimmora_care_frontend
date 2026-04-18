@@ -2,36 +2,49 @@
 
 import Link from 'next/link'
 import { ArrowLeft, Clock, X, CheckCircle, Filter } from 'lucide-react'
-import { useState } from 'react'
-import { MOCK_CONSENT_HISTORY, type ConsentHistoryEntry } from '@/data/consent'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useState, useEffect } from 'react'
+import { consentApi, type ConsentRequest } from '@/lib/api'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
 
-type FilterType = 'all' | 'expired' | 'revoked' | 'completed'
+type FilterType = 'all' | 'expired' | 'revoked' | 'rejected'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const OUTCOME_META: Record<ConsentHistoryEntry['outcome'], { label: string; icon: React.ElementType; variant: 'error' | 'default' | 'success' }> = {
-  revoked: { label: 'Revoked', icon: X, variant: 'error' },
-  expired: { label: 'Expired', icon: Clock, variant: 'default' },
-  completed: { label: 'Completed', icon: CheckCircle, variant: 'success' },
+const STATUS_META: Record<string, { label: string; icon: React.ElementType; variant: 'error' | 'default' | 'success' }> = {
+  revoked:  { label: 'Revoked',   icon: X,            variant: 'error'   },
+  rejected: { label: 'Rejected',  icon: X,            variant: 'error'   },
+  expired:  { label: 'Expired',   icon: Clock,        variant: 'default' },
+  approved: { label: 'Completed', icon: CheckCircle,  variant: 'success' },
 }
 
 const SCOPE_LABELS: Record<string, string> = {
-  view_records: 'View records',
-  view_trends: 'View trends',
+  view_records:   'View records',
+  view_trends:    'View trends',
   export_summary: 'Export summary',
-  add_records: 'Add records',
+  add_records:    'Add records',
 }
 
 export default function ConsentHistoryPage() {
+  const [history, setHistory] = useState<ConsentRequest[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
 
-  const filtered = filter === 'all' ? MOCK_CONSENT_HISTORY : MOCK_CONSENT_HISTORY.filter((h) => h.outcome === filter)
+  useEffect(() => {
+    let alive = true
+    consentApi.getHistory().then((data) => {
+      if (alive) { setHistory(data); setLoading(false) }
+    }).catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  if (loading) return <div className="p-8 text-center text-greige font-body">Loading…</div>
+
+  const filtered = filter === 'all' ? history : history.filter((h) => h.status === filter)
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -48,7 +61,7 @@ export default function ConsentHistoryPage() {
       {/* Filter */}
       <div className="flex items-center gap-2 flex-wrap">
         <Filter className="w-3.5 h-3.5 text-greige" />
-        {(['all', 'expired', 'revoked', 'completed'] as FilterType[]).map((f) => (
+        {(['all', 'expired', 'revoked', 'rejected'] as FilterType[]).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -65,12 +78,12 @@ export default function ConsentHistoryPage() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Expired', count: MOCK_CONSENT_HISTORY.filter((h) => h.outcome === 'expired').length, variant: 'default' as const },
-          { label: 'Revoked', count: MOCK_CONSENT_HISTORY.filter((h) => h.outcome === 'revoked').length, variant: 'error' as const },
-          { label: 'Completed', count: MOCK_CONSENT_HISTORY.filter((h) => h.outcome === 'completed').length, variant: 'success' as const },
+          { label: 'Expired',  status: 'expired',  variant: 'default' as const },
+          { label: 'Revoked',  status: 'revoked',  variant: 'error'   as const },
+          { label: 'Rejected', status: 'rejected', variant: 'error'   as const },
         ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
-            <p className="font-display text-2xl text-charcoal-deep">{s.count}</p>
+            <p className="font-display text-2xl text-charcoal-deep">{history.filter((h) => h.status === s.status).length}</p>
             <Badge variant={s.variant} className="mt-1">{s.label}</Badge>
           </Card>
         ))}
@@ -85,47 +98,53 @@ export default function ConsentHistoryPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((entry) => {
-            const meta = OUTCOME_META[entry.outcome]
+            const meta = STATUS_META[entry.status] ?? STATUS_META['expired']
             const Icon = meta.icon
             return (
               <Card key={entry.id}>
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start gap-3">
-                    <Avatar name={entry.grantedToName} size="md" />
+                    <Avatar name={entry.requester_name} size="md" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-body font-semibold text-charcoal-deep">{entry.grantedToName}</p>
+                        <p className="text-sm font-body font-semibold text-charcoal-deep">{entry.requester_name}</p>
                         <Badge variant={meta.variant}>
                           <Icon className="w-3 h-3" />
                           {meta.label}
                         </Badge>
                       </div>
-                      <p className="text-xs text-greige capitalize">{entry.grantedToRole}</p>
+                      <p className="text-xs text-greige">{entry.requester_email}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-x-4 gap-y-1 bg-parchment rounded-xl p-3">
                     <div>
-                      <p className="text-[10px] text-greige uppercase tracking-wide">Granted</p>
-                      <p className="text-xs font-body font-medium text-charcoal-deep">{formatDate(entry.grantedAt)}</p>
+                      <p className="text-[10px] text-greige uppercase tracking-wide">Requested</p>
+                      <p className="text-xs font-body font-medium text-charcoal-deep">{formatDate(entry.requested_at)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-greige uppercase tracking-wide">
-                        {entry.revokedAt ? 'Revoked' : 'Expired'}
+                        {entry.revoked_at ? 'Revoked' : entry.expires_at ? 'Expired' : 'Resolved'}
                       </p>
                       <p className="text-xs font-body font-medium text-charcoal-deep">
-                        {entry.revokedAt ? formatDate(entry.revokedAt) : entry.expiresAt ? formatDate(entry.expiresAt) : '—'}
+                        {entry.revoked_at
+                          ? formatDate(entry.revoked_at)
+                          : entry.expires_at
+                            ? formatDate(entry.expires_at)
+                            : entry.resolved_at
+                              ? formatDate(entry.resolved_at)
+                              : '—'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-greige uppercase tracking-wide">Usage</p>
-                      <p className="text-xs font-body font-medium text-charcoal-deep">{entry.usageCount} views</p>
+                      <p className="text-[10px] text-greige uppercase tracking-wide">Permissions</p>
+                      <p className="text-xs font-body font-medium text-charcoal-deep">{entry.scope.length}</p>
                     </div>
                   </div>
 
-                  {entry.revokedReason && (
+                  {entry.revocation_reason && (
                     <p className="text-xs text-greige font-body bg-error-soft/30 rounded-lg px-3 py-2">
-                      Reason: {entry.revokedReason}
+                      Reason: {entry.revocation_reason}
                     </p>
                   )}
 
