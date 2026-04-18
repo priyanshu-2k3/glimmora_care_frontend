@@ -411,6 +411,22 @@ export const authApi = {
       body: JSON.stringify({ email, otp, new_password }),
       auth: false,
     }),
+
+  googleSignIn: (id_token: string, role?: string) =>
+    apiFetch<
+      | { accessToken: string; refreshToken: string }
+      | { needs_role: true; email: string; name: string; picture: string | null }
+    >('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(role ? { id_token, role } : { id_token }),
+      auth: false,
+    }),
+
+  connectGoogle: (id_token: string) =>
+    apiFetch<{ success: boolean }>('/auth/connect-google', {
+      method: 'POST',
+      body: JSON.stringify({ id_token }),
+    }),
 }
 
 // ─── Profile API ──────────────────────────────────────────────────────────────
@@ -528,7 +544,6 @@ export const familyApi = {
     apiFetch<{ userId: string }>('/families/invite/accept', {
       method: 'POST',
       body: JSON.stringify({ token, password }),
-      auth: false,
     }),
 
   declineInvite: (token: string) =>
@@ -625,6 +640,13 @@ export const orgApi = {
       body: JSON.stringify({ email }),
     }),
 
+  /** Admin: directly add a doctor to the org (creates account if needed) */
+  addDoctor: (data: { email: string; first_name: string; last_name: string }) =>
+    apiFetch<{ user_id: string; email: string; first_name: string; last_name: string; created: boolean }>(
+      '/organizations/mine/add-doctor',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+
   /** Admin: list all doctor invites */
   listDoctorInvites: () =>
     apiFetch<DoctorInviteOut[]>('/organizations/mine/doctor-invites'),
@@ -662,6 +684,83 @@ export const orgApi = {
   /** Patient: get my assigned doctor */
   getMyDoctor: () =>
     apiFetch<AssignedDoctorOut>('/patient/doctor'),
+}
+
+// ─── Admin API (super_admin only) ─────────────────────────────────────────────
+
+export interface AdminUserOut {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  role: string
+  is_active: boolean
+  email_verified: boolean
+  organization: string | null
+  location: string | null
+  created_at: string | null
+}
+
+export interface AdminStatsOut {
+  total_users: number
+  total_doctors: number
+  total_patients: number
+  total_admins: number
+  total_organizations: number
+  total_assignments: number
+  new_users_last_30_days: number
+}
+
+export interface AuditLogOut {
+  id: string
+  action: string
+  performed_by: string
+  target: string | null
+  detail: string | null
+  severity: string
+  timestamp: string
+}
+
+export interface AdminPatientOut {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+}
+
+export const adminApi = {
+  /** List all users (searchable) */
+  listUsers: (search = '') =>
+    apiFetch<AdminUserOut[]>(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Update a user's role or active status */
+  updateUser: (userId: string, data: { role?: string; is_active?: boolean }) =>
+    apiFetch<AdminUserOut>(`/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  /** Permanently delete a user account */
+  deleteUser: (userId: string) =>
+    apiFetch<{ message: string }>(`/admin/users/${userId}`, { method: 'DELETE' }),
+
+  /** Admin dashboard stats */
+  getStats: () =>
+    apiFetch<AdminStatsOut>('/admin/stats'),
+
+  /** Audit log entries */
+  getAuditLogs: (params: { search?: string; severity?: string; limit?: number } = {}) => {
+    const q = new URLSearchParams()
+    if (params.search) q.set('search', params.search)
+    if (params.severity) q.set('severity', params.severity)
+    if (params.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return apiFetch<AuditLogOut[]>(`/admin/audit-logs${qs ? `?${qs}` : ''}`)
+  },
+
+  /** List all patients (admin + super_admin) */
+  listPatients: (search = '') =>
+    apiFetch<AdminPatientOut[]>(`/admin/patients${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 }
 
 // ─── Intake API ───────────────────────────────────────────────────────────────
