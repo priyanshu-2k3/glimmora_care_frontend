@@ -14,12 +14,15 @@ import {
   ApiError,
   type BackendUser,
 } from '@/lib/api'
+import { signInWithGoogle, signOutFromFirebase } from '@/lib/firebase'
 
 // ─── Context shape ─────────────────────────────────────────────────────────────
 interface AuthContextValue {
   user: User | null
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<User>
+  googleLogin: () => Promise<void>
+  googleLoginWithRole: (role: Role) => Promise<boolean>
   demoLogin: (role: Role) => Promise<void>
   register: (credentials: RegisterCredentials) => Promise<void>
   logout: () => Promise<void>
@@ -28,6 +31,7 @@ interface AuthContextValue {
   isLoading: boolean
   error: string | null
   clearError: () => void
+  pendingGoogleRole: { email: string; name: string; picture: string | null; idToken: string } | null
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -58,6 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingGoogleRole, setPendingGoogleRole] = useState<{
+    email: string
+    name: string
+    picture: string | null
+    idToken: string
+  } | null>(null)
 
   const clearError = useCallback(() => setError(null), [])
 
@@ -157,6 +167,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
+  // ─── Google login ────────────────────────────────────────────────────────────
+  const googleLogin = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const firebaseUser = await signInWithGoogle()
+      const idToken = await firebaseUser.getIdToken()
+      const result = await authApi.googleSignIn(idToken)
+
+      if ('needs_role' in result) {
+        setPendingGoogleRole({
+          email: result.email,
+          name: result.name,
+          picture: result.picture,
+          idToken,
+        })
+        return
+      }
+
+      setTokens(result.accessToken, result.refreshToken)
+      const me = await authApi.me()
+      const mapped = backendUserToUser(me, result.accessToken)
+      persistUser(mapped)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code !== 'auth/popup-closed-by-user') {
+        setError('Google sign-in failed. Please try again.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const googleLoginWithRole = useCallback(async (role: Role): Promise<boolean> => {
+    if (!pendingGoogleRole) return false
+    setIsLoading(true)
+    setError(null)
+    try {
+      const result = await authApi.googleSignIn(
+        pendingGoogleRole.idToken,
+        frontendRoleToBackend(role)
+      )
+      if ('needs_role' in result) {
+        setError('Role selection failed. Please try again.')
+        return false
+      }
+      setPendingGoogleRole(null)
+      setTokens(result.accessToken, result.refreshToken)
+      const me = await authApi.me()
+      const mapped = backendUserToUser(me, result.accessToken)
+      persistUser(mapped)
+      return true
+    } catch {
+      setError('Google sign-in failed. Please try again.')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }, [pendingGoogleRole])
+
   // ─── Register ────────────────────────────────────────────────────────────────
   const register = useCallback(async ({
     firstName, lastName, email, phone, password, role,
@@ -216,11 +286,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) await authApi.logout()
     } catch {
       // ignore errors — clear locally regardless
-    } finally {
-      clearTokens()
-      setUser(null)
-      localStorage.removeItem(STORAGE_KEY)
     }
+    try {
+      await signOutFromFirebase()
+    } catch {
+      // ignore firebase sign-out errors
+    }
+    clearTokens()
+    setUser(null)
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
 
   return (
@@ -228,6 +302,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: !!user,
       login,
+      googleLogin,
+      googleLoginWithRole,
       demoLogin,
       register,
       logout,
@@ -235,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       error,
       clearError,
+      pendingGoogleRole,
     }}>
       {children}
     </AuthContext.Provider>

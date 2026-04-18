@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Shield, Trash2, Clock, Eye, Activity } from 'lucide-react'
-import { MOCK_ACTIVE_CONSENTS, type ExtendedConsentRecord } from '@/data/consent'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import { consentApi, type ConsentRequest } from '@/lib/api'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
@@ -26,15 +26,34 @@ function formatDate(iso: string) {
 }
 
 export default function ActiveConsentsPage() {
-  const [consents, setConsents] = useState<ExtendedConsentRecord[]>(MOCK_ACTIVE_CONSENTS)
-  const [revoking, setRevoking] = useState<string | null>(null)
+  const [consents, setConsents] = useState<ConsentRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [revokeId, setRevokeId] = useState<string | null>(null)
+  const [revokeReason, setRevokeReason] = useState('')
+  const [revoking, setRevoking] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    consentApi.getActive().then((data) => {
+      if (alive) { setConsents(data); setLoading(false) }
+    }).catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
 
   async function handleRevoke(id: string) {
-    setRevoking(id)
-    await new Promise((r) => setTimeout(r, 800))
-    setConsents((prev) => prev.filter((c) => c.id !== id))
-    setRevoking(null)
+    if (!revokeReason.trim()) return
+    setRevoking(true)
+    try {
+      await consentApi.revoke(id, revokeReason)
+      setConsents((prev) => prev.filter((c) => c.id !== id))
+      setRevokeId(null)
+      setRevokeReason('')
+    } finally {
+      setRevoking(false)
+    }
   }
+
+  if (loading) return <div className="p-8 text-center text-greige font-body">Loading…</div>
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -57,20 +76,20 @@ export default function ActiveConsentsPage() {
       ) : (
         <div className="space-y-4">
           {consents.map((consent) => {
-            const days = consent.expiresAt ? daysUntil(consent.expiresAt) : null
+            const days = consent.expires_at ? daysUntil(consent.expires_at) : null
             const isExpiringSoon = days !== null && days <= 30
             return (
               <Card key={consent.id} className={isExpiringSoon ? 'border-warning-DEFAULT/40' : ''}>
                 <CardContent className="p-5 space-y-4">
                   {/* Header */}
                   <div className="flex items-start gap-3">
-                    <Avatar name={consent.grantedToName} size="lg" />
+                    <Avatar name={consent.requester_name} size="lg" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-body font-semibold text-charcoal-deep">{consent.grantedToName}</p>
+                        <p className="font-body font-semibold text-charcoal-deep">{consent.requester_name}</p>
                         <Badge variant="success">Active</Badge>
                       </div>
-                      <p className="text-xs text-greige capitalize">{consent.grantedToRole} · Granted {formatDate(consent.grantedAt)}</p>
+                      <p className="text-xs text-greige">{consent.requester_email} · Granted {formatDate(consent.requested_at)}</p>
                     </div>
                   </div>
 
@@ -84,14 +103,8 @@ export default function ActiveConsentsPage() {
                   </div>
 
                   {/* Stats row */}
-                  <div className="grid grid-cols-3 gap-3 bg-ivory-warm rounded-xl p-3">
+                  <div className="grid grid-cols-2 gap-3 bg-ivory-warm rounded-xl p-3">
                     <div className="text-center">
-                      <p className="font-display text-lg text-charcoal-deep">{consent.usageCount}</p>
-                      <p className="text-[11px] text-greige font-body flex items-center justify-center gap-1">
-                        <Eye className="w-3 h-3" /> Views
-                      </p>
-                    </div>
-                    <div className="text-center border-x border-sand-light">
                       <p className={`font-display text-lg ${isExpiringSoon ? 'text-warning-DEFAULT' : 'text-charcoal-deep'}`}>
                         {days !== null ? `${days}d` : '∞'}
                       </p>
@@ -99,10 +112,10 @@ export default function ActiveConsentsPage() {
                         <Clock className="w-3 h-3" /> Expires
                       </p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-display text-lg text-charcoal-deep">{consent.recordTypes.length}</p>
+                    <div className="text-center border-l border-sand-light">
+                      <p className="font-display text-lg text-charcoal-deep">{consent.scope.length}</p>
                       <p className="text-[11px] text-greige font-body flex items-center justify-center gap-1">
-                        <Activity className="w-3 h-3" /> Types
+                        <Activity className="w-3 h-3" /> Permissions
                       </p>
                     </div>
                   </div>
@@ -110,7 +123,7 @@ export default function ActiveConsentsPage() {
                   {isExpiringSoon && (
                     <div className="bg-warning-soft border border-warning-DEFAULT/30 rounded-xl p-3">
                       <p className="text-xs text-warning-DEFAULT font-body">
-                        ⚠ Expiring in {days} day{days !== 1 ? 's' : ''}. This consent will auto-revoke on {consent.expiresAt ? formatDate(consent.expiresAt) : 'N/A'}.
+                        ⚠ Expiring in {days} day{days !== 1 ? 's' : ''}. This consent will auto-revoke on {consent.expires_at ? formatDate(consent.expires_at) : 'N/A'}.
                       </p>
                     </div>
                   )}
@@ -118,12 +131,36 @@ export default function ActiveConsentsPage() {
                   <Button
                     variant="danger"
                     className="w-full"
-                    isLoading={revoking === consent.id}
-                    onClick={() => handleRevoke(consent.id)}
+                    onClick={() => setRevokeId(consent.id)}
                   >
                     <Trash2 className="w-4 h-4" />
                     Revoke Access
                   </Button>
+
+                  {revokeId === consent.id && (
+                    <div className="mt-3 flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={revokeReason}
+                        onChange={(e) => setRevokeReason(e.target.value)}
+                        placeholder="Reason for revoking…"
+                        className="flex-1 text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+                      />
+                      <button
+                        onClick={() => handleRevoke(consent.id)}
+                        disabled={revoking || !revokeReason.trim()}
+                        className="text-xs px-3 py-2 rounded-lg bg-error-soft text-error-DEFAULT font-body disabled:opacity-50"
+                      >
+                        {revoking ? 'Revoking…' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => { setRevokeId(null); setRevokeReason('') }}
+                        className="text-xs px-3 py-2 rounded-lg border border-sand-light text-greige font-body"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )
