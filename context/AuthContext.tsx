@@ -22,7 +22,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<User>
   googleLogin: () => Promise<void>
-  googleLoginWithRole: (role: Role) => Promise<void>
+  googleLoginWithRole: (role: Role) => Promise<boolean>
   demoLogin: (role: Role) => Promise<void>
   register: (credentials: RegisterCredentials) => Promise<void>
   logout: () => Promise<void>
@@ -200,8 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const googleLoginWithRole = useCallback(async (role: Role) => {
-    if (!pendingGoogleRole) return
+  const googleLoginWithRole = useCallback(async (role: Role): Promise<boolean> => {
+    if (!pendingGoogleRole) return false
     setIsLoading(true)
     setError(null)
     try {
@@ -211,15 +211,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       )
       if ('needs_role' in result) {
         setError('Role selection failed. Please try again.')
-        return
+        return false
       }
       setPendingGoogleRole(null)
       setTokens(result.accessToken, result.refreshToken)
       const me = await authApi.me()
       const mapped = backendUserToUser(me, result.accessToken)
       persistUser(mapped)
+      return true
     } catch {
       setError('Google sign-in failed. Please try again.')
+      return false
     } finally {
       setIsLoading(false)
     }

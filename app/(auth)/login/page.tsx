@@ -58,8 +58,10 @@ export default function LoginPage() {
   }
 
   async function handleGoogleRoleSelect(role: Role) {
-    await googleLoginWithRole(role)
-    router.push('/dashboard')
+    const success = await googleLoginWithRole(role)
+    if (success) {
+      router.push('/dashboard')
+    }
   }
 
   async function handleRealLogin(e: React.FormEvent) {
