@@ -18,6 +18,8 @@ export interface User {
   familyId?: string | null
   /** whether the user's email has been verified */
   emailVerified?: boolean
+  /** Firebase UID set when user has connected a Google account */
+  firebase_uid?: string | null
 }
 
 export interface AuthSession {
