@@ -254,6 +254,23 @@ export interface InvitePreview {
   status: string
 }
 
+export interface ConsentRequest {
+  id: string
+  requester_id: string
+  requester_email: string
+  requester_name: string
+  patient_id: string
+  patient_email: string
+  scope: string[]
+  message: string | null
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'revoked'
+  expires_at: string | null
+  requested_at: string
+  resolved_at: string | null
+  revoked_at: string | null
+  revocation_reason: string | null
+}
+
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (email: string, password: string) =>
@@ -848,6 +865,39 @@ export const bulkImportApi = {
       method: 'POST',
       body: JSON.stringify({ rows }),
     }),
+}
+
+// ─── Consent API ──────────────────────────────────────────────────────────────
+export const consentApi = {
+  request: (patient_email: string, scope: string[], message?: string) =>
+    apiFetch<ConsentRequest>('/consent/request', {
+      method: 'POST',
+      body: JSON.stringify({ patient_email, scope, message }),
+    }),
+
+  share: (doctor_email: string, scope: string[], message?: string) =>
+    apiFetch<ConsentRequest>('/consent/share', {
+      method: 'POST',
+      body: JSON.stringify({ doctor_email, scope, message }),
+    }),
+
+  getIncoming: () => apiFetch<ConsentRequest[]>('/consent/requests/incoming'),
+
+  approve: (id: string) =>
+    apiFetch<ConsentRequest>(`/consent/requests/${id}/approve`, { method: 'POST' }),
+
+  reject: (id: string) =>
+    apiFetch<ConsentRequest>(`/consent/requests/${id}/reject`, { method: 'POST' }),
+
+  getActive: () => apiFetch<ConsentRequest[]>('/consent/active'),
+
+  revoke: (id: string, reason: string) =>
+    apiFetch<ConsentRequest>(`/consent/${id}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  getHistory: () => apiFetch<ConsentRequest[]>('/consent/history'),
 }
 
 export default apiFetch
