@@ -1,5 +1,27 @@
 # GlimmoraCare — Claude Code Project Rules
 
+## Pre-Push / Post-Session Build Check (MANDATORY)
+
+Before pushing frontend to GitHub — or after any significant frontend session — run:
+
+```bash
+cd "d:/BAAREZ/Glimmora Care/glimmora_care"
+npm run build
+```
+
+**Rules:**
+- The build MUST pass with zero errors before any `git push`
+- If the build fails, fix all errors before committing
+- A passing build confirms: TypeScript types are valid, all imports resolve, all 59 routes compile
+- Do NOT push if there are any `Type error:`, `Module not found:`, or `Failed to compile` lines in the output
+
+**What a clean build looks like:**
+```
+✓ Compiled successfully
+✓ Generating static pages (59/59)
+```
+Every route listed below that — no red lines above it.
+
 ## Feature Tracking (REQUIRED — Update as You Work)
 
 Two living documents must be kept up to date at all times:
