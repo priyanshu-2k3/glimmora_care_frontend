@@ -1,14 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ClipboardList, Search } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { MOCK_ADMIN_LOGS } from '@/data/admin-mock'
-import { formatDateTime } from '@/lib/utils'
+import { adminApi, type AuditLogOut } from '@/lib/api'
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
   info: 'success',
@@ -16,14 +15,35 @@ const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
   critical: 'error',
 }
 
-export default function AdminLogsPage() {
-  const [search, setSearch] = useState('')
+const SEVERITY_DOT: Record<string, string> = {
+  critical: 'bg-error-DEFAULT',
+  warning: 'bg-warning-DEFAULT',
+  info: 'bg-success-DEFAULT',
+}
 
-  const filtered = MOCK_ADMIN_LOGS.filter((l) =>
+function formatDateTime(ts: string) {
+  try { return new Date(ts).toLocaleString() } catch { return ts }
+}
+
+export default function AdminLogsPage() {
+  const [logs, setLogs] = useState<AuditLogOut[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    adminApi.getAuditLogs({ limit: 200 })
+      .then((l) => { if (active) setLogs(l) })
+      .catch(() => { if (active) setLogs([]) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filtered = logs.filter((l) =>
     !search ||
     l.action.toLowerCase().includes(search.toLowerCase()) ||
-    l.target.toLowerCase().includes(search.toLowerCase()) ||
-    l.performedBy.toLowerCase().includes(search.toLowerCase())
+    (l.target ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    l.performed_by.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -37,7 +57,7 @@ export default function AdminLogsPage() {
             </h1>
             <p className="text-sm text-greige font-body mt-1">Audit trail of all admin operations.</p>
           </div>
-          <Badge variant="dark">{filtered.length} entries</Badge>
+          <Badge variant="dark">{loading ? '…' : filtered.length} entries</Badge>
         </div>
 
         <Input
@@ -47,25 +67,24 @@ export default function AdminLogsPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {filtered.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="No logs found" description="Try a different search." />
+        {loading ? (
+          <p className="text-sm text-greige font-body">Loading logs...</p>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={ClipboardList} title="No logs found" description="Actions will appear here once admins perform operations." />
         ) : (
           <div className="space-y-2">
             {filtered.map((log) => (
               <Card key={log.id}>
                 <CardContent>
                   <div className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                      log.severity === 'critical' ? 'bg-error-DEFAULT' :
-                      log.severity === 'warning' ? 'bg-warning-DEFAULT' : 'bg-success-DEFAULT'
-                    }`} />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-body font-medium text-charcoal-deep">{log.action}</p>
-                        <Badge variant={SEVERITY_VARIANT[log.severity]} className="capitalize shrink-0">{log.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[log.severity] ?? 'success'} className="capitalize shrink-0">{log.severity}</Badge>
                       </div>
-                      <p className="text-xs text-greige mt-0.5">{log.target}</p>
-                      <p className="text-xs text-greige mt-0.5">By: {log.performedBy} · {formatDateTime(log.timestamp)}</p>
+                      {log.target && <p className="text-xs text-greige mt-0.5">{log.target}</p>}
+                      <p className="text-xs text-greige mt-0.5">By: {log.performed_by} · {formatDateTime(log.timestamp)}</p>
                     </div>
                   </div>
                 </CardContent>

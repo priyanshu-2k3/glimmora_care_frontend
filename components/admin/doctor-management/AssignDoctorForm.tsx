@@ -1,43 +1,75 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { UserPlus, Check, AlertCircle } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Select'
-import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { DOCTOR_SELECT_OPTIONS } from '@/data/admin-mock'
+import { orgApi, adminApi, type DoctorOut, type AdminPatientOut } from '@/lib/api'
 
 interface AssignDoctorFormProps {
-  onAssign?: (patientEmail: string, doctorId: string) => void
+  onAssign?: () => void
 }
 
 export function AssignDoctorForm({ onAssign }: AssignDoctorFormProps) {
-  const [patientEmail, setPatientEmail] = useState('')
+  const [doctors, setDoctors] = useState<DoctorOut[]>([])
+  const [patients, setPatients] = useState<AdminPatientOut[]>([])
+  const [patientId, setPatientId] = useState('')
   const [doctorId, setDoctorId] = useState('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    let active = true
+    orgApi.listDoctors()
+      .then((d) => { if (active) setDoctors(d) })
+      .catch(() => { if (active) setDoctors([]) })
+    adminApi.listPatients()
+      .then((p) => { if (active) setPatients(p) })
+      .catch(() => { if (active) setPatients([]) })
+    return () => { active = false }
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!patientEmail || !doctorId) {
-      setError('Please fill in all fields.')
+    if (!patientId || !doctorId) {
+      setError('Please select both a patient and a doctor.')
       return
     }
     setError(null)
     setSaving(true)
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 800))
-    setSaving(false)
-    setSuccess(true)
-    onAssign?.(patientEmail, doctorId)
-    setTimeout(() => {
-      setSuccess(false)
-      setPatientEmail('')
-      setDoctorId('')
-    }, 2000)
+    try {
+      await orgApi.assignPatient(patientId, doctorId)
+      setSaving(false)
+      setSuccess(true)
+      onAssign?.()
+      setTimeout(() => {
+        setSuccess(false)
+        setPatientId('')
+        setDoctorId('')
+      }, 2000)
+    } catch (err: unknown) {
+      setSaving(false)
+      setError(err instanceof Error ? err.message : 'Failed to assign doctor.')
+    }
   }
+
+  const doctorOptions = [
+    { value: '', label: 'Choose a doctor...' },
+    ...doctors.map((d) => ({
+      value: d.user_id,
+      label: `${d.first_name ?? ''} ${d.last_name ?? ''} (${d.email})`.trim(),
+    })),
+  ]
+
+  const patientOptions = [
+    { value: '', label: 'Choose a patient...' },
+    ...patients.map((p) => ({
+      value: p.id,
+      label: `${p.first_name} ${p.last_name} (${p.email})`,
+    })),
+  ]
 
   return (
     <Card>
@@ -62,17 +94,15 @@ export function AssignDoctorForm({ onAssign }: AssignDoctorFormProps) {
               <p className="text-xs font-body text-success-DEFAULT">Doctor assigned successfully.</p>
             </div>
           )}
-          <Input
-            label="Patient Email"
-            type="email"
-            placeholder="patient@example.com"
-            value={patientEmail}
-            onChange={(e) => { setPatientEmail(e.target.value); setError(null) }}
-            required
+          <Select
+            label="Select Patient"
+            options={patientOptions}
+            value={patientId}
+            onChange={(e) => { setPatientId(e.target.value); setError(null) }}
           />
           <Select
             label="Select Doctor"
-            options={[{ value: '', label: 'Choose a doctor...' }, ...DOCTOR_SELECT_OPTIONS]}
+            options={doctorOptions}
             value={doctorId}
             onChange={(e) => { setDoctorId(e.target.value); setError(null) }}
           />

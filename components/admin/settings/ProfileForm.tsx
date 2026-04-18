@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Save, Check, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { authApi } from '@/lib/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -12,15 +13,28 @@ import { ROLES } from '@/lib/constants'
 import type { Role } from '@/types/auth'
 
 export function ProfileForm() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [form, setForm] = useState({
-    name: user?.name ?? '',
-    email: user?.email ?? '',
-    location: user?.location ?? '',
+    first_name: '',
+    last_name: '',
+    location: '',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    if (user) {
+      const [first, ...rest] = (user.name ?? '').split(' ')
+      if (active) setForm({
+        first_name: first ?? '',
+        last_name: rest.join(' '),
+        location: user.location ?? '',
+      })
+    }
+    return () => { active = false }
+  }, [user])
 
   const isDemo = !user?.accessToken
 
@@ -28,10 +42,20 @@ export function ProfileForm() {
     if (isDemo) return
     setSaving(true)
     setError(null)
-    await new Promise((r) => setTimeout(r, 800))
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await authApi.updateMe({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        location: form.location,
+      })
+      await refreshUser()
+      setSaving(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err: unknown) {
+      setSaving(false)
+      setError(err instanceof Error ? err.message : 'Failed to save profile.')
+    }
   }
 
   if (!user) return null
@@ -56,16 +80,15 @@ export function ProfileForm() {
           </div>
         )}
         <Input
-          label="Full Name"
-          value={form.name}
-          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+          label="First Name"
+          value={form.first_name}
+          onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))}
           disabled={isDemo}
         />
         <Input
-          label="Email Address"
-          type="email"
-          value={form.email}
-          onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+          label="Last Name"
+          value={form.last_name}
+          onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))}
           disabled={isDemo}
         />
         <Input
@@ -74,12 +97,11 @@ export function ProfileForm() {
           onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
           disabled={isDemo}
         />
-        {!isDemo && (
+        {!isDemo ? (
           <Button onClick={handleSave} isLoading={saving} disabled={saving}>
             {saved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
           </Button>
-        )}
-        {isDemo && (
+        ) : (
           <p className="text-xs text-warning-DEFAULT font-body">Demo mode — changes are disabled.</p>
         )}
       </CardContent>
