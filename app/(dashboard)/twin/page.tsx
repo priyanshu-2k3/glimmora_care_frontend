@@ -7,8 +7,8 @@ import {
   AreaChart, Area
 } from 'recharts'
 import { useAuth } from '@/context/AuthContext'
-import { MOCK_PATIENTS } from '@/data/patients'
-import { twinApi } from '@/lib/api'
+import { twinApi, orgApi, adminApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
 import type { DigitalHealthTwin, TwinRiskPoint } from '@/types/twin'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -17,11 +17,6 @@ import { Select } from '@/components/ui/Select'
 import { RiskGauge } from '@/components/charts/RiskGauge'
 import { cn } from '@/lib/utils'
 import { AI_DISCLAIMER } from '@/lib/constants'
-
-const PATIENT_OPTIONS = [
-  { value: 'pat_001', label: 'Priya Sharma (38y)' },
-  { value: 'pat_002', label: 'Ramesh Patel (55y)' },
-]
 
 // Custom tooltip for the risk-trajectory chart.  Surfaces confidence, sample
 // size, and — most importantly — the per-event reasons that produced the
@@ -99,35 +94,59 @@ function makeAnomalyDot(anomKey: string) {
 
 export default function TwinPage() {
   const { user } = useAuth()
-  const [selectedPatient, setSelectedPatient] = useState('pat_001')
+  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
   const [twin, setTwin] = useState<DigitalHealthTwin | null>(null)
   const [loading, setLoading] = useState(true)
+  const [patientsLoading, setPatientsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const patient = MOCK_PATIENTS.find((p) => p.id === selectedPatient)
 
-  // Fetch real twin from backend.  Patients hit `/twin` (self);
-  // doctor/admin pass an explicit patient id from the selector above.
+  const isPatient = user?.role === 'patient'
+  const canViewAll = user?.role === 'doctor' || user?.role === 'admin' || user?.role === 'super_admin'
+
+  // For doctor/admin: fetch their patient list to populate the selector
   useEffect(() => {
+    if (!canViewAll || !getAccessToken()) return
+    setPatientsLoading(true)
+    const fetch = user?.role === 'doctor'
+      ? orgApi.getDoctorPatients()
+      : orgApi.listPatients()
+    fetch
+      .then((list) => {
+        setPatients(list)
+        if (list.length > 0 && !selectedPatientId) {
+          setSelectedPatientId(list[0].patient_id)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPatientsLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canViewAll, user?.role])
+
+  // Fetch twin — patient gets their own, doctor/admin use the selector
+  useEffect(() => {
+    if (!isPatient && !selectedPatientId) return
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    const request = user?.role === 'patient'
-      ? twinApi.getMine()
-      : twinApi.get(selectedPatient)
-
+    const request = isPatient ? twinApi.getMine() : twinApi.get(selectedPatientId)
     request
       .then((res) => { if (!cancelled) setTwin(res.twin) })
       .catch((e: unknown) => {
         if (cancelled) return
-        const msg = e instanceof Error ? e.message : 'Failed to load digital twin'
-        setError(msg)
+        setError(e instanceof Error ? e.message : 'Failed to load digital twin')
         setTwin(null)
       })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [user?.role, selectedPatient])
+  }, [isPatient, selectedPatientId])
+
+  const selectedPatient = patients.find((p) => p.patient_id === selectedPatientId)
+  const selectedPatientName = selectedPatient
+    ? `${selectedPatient.first_name ?? ''} ${selectedPatient.last_name ?? ''}`.trim() || selectedPatient.email || selectedPatientId
+    : ''
 
   const [visibleMarkers, setVisibleMarkers] = useState<Record<string, boolean>>({})
   useEffect(() => {
@@ -224,16 +243,25 @@ export default function TwinPage() {
 
       <div className="space-y-6">
 
-      {/* Patient selector */}
-      {user?.role !== 'patient' && (
+      {/* Patient selector — doctor / admin only */}
+      {canViewAll && (
         <Card>
           <CardContent>
-            <Select
-              label="Select Patient"
-              options={PATIENT_OPTIONS}
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-            />
+            {patientsLoading ? (
+              <div className="h-10 bg-sand-light rounded-lg animate-pulse" />
+            ) : patients.length === 0 ? (
+              <p className="text-sm text-greige font-body">No patients assigned yet.</p>
+            ) : (
+              <Select
+                label="Select Patient"
+                options={patients.map((p) => ({
+                  value: p.patient_id,
+                  label: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id,
+                }))}
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -275,7 +303,7 @@ export default function TwinPage() {
                   <CardTitle className="font-body font-semibold">Longitudinal Marker Timeline</CardTitle>
                   <CardDescription>Toggle markers to overlay on timeline · {allDates.length} data points</CardDescription>
                 </div>
-                {patient && <Badge variant="gold">{patient.name}</Badge>}
+                {selectedPatientName && <Badge variant="gold">{selectedPatientName}</Badge>}
               </div>
               {/* Marker toggles */}
               <div className="flex flex-wrap gap-2 mt-3">

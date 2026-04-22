@@ -1,23 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight } from 'lucide-react'
+import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { MOCK_PATIENTS } from '@/data/patients'
 import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
+import { MOCK_PATIENTS } from '@/data/patients'
 import { intakeApi, getAccessToken } from '@/lib/api'
 import type { HealthRecord } from '@/types/intake'
 import type { HealthRecord as MockHealthRecord } from '@/types/health'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EncryptionBadge } from '@/components/vault/EncryptionBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatDate, getInitials } from '@/lib/utils'
+import { formatDate, getInitials, cn } from '@/lib/utils'
 
-/** Convert mock HealthRecord (types/health) → intake HealthRecord shape for display */
 function adaptMockRecord(r: MockHealthRecord): HealthRecord {
   return {
     id: r.id,
@@ -54,61 +53,64 @@ const RECORD_TYPE_LABELS: Record<string, string> = {
   imaging: 'Imaging',
   vitals: 'Vitals',
   ngo_field_entry: 'NGO Field Entry',
+  manual_entry: 'Manual Entry',
 }
-
-const ALL_PATIENTS_OPTION = { value: 'all', label: 'All Patients' }
-const PATIENT_OPTIONS = [
-  ALL_PATIENTS_OPTION,
-  ...MOCK_PATIENTS.map((p) => ({ value: p.id, label: `${p.name} (${p.age}y · ${p.district})` })),
-]
 
 export default function VaultPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const selectedPatientId = searchParams.get('patient')
   const [search, setSearch] = useState('')
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(
-    user?.role === 'patient' ? 'pat_001' : 'all'
-  )
   const [records, setRecords] = useState<HealthRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
 
   if (!user) return null
 
-  // Patients that the current role can see
   const canViewAll = user.role === 'doctor' || user.role === 'admin' || user.role === 'super_admin'
+  const isDoctor = user.role === 'doctor'
+  const isPatient = user.role === 'patient'
+  const pageTitle = isDoctor ? 'Patient Vault' : 'Health Vault'
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     setIsLoading(true)
     setFetchError(null)
 
-    // Demo users have no JWT — fall back to mock data immediately
+    // Demo users have no JWT — show mock data only
     if (!getAccessToken()) {
       const mockRecords = MOCK_HEALTH_RECORDS.map(adaptMockRecord)
-      const filtered = user?.role === 'patient'
-        ? mockRecords.filter((r) => r.patientId === 'pat_001')
-        : mockRecords
+      const filtered = isPatient ? mockRecords.filter((r) => r.patientId === 'pat_001') : mockRecords
       setRecords(filtered)
+      setIsDemo(true)
       setIsLoading(false)
       return
     }
 
-    const patientParam = (canViewAll && selectedPatientId !== 'all') ? selectedPatientId : undefined
-    intakeApi.getRecords(patientParam)
+    setIsDemo(false)
+    // Doctors fetch all records in one call; patients get their own automatically
+    intakeApi.getRecords()
       .then(setRecords)
       .catch((err) => {
-        // On API failure, fall back to mock data so the UI is never blank
-        const mockRecords = MOCK_HEALTH_RECORDS.map(adaptMockRecord)
-        const filtered = user?.role === 'patient'
-          ? mockRecords.filter((r) => r.patientId === 'pat_001')
-          : mockRecords
-        setRecords(filtered)
-        if (!(err instanceof Error && err.message.includes('401'))) {
-          setFetchError(`Backend unavailable — showing demo data. (${err instanceof Error ? err.message : 'error'})`)
-        }
+        setFetchError(err instanceof Error ? err.message : 'Failed to load records')
       })
       .finally(() => setIsLoading(false))
-  }, [selectedPatientId, canViewAll, user?.role])
+  }, [isPatient])
+
+  // Derive unique patients from real records (for doctor/admin card view)
+  const patientMap = new Map<string, { name: string; consented: number; total: number; district?: string; age?: number }>()
+  for (const rec of records) {
+    const prev = patientMap.get(rec.patientId) ?? { name: rec.patientId, consented: 0, total: 0 }
+    prev.total++
+    if (rec.consentStatus === 'granted') prev.consented++
+    // If demo, enrich with mock patient details
+    if (isDemo) {
+      const mock = MOCK_PATIENTS.find((p) => p.id === rec.patientId)
+      if (mock) { prev.name = mock.name; prev.district = mock.district; prev.age = mock.age }
+    }
+    patientMap.set(rec.patientId, prev)
+  }
 
   const filteredRecords = records.filter((r) => {
     if (!search) return true
@@ -118,25 +120,113 @@ export default function VaultPage() {
     )
   })
 
-  const isDoctor = user.role === 'doctor'
-  const isPatient = user.role === 'patient'
-  const pageTitle = isDoctor ? 'Patient Vault' : 'Health Vault'
+  /* ── Doctor: single-patient record view (from patient card click) ── */
+  if (isDoctor && selectedPatientId) {
+    const patient = patientMap.get(selectedPatientId)
+    const patientRecords = filteredRecords.filter((r) => r.patientId === selectedPatientId)
 
-  /* ── Doctor card view: show patients as cards ── */
-  if (isDoctor) {
-    const patientMap = new Map<string, { consented: number; total: number }>()
-    for (const rec of records) {
-      const prev = patientMap.get(rec.patientId) ?? { consented: 0, total: 0 }
-      prev.total++
-      if (rec.consentStatus === 'granted') prev.consented++
-      patientMap.set(rec.patientId, prev)
-    }
-    const filteredPatients = MOCK_PATIENTS.filter((p) =>
-      !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.district ?? '').toLowerCase().includes(search.toLowerCase())
-    )
     return (
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-        {/* Page header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+            <Link href="/vault" className="hover:text-gold-deep transition-colors flex items-center gap-1">
+              <ArrowLeft className="w-3 h-3" />
+              Patient Vault
+            </Link>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-gold-deep">{patient?.name ?? selectedPatientId}</span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">{patient?.name ?? selectedPatientId}</h1>
+              <p className="text-sm text-stone font-body mt-1.5">
+                {patient?.age ? `${patient.age}y` : ''}{patient?.age && patient?.district ? ' · ' : ''}{patient?.district ?? ''}
+              </p>
+            </div>
+            <Link href={`/intake?patient=${selectedPatientId}`} className="shrink-0">
+              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
+                <Upload className="w-4 h-4" />
+                Upload Record
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {isDemo && (
+          <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-2xl p-3 text-xs text-warning-DEFAULT font-body">
+            Demo mode — showing sample data
+          </div>
+        )}
+
+        <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm">
+          <Input
+            placeholder="Search records..."
+            leftIcon={<Search className="w-4 h-4" />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border border-sand-light rounded-2xl p-4 animate-pulse">
+                <div className="h-4 bg-sand-light rounded w-1/3 mb-2" />
+                <div className="h-3 bg-sand-light rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && patientRecords.length === 0 && (
+          <EmptyState icon={FileText} title="No records" description="No health records found for this patient." />
+        )}
+
+        {!isLoading && patientRecords.length > 0 && (
+          <div className="space-y-3">
+            {patientRecords.map((record) => (
+              <Link key={record.id} href={`/vault/${record.id}`}>
+                <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body font-semibold text-charcoal-deep text-sm truncate">{record.title}</p>
+                      <p className="text-xs text-greige font-body mt-0.5">{record.source} · {record.date}</p>
+                    </div>
+                    <Badge variant={record.consentStatus === 'granted' ? 'success' : 'warning'}>
+                      {RECORD_TYPE_LABELS[record.type] ?? record.type}
+                    </Badge>
+                  </div>
+                  {record.markers.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {record.markers.slice(0, 4).map((m) => (
+                        <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-error-DEFAULT' : 'bg-parchment text-stone')}>
+                          {m.name}: {m.value} {m.unit}
+                        </span>
+                      ))}
+                      {record.markers.length > 4 && (
+                        <span className="text-[10px] text-greige font-body px-2 py-0.5">+{record.markers.length - 4} more</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  /* ── Doctor / Admin card view: only show patients with consent granted ── */
+  if (canViewAll) {
+    const patientEntries = [...patientMap.entries()].filter(([, p]) => {
+      if (isDoctor && p.consented === 0) return false
+      if (!search) return true
+      return p.name.toLowerCase().includes(search.toLowerCase())
+    })
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
         <div className="mb-6">
           <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
             <span>Health Data</span>
@@ -150,14 +240,21 @@ export default function VaultPage() {
                 Manage and review health records for your patients
               </p>
             </div>
-            <Badge variant="dark" className="shrink-0 self-center">{filteredPatients.length} Patient{filteredPatients.length !== 1 ? 's' : ''}</Badge>
+            <Badge variant="dark" className="shrink-0 self-center">
+              {patientEntries.length} Patient{patientEntries.length !== 1 ? 's' : ''}
+            </Badge>
           </div>
         </div>
 
-        {/* Search bar */}
-        <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm mb-4 flex flex-col sm:flex-row gap-3">
+        {isDemo && (
+          <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-2xl p-3 text-xs text-warning-DEFAULT font-body">
+            Demo mode — showing sample data
+          </div>
+        )}
+
+        <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm mb-4">
           <Input
-            placeholder="Search patients by name, district..."
+            placeholder="Search patients by name..."
             leftIcon={<Search className="w-4 h-4" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -181,23 +278,36 @@ export default function VaultPage() {
           </div>
         )}
 
-        {!isLoading && filteredPatients.length === 0 ? (
-          <EmptyState icon={User} title="No patients found" description="Try a different search term." />
-        ) : (
+        {!isLoading && !fetchError && patientEntries.length === 0 && (
+          <EmptyState
+            icon={User}
+            title="No patients found"
+            description={isDoctor ? 'No patients have granted you consent yet.' : 'No health records exist yet.'}
+          />
+        )}
+
+        {!isLoading && !fetchError && patientEntries.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPatients.map((patient) => (
-              <Link key={patient.id} href={`/vault?patient=${patient.id}`}>
+            {patientEntries.map(([patientId, p]) => (
+              <Link key={patientId} href={`/vault?patient=${patientId}`}>
                 <div className="bg-gradient-to-br from-white to-ivory-warm border border-sand-light rounded-2xl p-5 hover:border-gold-soft/60 hover:shadow-md transition-all duration-300 cursor-pointer">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-charcoal-deep to-stone flex items-center justify-center text-ivory-cream font-display text-lg mb-3 shrink-0">
-                    {getInitials(patient.name)}
-                  </div>
-                  <p className="font-body font-semibold text-charcoal-deep text-sm">{patient.name}</p>
-                  <p className="text-xs text-greige font-body mt-0.5">{patient.age}y · {patient.district ?? patient.state}</p>
-                  <div className="mt-3 pt-3 border-t border-sand-light flex items-center justify-between">
-                    <span className="text-[11px] text-greige font-body">{(patientMap.get(patient.id)?.total ?? 0)} records</span>
-                    <Badge variant={(patientMap.get(patient.id)?.consented ?? 0) === (patientMap.get(patient.id)?.total ?? 0) ? 'success' : 'warning'}>
-                      {patientMap.get(patient.id)?.consented ?? 0}/{patientMap.get(patient.id)?.total ?? 0} consented
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-charcoal-deep to-stone flex items-center justify-center text-ivory-cream font-display text-lg shrink-0">
+                      {getInitials(p.name)}
+                    </div>
+                    <Badge variant="success" className="shrink-0">
+                      Consented
                     </Badge>
+                  </div>
+                  <p className="font-body font-semibold text-charcoal-deep text-sm">{p.name}</p>
+                  {(p.age || p.district) && (
+                    <p className="text-xs text-greige font-body mt-0.5">
+                      {p.age ? `${p.age}y` : ''}{p.age && p.district ? ' · ' : ''}{p.district ?? ''}
+                    </p>
+                  )}
+                  <div className="mt-3 pt-3 border-t border-sand-light flex items-center justify-between">
+                    <span className="text-[11px] text-greige font-body">{p.total} record{p.total !== 1 ? 's' : ''}</span>
+                    <span className="text-[11px] text-gold-deep font-body font-medium">View records →</span>
                   </div>
                 </div>
               </Link>
@@ -208,9 +318,9 @@ export default function VaultPage() {
     )
   }
 
+  /* ── Patient view: own records list ── */
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {/* Page header */}
       <div className="mb-6">
         <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
           <span>Health Data</span>
@@ -224,29 +334,22 @@ export default function VaultPage() {
               Your encrypted health records, secured and accessible
             </p>
           </div>
-          {isPatient && (
-            <Link href="/intake" className="shrink-0">
-              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
-                <Upload className="w-4 h-4" />
-                Upload
-              </Button>
-            </Link>
-          )}
+          <Link href="/intake" className="shrink-0">
+            <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
+              <Upload className="w-4 h-4" />
+              Upload
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Search / filter bar */}
-      <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm mb-4 flex flex-col sm:flex-row gap-3">
-        {/* Admin/SuperAdmin patient selector */}
-        {canViewAll && (
-          <Select
-            label="Filter by Patient"
-            options={PATIENT_OPTIONS}
-            value={selectedPatientId}
-            onChange={(e) => setSelectedPatientId(e.target.value)}
-            hint={selectedPatientId === 'all' ? `Showing records for all ${MOCK_PATIENTS.length} patients` : ''}
-          />
-        )}
+      {isDemo && (
+        <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-2xl p-3 text-xs text-warning-DEFAULT font-body">
+          Demo mode — showing sample data
+        </div>
+      )}
+
+      <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm mb-4">
         <Input
           placeholder="Search records by title, lab, source..."
           leftIcon={<Search className="w-4 h-4" />}
@@ -255,7 +358,6 @@ export default function VaultPage() {
         />
       </div>
 
-      {/* Loading skeleton */}
       {isLoading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -267,41 +369,30 @@ export default function VaultPage() {
         </div>
       )}
 
-      {/* Error display */}
       {fetchError && (
         <div className="bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-4 text-sm text-error-DEFAULT font-body">
           {fetchError}
         </div>
       )}
 
-      {/* Records list */}
       {!isLoading && !fetchError && (
         filteredRecords.length === 0 ? (
-          isPatient ? (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 bg-parchment rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <Shield className="w-8 h-8 text-greige" />
-              </div>
-              <h3 className="font-display text-2xl text-charcoal-deep tracking-tight mb-2">No records yet</h3>
-              <p className="text-sm text-stone font-body mb-5 max-w-xs mx-auto">Upload your first health document to get started</p>
-              <Link href="/intake">
-                <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream border-0 shadow-sm">
-                  <Upload className="w-4 h-4" />
-                  Upload First Record
-                </Button>
-              </Link>
+          <div className="text-center py-20">
+            <div className="w-16 h-16 bg-parchment rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <Shield className="w-8 h-8 text-greige" />
             </div>
-          ) : (
-            <EmptyState
-              icon={FileText}
-              title="No records found"
-              description="Try a different search or adjust the patient filter."
-            />
-          )
+            <h3 className="font-display text-2xl text-charcoal-deep tracking-tight mb-2">No records yet</h3>
+            <p className="text-sm text-stone font-body mb-5 max-w-xs mx-auto">Upload your first health document to get started</p>
+            <Link href="/intake">
+              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream border-0 shadow-sm">
+                <Upload className="w-4 h-4" />
+                Upload First Record
+              </Button>
+            </Link>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
             {filteredRecords.map((rec) => {
-              const patient = MOCK_PATIENTS.find((p) => p.id === rec.patientId)
               const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
               return (
                 <Link href={`/vault/${rec.id}`} key={rec.id} className="block group">
@@ -332,10 +423,7 @@ export default function VaultPage() {
                             </div>
                           </div>
                           <p className="text-xs text-greige font-body mt-0.5">
-                            {RECORD_TYPE_LABELS[rec.type]} · {formatDate(rec.date)} · {rec.source}
-                            {patient && user.role !== 'patient' && (
-                              <> · <span className="text-charcoal-warm font-medium">{patient.name}</span></>
-                            )}
+                            {RECORD_TYPE_LABELS[rec.type] ?? rec.type} · {formatDate(rec.date)} · {rec.source}
                           </p>
                           <div className="flex items-center gap-3 mt-2">
                             <span className="text-xs text-stone font-body">{rec.markers.length} markers</span>
@@ -352,11 +440,6 @@ export default function VaultPage() {
                             )}
                             {rec.ocrConfidence != null && (
                               <span className="text-xs text-greige">OCR: {Math.round(rec.ocrConfidence * 100)}%</span>
-                            )}
-                            {patient && user.role !== 'patient' && (
-                              <span className="text-xs bg-azure-whisper text-sapphire-deep px-2 py-0.5 rounded-full font-body">
-                                {patient.district}
-                              </span>
                             )}
                           </div>
                         </div>
