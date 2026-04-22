@@ -132,9 +132,8 @@ test('A04: super_admin /manage-users loads with user list', async ({ page }) => 
   // Stats bar shows "Total Users"
   await expect(page.locator('text=Total Users').first()).toBeVisible({ timeout: 10_000 })
 
-  // Page must not show 403 or error
-  await expect(page.locator('body')).not.toContainText('403')
-  await expect(page.locator('body')).not.toContainText('Forbidden')
+  // Page must not show a 403 Forbidden error (avoid matching partial email/number strings)
+  await expect(page.locator('text=403 Forbidden').or(page.locator('text=Forbidden')).or(page.locator('text=Access Denied'))).toHaveCount(0, { timeout: 5_000 })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -145,16 +144,20 @@ test('A05: manage-users table contains known test accounts', async ({ page }) =>
   await page.goto('/manage-users')
 
   await expect(page.locator('h1:has-text("Manage Users")')).toBeVisible({ timeout: 10_000 })
+  // Wait for stat cards AND at least one user card to confirm data loaded
   await expect(page.locator('text=Total Users').first()).toBeVisible({ timeout: 15_000 })
+  await page.waitForTimeout(2_000)
 
-  // Search for the admin account by partial email
-  await page.fill('input[placeholder*="Search"]', 'ov3644111')
-  await page.waitForTimeout(500)
+  // Use testid to avoid matching the topbar search input
+  const searchInput = page.locator('[data-testid="users-search"]')
+  await searchInput.clear()
+  await searchInput.fill('ov3644111')
+  // Wait for debounced backend search + render (debounce=400ms + API ~1s)
+  await page.waitForTimeout(2_000)
 
-  // At least one result should appear — either a user card or row containing that email
   await expect(
     page.locator('text=/ov3644111/i').first()
-  ).toBeVisible({ timeout: 10_000 })
+  ).toBeVisible({ timeout: 15_000 })
 })
 
 test('A05b: manage-users search returns doctor account', async ({ page }) => {
@@ -162,12 +165,14 @@ test('A05b: manage-users search returns doctor account', async ({ page }) => {
   await page.goto('/manage-users')
 
   await expect(page.locator('text=Total Users').first()).toBeVisible({ timeout: 15_000 })
+  await page.waitForTimeout(2_000)
 
-  // Search for the doctor
-  await page.fill('input[placeholder*="Search"]', 'pv121416an')
-  await page.waitForTimeout(500)
+  const searchInput = page.locator('[data-testid="users-search"]')
+  await searchInput.clear()
+  await searchInput.fill('pv121416an')
+  await page.waitForTimeout(2_000)
 
   await expect(
     page.locator('text=/pv121416an/i').first()
-  ).toBeVisible({ timeout: 10_000 })
+  ).toBeVisible({ timeout: 15_000 })
 })

@@ -106,25 +106,23 @@ test('C02: sending a message produces a non-empty AI response', async ({ page })
   await page.goto('/assistants')
   await page.waitForLoadState('networkidle')
 
-  // Find the chat input (textarea preferred, fallback input)
-  const chatInput = page.locator('textarea').first()
+  // Find the chat input by testid to avoid matching topbar search
+  const chatInput = page.locator('[data-testid="chat-input"]')
   await expect(chatInput).toBeVisible({ timeout: 10_000 })
 
   // Type a message
   await chatInput.fill('What does HbA1c mean?')
 
-  // Send via Enter or Send button
+  // Send via Enter
   await chatInput.press('Enter')
 
-  // Wait for the AI response — a message bubble from the bot should appear
-  // The AI response is inside a message bubble (not a user bubble)
-  // Give it up to 30 seconds (Gemini API latency)
+  // Wait for the AI response bubble (data-role="assistant" added to message div)
   await expect(
-    page.locator('[class*="message"], [class*="bubble"], [data-role="assistant"]').last()
+    page.locator('[data-role="assistant"]').last()
   ).toBeVisible({ timeout: 30_000 })
 
-  // Verify the last message bubble is not empty
-  const lastMessage = page.locator('[class*="message"], [class*="bubble"], [data-role="assistant"]').last()
+  // Verify the last assistant message is not empty
+  const lastMessage = page.locator('[data-role="assistant"]').last()
   const text = await lastMessage.textContent()
   expect((text ?? '').trim().length).toBeGreaterThan(0)
 })
@@ -194,10 +192,8 @@ test('C04: doctor /assistants loads Doctor Assistant persona', async ({ page }) 
   ).toBeVisible({ timeout: 10_000 })
 
   // Chat input must be present
-  await expect(page.locator('textarea').first()).toBeVisible({ timeout: 5_000 })
-
-  // Send a doctor-specific message
-  const chatInput = page.locator('textarea').first()
+  const chatInput = page.locator('input[type="text"], textarea').last()
+  await expect(chatInput).toBeVisible({ timeout: 5_000 })
   await chatInput.fill("Give me a clinical summary for today's patients")
   await chatInput.press('Enter')
 
