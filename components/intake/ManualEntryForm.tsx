@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Save } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Trash2, Save, Check, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { intakeApi } from '@/lib/api'
@@ -41,6 +42,7 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
   const [rows, setRows] = useState<MarkerRow[]>([emptyRow()])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
 
   function updateRow(index: number, field: keyof MarkerRow, val: string) {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: val } : r)))
@@ -78,12 +80,60 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
       }
 
       const result = await intakeApi.manual(data)
+      setSavedRecordId(result.recordId)
+      setTitle('')
+      setDate(today)
+      setSource('')
+      setRows([emptyRow()])
       onSuccess(result.recordId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save record')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (savedRecordId) {
+    return (
+      <div className="bg-white border border-sand-light rounded-2xl p-6 space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-success-soft flex items-center justify-center shrink-0">
+            <Check className="w-4 h-4 text-success-DEFAULT" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-display text-lg text-charcoal-deep tracking-tight">
+              Saved to your Health Vault
+            </h3>
+            <p className="text-sm font-body text-stone mt-1">
+              Your digital twin is recomputing in the background. It may take a few seconds to appear on the Twin page.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3 pt-1">
+          <Link
+            href={`/vault/${savedRecordId}`}
+            className="inline-flex items-center gap-1.5 text-sm font-body font-semibold text-gold-deep hover:text-gold-muted transition-colors"
+          >
+            View record
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link
+            href="/twin"
+            className="inline-flex items-center gap-1.5 text-sm font-body font-semibold text-sapphire-deep hover:text-sapphire-mist transition-colors"
+          >
+            Open Digital Twin
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSavedRecordId(null)}
+            className="text-sm font-body font-semibold text-stone hover:text-charcoal-deep transition-colors"
+          >
+            Enter another
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
