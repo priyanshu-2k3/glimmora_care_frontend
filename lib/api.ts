@@ -20,6 +20,7 @@ import type {
   MarkerIn,
   UploadResponse,
 } from '@/types/intake'
+import type { DigitalHealthTwin } from '@/types/twin'
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000'
 export const API_BASE = `${API_HOST}/api/v1`
@@ -899,6 +900,25 @@ export const consentApi = {
     }),
 
   getHistory: () => apiFetch<ConsentRequest[]>('/consent/history'),
+}
+
+// ─── Digital Twin API ─────────────────────────────────────────────────────────
+interface TwinResponse {
+  twin: DigitalHealthTwin | null
+}
+
+export const twinApi = {
+  /** Fetch the authenticated patient's twin (patient role only). */
+  getMine: () => apiFetch<TwinResponse>('/twin'),
+
+  /** Fetch a specific patient's twin (doctor / admin). */
+  get: (patientId: string) => apiFetch<TwinResponse>(`/twin/${patientId}`),
+
+  /** Force a background recompute; poll `get` afterwards to read the result. */
+  recompute: (patientId: string) =>
+    apiFetch<{ status: string; patientId: string }>(`/twin/${patientId}/recompute`, {
+      method: 'POST',
+    }),
 }
 
 export default apiFetch

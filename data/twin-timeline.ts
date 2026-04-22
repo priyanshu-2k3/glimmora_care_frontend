@@ -71,6 +71,7 @@ export const MOCK_TWINS: Record<string, DigitalHealthTwin> = {
       { date: '2025-07', value: 62, predicted: true },
     ],
     dataCompleteness: 82,
+    categoryCompleteness: [],
     lifestyleAdherence: [
       { name: 'Testing Frequency', score: 78, label: 'Good' },
       { name: 'Check-up Regularity', score: 65, label: 'Moderate' },

@@ -1,56 +1,150 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, Eye, EyeOff, TrendingUp, ChevronRight } from 'lucide-react'
+import { Eye, EyeOff, ChevronRight, Info } from 'lucide-react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts'
 import { useAuth } from '@/context/AuthContext'
 import { MOCK_PATIENTS } from '@/data/patients'
-import { getTwinByPatient } from '@/data/twin-timeline'
+import { twinApi } from '@/lib/api'
+import type { DigitalHealthTwin, TwinRiskPoint } from '@/types/twin'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { Select } from '@/components/ui/Select'
 import { RiskGauge } from '@/components/charts/RiskGauge'
-import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { AI_DISCLAIMER } from '@/lib/constants'
-import { Info } from 'lucide-react'
 
 const PATIENT_OPTIONS = [
   { value: 'pat_001', label: 'Priya Sharma (38y)' },
   { value: 'pat_002', label: 'Ramesh Patel (55y)' },
 ]
 
+// Custom tooltip for the risk-trajectory chart.  Surfaces confidence, sample
+// size, and — most importantly — the per-event reasons that produced the
+// score.  This is the SOW-mandated reasoning trace on the "why" side.
+interface RiskTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: TwinRiskPoint }>
+}
+function RiskTooltip({ active, payload }: RiskTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+  const p = payload[0].payload
+  const predicted = !!p.predicted
+  const hasBand = typeof p.low === 'number' && typeof p.high === 'number'
+  return (
+    <div className="rounded-xl border border-sand-light bg-ivory-cream/95 p-3 text-[11px] font-body shadow-md min-w-[200px]">
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <span className="text-charcoal-deep font-semibold">{p.date}</span>
+        <span className={cn('text-sm font-semibold', predicted ? 'text-greige' : 'text-gold-deep')}>
+          {p.value}{predicted ? '% (pred.)' : '%'}
+        </span>
+      </div>
+      {hasBand && (
+        <p className="text-greige">
+          95% band: {p.low}–{p.high}%
+        </p>
+      )}
+      {typeof p.sampleSize === 'number' && (
+        <p className="text-greige">{p.sampleSize} events · conf. {Math.round((p.confidence ?? 0) * 100)}%</p>
+      )}
+      {!predicted && p.reasons && p.reasons.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-sand-light">
+          <p className="text-[10px] text-greige uppercase tracking-wider mb-1">Reasons</p>
+          <ul className="space-y-1">
+            {p.reasons.map((r, i) => (
+              <li key={i} className="text-charcoal-deep">
+                <span className="font-semibold">{r.markerName}</span>{' '}
+                <span className="text-greige">{r.value} {r.unit}</span>
+                {r.anomaly && (
+                  <div className="text-[10px] text-warning-soft">⚠ {r.anomaly.reason}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Custom dot renderer for marker lines — draws a warning triangle on points
+// flagged as personal-baseline deviations or sudden changes.  The `anomKey`
+// arg tells it which extra field on the row carries the anomaly reason.
+interface DotProps {
+  cx?: number
+  cy?: number
+  payload?: Record<string, unknown>
+  fill?: string
+}
+function makeAnomalyDot(anomKey: string) {
+  return function AnomalyDot(props: DotProps) {
+    const { cx, cy, payload, fill } = props
+    if (cx == null || cy == null) return <g />
+    const isAnom = payload?.[anomKey] != null
+    if (isAnom) {
+      return (
+        <g>
+          <circle cx={cx} cy={cy} r={5} fill={fill} stroke="#8B5252" strokeWidth={2} />
+          <circle cx={cx} cy={cy} r={2} fill="#FAF8F5" />
+        </g>
+      )
+    }
+    return <circle cx={cx} cy={cy} r={3} fill={fill} />
+  }
+}
+
 export default function TwinPage() {
   const { user } = useAuth()
   const [selectedPatient, setSelectedPatient] = useState('pat_001')
-  const twin = getTwinByPatient(selectedPatient)
+  const [twin, setTwin] = useState<DigitalHealthTwin | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const patient = MOCK_PATIENTS.find((p) => p.id === selectedPatient)
 
-  const [visibleMarkers, setVisibleMarkers] = useState<Record<string, boolean>>(
-    Object.fromEntries(twin?.markerOverlays.map((m) => [m.markerId, m.isVisible]) ?? [])
-  )
+  // Fetch real twin from backend.  Patients hit `/twin` (self);
+  // doctor/admin pass an explicit patient id from the selector above.
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
 
-  const DC_ITEMS = [
-    { label: 'Metabolic Markers',   value: 85 },
-    { label: 'Cardiac Profile',     value: 78 },
-    { label: 'Blood Panel',         value: 90 },
-    { label: 'Nutritional Markers', value: 60 },
-    { label: 'Renal Function',      value: 50 },
-  ]
+    const request = user?.role === 'patient'
+      ? twinApi.getMine()
+      : twinApi.get(selectedPatient)
 
-  const [lifestyleAnim, setLifestyleAnim] = useState<number[]>(
-    (twin?.lifestyleAdherence ?? []).map(() => 0)
-  )
-  const [dcAnim, setDcAnim] = useState<number[]>(DC_ITEMS.map(() => 0))
+    request
+      .then((res) => { if (!cancelled) setTwin(res.twin) })
+      .catch((e: unknown) => {
+        if (cancelled) return
+        const msg = e instanceof Error ? e.message : 'Failed to load digital twin'
+        setError(msg)
+        setTwin(null)
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [user?.role, selectedPatient])
+
+  const [visibleMarkers, setVisibleMarkers] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    setVisibleMarkers(
+      Object.fromEntries(twin?.markerOverlays.map((m) => [m.markerId, m.isVisible]) ?? [])
+    )
+  }, [twin])
+
+  const categoryBars = twin?.categoryCompleteness ?? []
+
+  const [lifestyleAnim, setLifestyleAnim] = useState<number[]>([])
+  const [dcAnim, setDcAnim] = useState<number[]>([])
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setLifestyleAnim((twin?.lifestyleAdherence ?? []).map(() => 0))
-    setDcAnim(DC_ITEMS.map(() => 0))
+    setDcAnim((twin?.categoryCompleteness ?? []).map(() => 0))
 
     const el = sectionRef.current
     if (!el) return
@@ -67,7 +161,7 @@ export default function TwinPage() {
           step++
           const eased = 1 - Math.pow(1 - Math.min(step / steps, 1), 3)
           setLifestyleAnim((twin?.lifestyleAdherence ?? []).map((c) => Math.round(c.score * eased)))
-          setDcAnim(DC_ITEMS.map((item) => Math.round(item.value * eased)))
+          setDcAnim((twin?.categoryCompleteness ?? []).map((c) => Math.round(c.score * eased)))
           if (step >= steps) clearInterval(timer)
         }, ms)
       },
@@ -75,7 +169,7 @@ export default function TwinPage() {
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [selectedPatient])
+  }, [twin])
 
   function toggleMarker(id: string) {
     setVisibleMarkers((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -86,14 +180,29 @@ export default function TwinPage() {
     (twin?.markerOverlays ?? []).flatMap((m) => m.dataPoints.map((d) => d.date))
   )].sort()
 
+  // Marker-timeline rows carry per-cell value AND an `_anom` flag so the
+  // custom dot renderer can draw a warning triangle on anomaly points.
   const chartData = allDates.map((date) => {
     const row: Record<string, unknown> = { date }
     twin?.markerOverlays.forEach((marker) => {
       const point = marker.dataPoints.find((d) => d.date === date)
-      if (point) row[marker.markerId] = point.value
+      if (point) {
+        row[marker.markerId] = point.value
+        if (point.anomaly) row[`${marker.markerId}__anom`] = point.anomaly.reason
+      }
     })
     return row
   })
+
+  // Risk trajectory rows pre-compute the stacked-band dataKeys for recharts.
+  // `bandLow` renders invisible; `bandSpan` on top paints the 95% CI band.
+  const riskChartData = (twin?.riskTrajectory ?? []).map((p) => ({
+    ...p,
+    bandLow: typeof p.low === 'number' ? p.low : null,
+    bandSpan: typeof p.low === 'number' && typeof p.high === 'number'
+      ? Math.max(0, p.high - p.low)
+      : null,
+  }))
 
   const currentRisk = twin?.riskTrajectory.filter((d) => !d.predicted).at(-1)?.value ?? 0
 
@@ -123,18 +232,20 @@ export default function TwinPage() {
               label="Select Patient"
               options={PATIENT_OPTIONS}
               value={selectedPatient}
-              onChange={(e) => {
-                setSelectedPatient(e.target.value)
-                const newTwin = getTwinByPatient(e.target.value)
-                setVisibleMarkers(Object.fromEntries(newTwin?.markerOverlays.map((m) => [m.markerId, m.isVisible]) ?? []))
-              }}
+              onChange={(e) => setSelectedPatient(e.target.value)}
             />
           </CardContent>
         </Card>
       )}
 
-      {!twin ? (
-        <Card><CardContent className="text-center py-12 text-greige font-body">No twin data available for this patient.</CardContent></Card>
+      {loading ? (
+        <Card><CardContent className="text-center py-12 text-greige font-body">Loading digital twin…</CardContent></Card>
+      ) : error ? (
+        <Card><CardContent className="text-center py-12 text-error-soft font-body">{error}</CardContent></Card>
+      ) : !twin ? (
+        <Card><CardContent className="text-center py-12 text-greige font-body">
+          No twin data yet — add health records to build this patient&apos;s twin.
+        </CardContent></Card>
       ) : (
         <>
           {/* Header stats */}
@@ -203,7 +314,7 @@ export default function TwinPage() {
                         dataKey={m.markerId}
                         stroke={m.color}
                         strokeWidth={2}
-                        dot={{ r: 3, fill: m.color }}
+                        dot={makeAnomalyDot(`${m.markerId}__anom`)}
                         connectNulls
                         name={m.markerName}
                       />
@@ -222,7 +333,7 @@ export default function TwinPage() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={twin.riskTrajectory} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <AreaChart data={riskChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#C9A962" stopOpacity={0.3} />
@@ -232,13 +343,34 @@ export default function TwinPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5DFD3" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Inter' }}
-                    formatter={(val: number | undefined) => [
-                      `${val ?? ''}`, 'Value'
-                    ]}
+                  <Tooltip content={<RiskTooltip />} />
+                  {/* 95% confidence band — two stacked areas so the visible
+                      fill spans `low` → `high`.  The lower one stays invisible. */}
+                  <Area
+                    type="monotone"
+                    dataKey="bandLow"
+                    stackId="band"
+                    stroke="transparent"
+                    fill="transparent"
+                    isAnimationActive={false}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#C9A962" strokeWidth={2} fill="url(#riskGrad)" dot={{ r: 3 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="bandSpan"
+                    stackId="band"
+                    stroke="transparent"
+                    fill="#C9A962"
+                    fillOpacity={0.12}
+                    isAnimationActive={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#C9A962"
+                    strokeWidth={2}
+                    fill="url(#riskGrad)"
+                    dot={{ r: 3 }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
               <div className="flex items-start gap-2 mt-3 p-3 bg-azure-whisper/50 rounded-lg">
@@ -273,15 +405,21 @@ export default function TwinPage() {
                 <CardDescription>Health record coverage by category</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {DC_ITEMS.map((item, i) => (
-                  <Progress
-                    key={item.label}
-                    value={dcAnim[i] ?? 0}
-                    label={`${item.label} · ${dcAnim[i] ?? 0}%`}
-                    showLabel
-                    variant="default"
-                  />
-                ))}
+                {categoryBars.length === 0 ? (
+                  <p className="text-xs text-greige font-body">
+                    No category coverage yet — upload a lab report with categorised markers.
+                  </p>
+                ) : (
+                  categoryBars.map((item, i) => (
+                    <Progress
+                      key={item.category}
+                      value={dcAnim[i] ?? 0}
+                      label={`${item.name} · ${dcAnim[i] ?? 0}%`}
+                      showLabel
+                      variant="default"
+                    />
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>

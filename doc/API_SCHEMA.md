@@ -672,3 +672,46 @@ Vault detail page (`app/(dashboard)/vault/[id]/page.tsx`) uses mock data.
 
 ### DELETE /health-records/{id} ❌ Missing
 Right to erasure (DPDP Act compliance). No frontend UI yet.
+
+---
+
+## Digital Twin
+
+### GET /twin ✅ Done
+**Auth:** Bearer (patient role)
+**Response:**
+```json
+{ "twin": {
+    "patientId": "string",
+    "markerOverlays": [
+      { "markerId": "hba1c", "markerName": "HbA1c (%)", "color": "#C9A962", "isVisible": true, "unit": "%",
+        "dataPoints": [ { "date": "2024-01-10", "value": 5.5, "unit": "%", "isAbnormal": false } ] }
+    ],
+    "riskTrajectory": [ { "date": "2024-01", "value": 22.0 }, { "date": "2025-04", "value": 55.0, "predicted": true } ],
+    "dataCompleteness": 82.0,
+    "categoryCompleteness": [
+      { "name": "Metabolic Markers", "category": "metabolic", "score": 66.7, "label": "Moderate" },
+      { "name": "Cardiac Profile", "category": "cardiac", "score": 33.3, "label": "Low" }
+    ],
+    "lifestyleAdherence": [ { "name": "Testing Frequency", "score": 78, "label": "Good" } ],
+    "snapshots": [ { "id": "snap_...", "patientId": "...", "timestamp": "iso", "markerDelta": { "hba1c": 0.1 },
+                    "riskScoreChange": 4, "confidenceAdjustment": 0, "agentActionsTriggered": [], "dataCompleteness": 82 } ],
+    "lastUpdated": "iso"
+  } }
+```
+**Notes:** Returns `{"twin": null}` if the background job hasn't produced a snapshot yet; the GET call itself triggers a recompute so a subsequent call will usually return data.
+**Used by:** `app/(dashboard)/twin/page.tsx`
+
+---
+
+### GET /twin/{patient_id} ✅ Done
+**Auth:** Bearer (doctor / admin)
+Same response shape as `GET /twin`.
+**Used by:** `app/(dashboard)/twin/page.tsx` (non-patient roles)
+
+---
+
+### POST /twin/{patient_id}/recompute ✅ Done
+**Auth:** Bearer (doctor / admin, or patient acting on their own id)
+**Response:** `{ "status": "queued", "patientId": "string" }`
+Forces a background recompute; poll the GET endpoint to read the refreshed twin.

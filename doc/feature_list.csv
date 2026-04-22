@@ -10,7 +10,7 @@ Health Vault (Detail),100,0,0,Record detail UI done; no real API fetch
 Intelligence Dashboard,100,0,0,AGI trends UI; all mock data
 Agents Dashboard,100,0,0,5 agent cards; mock activity feed
 AI Assistants / Chat,100,50,50,Pre-scripted responses; chat backend route exists
-Digital Twin,100,0,0,Multi-marker overlay charts; all mock
+Digital Twin,100,100,100,Backend twin_service computes overlays/risk trajectory/lifestyle adherence from real records; GET /twin and /twin/{id} wired
 Population Dashboard,100,0,0,Heatmaps; Maharashtra mock data
 Offline Sync,100,0,0,IndexedDB UI; no real sync backend
 Settings,100,50,50,Profile UI done; profile API integrated; notifications/security mock
