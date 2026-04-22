@@ -1,15 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Share2, Plus } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { ShareConsentModal } from '@/components/admin/doctor-management/ShareConsentModal'
 import { DoctorPatientTable } from '@/components/admin/doctor-management/DoctorPatientTable'
 import { Button } from '@/components/ui/Button'
-import { MOCK_ASSIGNMENTS } from '@/data/admin-mock'
+import { orgApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
+import type { DoctorPatientAssignment } from '@/data/admin-mock'
+
+function adaptToAssignment(p: PatientOut): DoctorPatientAssignment {
+  return {
+    id: p.patient_id,
+    patientName: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id,
+    patientEmail: p.email ?? '',
+    patientAge: 0,
+    doctorName: p.assigned_doctor_name ?? 'Unassigned',
+    doctorId: p.assigned_doctor_id ?? '',
+    assignedAt: new Date().toISOString(),
+    consentStatus: p.assigned_doctor_id ? 'granted' : 'pending',
+  }
+}
 
 export default function ShareConsentPage() {
   const [modalOpen, setModalOpen] = useState(false)
+  const [assignments, setAssignments] = useState<DoctorPatientAssignment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!getAccessToken()) { setLoading(false); return }
+    orgApi.listPatients()
+      .then((patients) => setAssignments(patients.map(adaptToAssignment)))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const granted = assignments.filter((a) => a.consentStatus === 'granted')
 
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
@@ -28,7 +55,15 @@ export default function ShareConsentPage() {
           </Button>
         </div>
 
-        <DoctorPatientTable assignments={MOCK_ASSIGNMENTS.filter((a) => a.consentStatus === 'granted')} />
+        {loading ? (
+          <div className="space-y-3">
+            {[1,2,3].map((i) => (
+              <div key={i} className="h-14 bg-sand-light rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <DoctorPatientTable assignments={granted} />
+        )}
 
         <ShareConsentModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       </div>

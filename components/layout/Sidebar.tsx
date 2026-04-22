@@ -34,16 +34,16 @@ const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
   sibling: Users,
 }
 
-/* Sections for non-admin roles (unchanged from original) */
+/* Sections for non-admin roles */
 const DEFAULT_NAV_SECTIONS = [
   { label: null, hrefs: ['/dashboard'] },
-  { label: 'HEALTH', hrefs: ['/vault', '/twin'] },
-  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor', '/emergency', '/consent', '/access', '/logs'] },
+  { label: 'HEALTH', hrefs: ['/vault', '/intake', '/twin'] },
+  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/my-doctor'] },
+  { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access'] },
   { label: 'ORGANISATION', hrefs: ['/organization', '/organization/doctors', '/organization/patients'] },
   { label: 'MANAGEMENT', hrefs: ['/manage-users'] },
   { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },
-  { label: 'COMMUNITY', hrefs: ['/population', '/offline'] },
-  { label: 'SYSTEM', hrefs: ['/notifications', '/settings'] },
+  { label: 'SYSTEM', hrefs: ['/logs', '/notifications', '/settings'] },
 ]
 
 /* ── Admin nested nav item renderer ────────────────────────────────────────── */
@@ -131,7 +131,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 Glimmora<span className="text-gold-deep italic">Care</span>
               </h1>
               <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-                Admin Console
+                Super Admin Console
               </p>
             </div>
           </Link>
@@ -252,12 +252,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 )
               })}
               <Link
-                href="/profiles"
+                href="/family"
                 onClick={() => { setShowProfileSwitcher(false); onClose?.() }}
                 className="flex items-center gap-2.5 px-3 py-2 text-xs text-gold-deep hover:text-gold-muted border-t border-sand-light transition-colors"
               >
                 <Users className="w-3.5 h-3.5" />
-                Manage profiles
+                Manage family & profiles
               </Link>
             </div>
           )}

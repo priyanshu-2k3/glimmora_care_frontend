@@ -106,13 +106,12 @@ test('S02: password change allows login with new password', async ({ page }) => 
 
   // Change password back to original so test accounts remain consistent
   const revertRes = await apiRequest('/auth/change-password', newTokens.accessToken, {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify({
       current_password: newPassword,
       new_password: u.password,
     }),
   })
-  // 200 = reverted, other status codes are acceptable (endpoint may vary)
   expect([200, 204]).toContain(revertRes.status)
 })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, Sparkles, Save, Check, ChevronRight, UserCircle } from 'lucide-react'
 import { FileUploader } from '@/components/intake/FileUploader'
 import { OcrProcessingAnimation } from '@/components/intake/OcrProcessingAnimation'
@@ -12,9 +12,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { useAuth } from '@/context/AuthContext'
 import { useProfile } from '@/context/ProfileContext'
-import { MOCK_PATIENTS } from '@/data/patients'
 import { cn } from '@/lib/utils'
-import { intakeApi } from '@/lib/api'
+import { intakeApi, orgApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
 import type { MarkerOut } from '@/types/intake'
 import type { HealthMarker } from '@/types/health'
 
@@ -24,31 +24,46 @@ type IntakeTab = 'upload' | 'manual' | 'bulk'
 
 export default function IntakePage() {
   const { user } = useAuth()
-  const { profiles, activeProfile } = useProfile()
+  const { profiles } = useProfile()
+  const [realPatients, setRealPatients] = useState<PatientOut[]>([])
+
+  const isPatient = user?.role === 'patient'
+  const canViewAll = user?.role === 'doctor' || user?.role === 'admin' || user?.role === 'super_admin'
+
+  // Fetch real patient list for doctor/admin
+  useEffect(() => {
+    if (!canViewAll || !getAccessToken()) return
+    const fetch = user?.role === 'doctor'
+      ? orgApi.getDoctorPatients()
+      : orgApi.listPatients()
+    fetch.then(setRealPatients).catch(() => {})
+  }, [canViewAll, user?.role])
 
   const patientOptions = (() => {
     if (!user) return []
-    if (user.role === 'patient') {
+    if (isPatient) {
       const self = [{ value: user.id, label: `Myself (${user.name})` }]
       const family = profiles.map((p) => ({ value: p.id, label: `${p.name} · ${p.relation}` }))
       return [...self, ...family]
     }
-    return MOCK_PATIENTS.map((p) => ({
-      value: p.id,
-      label: `${p.name} (${p.age}y · ${p.district ?? p.state})`,
+    return realPatients.map((p) => ({
+      value: p.patient_id,
+      label: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id,
     }))
   })()
 
-  // For patients, default to the user's own ID (the JWT sub) so records are
-  // stored under the same ID that the backend queries when listing records.
-  // Family member profile IDs are different from the user ID — they are only
-  // valid when explicitly selected from the dropdown.
-  const defaultPatientId =
-    user?.role === 'patient'
-      ? (user?.id ?? '')
-      : (MOCK_PATIENTS[0]?.id ?? '')
+  const defaultPatientId = isPatient
+    ? (user?.id ?? '')
+    : (realPatients[0]?.patient_id ?? '')
 
-  const [selectedPatient, setSelectedPatient] = useState(defaultPatientId)
+  const [selectedPatient, setSelectedPatient] = useState('')
+
+  // Set default once real patients load
+  useEffect(() => {
+    if (!selectedPatient && defaultPatientId) {
+      setSelectedPatient(defaultPatientId)
+    }
+  }, [defaultPatientId, selectedPatient])
   const [filesSelected, setFilesSelected] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [processComplete, setProcessComplete] = useState(false)
@@ -64,6 +79,8 @@ export default function IntakePage() {
   const [isSaving, setIsSaving] = useState(false)
 
   if (!user) return null
+
+  const showPatientSelector = !isPatient || profiles.length > 0
 
   // Adapt MarkerOut[] → HealthMarker[] for MarkerExtractionForm.
   // Use sentinel -1 to mean "not provided" — resolveRange() in
@@ -86,8 +103,6 @@ export default function IntakePage() {
   }))
 
   const currentStep = isSaved ? 4 : processComplete ? 3 : filesSelected ? 2 : 1
-  const isPatient = user.role === 'patient'
-  const showPatientSelector = !isPatient || profiles.length > 0
 
   async function handleProcess() {
     if (!uploadedFile) return

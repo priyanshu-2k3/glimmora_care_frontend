@@ -78,7 +78,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [consents, setConsents] = useState<ConsentEntry[]>([])
 
   useEffect(() => {
-    // Demo users have no JWT — fall back to mock data
+    // Demo users have no JWT — show mock data only
     if (!getAccessToken()) {
       const mock = MOCK_HEALTH_RECORDS.find((r) => r.id === id)
       if (mock) setRecord(adaptMockRecord(mock))
@@ -88,12 +88,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
     }
     intakeApi.getRecord(id)
       .then(setRecord)
-      .catch(() => {
-        // Try mock data as fallback before showing not-found
-        const mock = MOCK_HEALTH_RECORDS.find((r) => r.id === id)
-        if (mock) setRecord(adaptMockRecord(mock))
-        else setNotFound(true)
-      })
+      .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false))
   }, [id])
 

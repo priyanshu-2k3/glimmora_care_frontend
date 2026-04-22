@@ -44,6 +44,12 @@ export const NAV_ITEMS = [
     roles: ['patient', 'doctor'] as Role[],
   },
   {
+    href: '/intake',
+    label: 'Data Intake',
+    icon: 'Upload',
+    roles: ['patient'] as Role[],
+  },
+  {
     href: '/twin',
     label: 'Health Twin',
     icon: 'Activity',
@@ -53,14 +59,8 @@ export const NAV_ITEMS = [
   /* ── Patient family ─── */
   {
     href: '/family',
-    label: 'Family Account',
+    label: 'Family & Account',
     icon: 'Users',
-    roles: ['patient'] as Role[],
-  },
-  {
-    href: '/profiles',
-    label: 'Manage Profiles',
-    icon: 'User',
     roles: ['patient'] as Role[],
   },
   {
@@ -90,29 +90,43 @@ export const NAV_ITEMS = [
     roles: ['admin', 'super_admin'] as Role[],
   },
 
-  /* ── Consent & access ─── */
+  /* ── Consent & access (patient + doctor) ─── */
   {
     href: '/consent',
     label: 'Consent Manager',
     icon: 'FileCheck',
-    roles: ['patient', 'doctor', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor'] as Role[],
   },
   {
     href: '/emergency',
     label: 'Emergency Access',
     icon: 'AlertTriangle',
-    roles: ['patient', 'super_admin'] as Role[],
+    roles: ['patient'] as Role[],
   },
   {
     href: '/access',
     label: 'Access Control',
     icon: 'Lock',
-    roles: ['patient', 'super_admin'] as Role[],
+    roles: ['patient'] as Role[],
   },
+
+  /* ── System ─── */
   {
     href: '/logs',
     label: 'Logs',
     icon: 'ClipboardList',
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+  },
+  {
+    href: '/notifications',
+    label: 'Notifications',
+    icon: 'Bell',
+    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+  },
+  {
+    href: '/settings',
+    label: 'Settings',
+    icon: 'Settings',
     roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
 
@@ -122,6 +136,14 @@ export const NAV_ITEMS = [
     label: 'AI Assistant',
     icon: 'MessageSquare',
     roles: ['patient', 'doctor'] as Role[],
+  },
+
+  /* ── Intelligence (doctor only) ─── */
+  {
+    href: '/intelligence',
+    label: 'Intelligence',
+    icon: 'TrendingUp',
+    roles: ['doctor'] as Role[],
   },
 
   /* ── Admin operational routes ─── */
@@ -156,32 +178,6 @@ export const NAV_ITEMS = [
     label: 'Manage Users',
     icon: 'Users',
     roles: ['super_admin'] as Role[],
-  },
-  {
-    href: '/agents',
-    label: 'Agents',
-    icon: 'Bot',
-    roles: ['super_admin'] as Role[],
-  },
-  {
-    href: '/intelligence',
-    label: 'Intelligence',
-    icon: 'TrendingUp',
-    roles: ['super_admin', 'doctor'] as Role[],
-  },
-
-  /* ── System ─── */
-  {
-    href: '/notifications',
-    label: 'Notifications',
-    icon: 'Bell',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
-  },
-  {
-    href: '/settings',
-    label: 'Settings',
-    icon: 'Settings',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
   },
 ]
 
