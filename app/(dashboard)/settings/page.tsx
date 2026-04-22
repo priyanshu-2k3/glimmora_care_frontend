@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Monitor, Shield, Save, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, type BackendSession } from '@/lib/api'
 import { signInWithGoogle } from '@/lib/firebase'
@@ -16,6 +16,28 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Tabs } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/types/auth'
+
+function DarkModeToggle() {
+  const [dark, setDark] = useState(() =>
+    typeof window !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+  function toggle() {
+    const next = !dark
+    setDark(next)
+    document.documentElement.classList.toggle('dark', next)
+    localStorage.setItem('theme', next ? 'dark' : 'light')
+  }
+  return (
+    <button
+      onClick={toggle}
+      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-sand-light bg-white hover:bg-parchment hover:border-gold-soft transition-all duration-200 text-sm font-body text-stone"
+      title="Toggle dark mode"
+    >
+      {dark ? <Sun className="w-4 h-4 text-gold-deep" /> : <Moon className="w-4 h-4 text-greige" />}
+      <span className="text-xs">{dark ? 'Light' : 'Dark'}</span>
+    </button>
+  )
+}
 
 const TABS = [
   { id: 'profile',       label: 'Profile',       icon: <User className="w-4 h-4" /> },
@@ -248,8 +270,13 @@ export default function SettingsPage() {
           <ChevronRight className="w-3 h-3" />
           <span className="text-gold-deep">Settings</span>
         </div>
-        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Settings</h1>
-        <p className="text-sm text-stone font-body mt-2">Manage your account, preferences and security</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Settings</h1>
+            <p className="text-sm text-stone font-body mt-2">Manage your account, preferences and security</p>
+          </div>
+          <DarkModeToggle />
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -310,22 +337,13 @@ export default function SettingsPage() {
                     onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
                     disabled={isDemo}
                   />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Input
-                      label="Organisation"
-                      placeholder="Hospital / Clinic name"
-                      value={profileForm.organization}
-                      onChange={(e) => setProfileForm((p) => ({ ...p, organization: e.target.value }))}
-                      disabled={isDemo}
-                    />
-                    <Input
-                      label="Location"
-                      placeholder="City, State"
-                      value={profileForm.location}
-                      onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
-                      disabled={isDemo}
-                    />
-                  </div>
+                  <Input
+                    label="Location"
+                    placeholder="City, State"
+                    value={profileForm.location}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
+                    disabled={isDemo}
+                  />
                   {user.role === 'patient' && (
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-body font-medium text-stone">Gender</label>

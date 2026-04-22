@@ -74,7 +74,7 @@ export default function AdminLogsPage() {
         ) : (
           <div className="space-y-2">
             {filtered.map((log) => (
-              <Card key={log.id}>
+              <Card key={log.id} data-testid="log-entry">
                 <CardContent>
                   <div className="flex items-start gap-3">
                     <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />

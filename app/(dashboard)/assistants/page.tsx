@@ -182,12 +182,15 @@ export default function AssistantsPage() {
                 <Avatar name={user?.name ?? 'User'} size="sm" />
               )}
               <div className={cn('max-w-[75%]', msg.role === 'user' && 'items-end flex flex-col')}>
-                <div className={cn(
-                  'px-4 py-3 rounded-2xl text-sm font-body leading-relaxed whitespace-pre-line',
-                  msg.role === 'user'
-                    ? 'bg-charcoal-deep text-ivory-cream rounded-br-sm'
-                    : 'bg-ivory-warm border border-sand-light text-charcoal-warm rounded-bl-sm'
-                )}>
+                <div
+                  data-role={msg.role}
+                  className={cn(
+                    'px-4 py-3 rounded-2xl text-sm font-body leading-relaxed whitespace-pre-line',
+                    msg.role === 'user'
+                      ? 'bg-charcoal-deep text-ivory-cream rounded-br-sm'
+                      : 'bg-ivory-warm border border-sand-light text-charcoal-warm rounded-bl-sm'
+                  )}
+                >
                   {msg.content}
                 </div>
                 {msg.role === 'assistant' && msg.confidenceScore && (
@@ -217,6 +220,7 @@ export default function AssistantsPage() {
         <div className="border-t border-sand-light p-3 shrink-0">
           <div className="flex gap-2">
             <input
+              data-testid="chat-input"
               className="flex-1 bg-ivory-warm border border-sand-DEFAULT rounded-xl px-4 py-2.5 text-sm font-body text-charcoal-deep placeholder:text-greige focus:outline-none focus:border-gold-soft transition-colors"
               placeholder="Ask about health markers, trends, or patient summaries..."
               value={input}

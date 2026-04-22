@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Users, Search, Shield, Trash2, ChevronDown, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { RoleGuard } from '@/components/auth/RoleGuard'
@@ -219,14 +219,15 @@ export default function ManageUsersPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Client-side filter for instant search (backend also filters)
-  const filtered = search
-    ? users.filter((u) => {
-        const q = search.toLowerCase()
-        const name = `${u.first_name} ${u.last_name}`.toLowerCase()
-        return name.includes(q) || u.email.toLowerCase().includes(q) || u.role.includes(q)
-      })
-    : users
+  // Debounced backend search — fires 400ms after the user stops typing
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function handleSearch(q: string) {
+    setSearch(q)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => load(q), 400)
+  }
+
+  const filtered = users
 
   const stats = {
     total: users.length,
@@ -272,7 +273,8 @@ export default function ManageUsersPage() {
           placeholder="Search by name, email, or role…"
           leftIcon={<Search className="w-4 h-4" />}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
+          data-testid="users-search"
         />
 
         {/* Error */}
