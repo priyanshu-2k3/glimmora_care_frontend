@@ -840,6 +840,18 @@ export const intakeApi = {
     apiFetch<unknown>(`/intake/records/${recordId}/consents/${consentId}`, {
       method: 'DELETE',
     }),
+
+  /** Get the current user's own health record audit trail */
+  getAuditTrail: (limit = 100) =>
+    apiFetch<AuditTrailEntry[]>(`/intake/audit-trail?limit=${limit}`),
+}
+
+export interface AuditTrailEntry {
+  id: string
+  action: string
+  record_id: string
+  detail: string
+  timestamp: string
 }
 
 // ─── Bulk Import API ──────────────────────────────────────────────────────────
@@ -919,6 +931,131 @@ export const twinApi = {
     apiFetch<{ status: string; patientId: string }>(`/twin/${patientId}/recompute`, {
       method: 'POST',
     }),
+}
+
+// ─── Notifications API ────────────────────────────────────────────────────────
+
+export interface NotificationOut {
+  id: string
+  type: 'alert' | 'info' | 'consent' | 'sync' | 'agent' | 'family'
+  title: string
+  message: string
+  timestamp: string
+  isRead: boolean
+  actionLabel?: string | null
+  actionHref?: string | null
+}
+
+export const notificationApi = {
+  list: (limit = 50) =>
+    apiFetch<NotificationOut[]>(`/notifications?limit=${limit}`),
+
+  markRead: (id: string) =>
+    apiFetch<{ ok: boolean }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllRead: () =>
+    apiFetch<{ ok: boolean }>('/notifications/read-all', { method: 'POST' }),
+
+  dismiss: (id: string) =>
+    apiFetch<{ ok: boolean }>(`/notifications/${id}`, { method: 'DELETE' }),
+}
+
+// ── Access Control types ──────────────────────────────────────────────────────
+
+export interface AccessRuleOut {
+  id: string
+  granted_to: string
+  granted_to_email: string
+  granted_to_name: string
+  granted_to_role: string
+  resource: string
+  permissions: string[]
+  is_active: boolean
+  created_at: string
+}
+
+export interface AccessSettingOut {
+  id: string
+  label: string
+  desc: string
+  enabled: boolean
+}
+
+// ── Emergency types ───────────────────────────────────────────────────────────
+
+export interface EmergencyTokenOut {
+  token: string
+  share_link: string
+  expires_at: string
+}
+
+export interface EmergencyHistoryItem {
+  id: string
+  activated_at: string
+  expires_at: string | null
+  deactivated_at: string | null
+  was_accessed: boolean
+  status: string
+}
+
+export interface EmergencyDataOut {
+  patient_name: string
+  blood_group: string | null
+  allergies: string[]
+  medications: string[]
+  recent_records: { title: string; date: string; type: string }[]
+  emergency_contacts: { name: string; relation: string }[]
+  generated_at: string
+}
+
+// ── Access Control API ────────────────────────────────────────────────────────
+
+export const accessApi = {
+  listRules: () =>
+    apiFetch<AccessRuleOut[]>('/access/rules'),
+
+  createRule: (email: string, resource: string) =>
+    apiFetch<AccessRuleOut>('/access/rules', {
+      method: 'POST',
+      body: JSON.stringify({ email, resource }),
+    }),
+
+  toggleRule: (ruleId: string) =>
+    apiFetch<AccessRuleOut>(`/access/rules/${ruleId}`, { method: 'PATCH' }),
+
+  deleteRule: (ruleId: string) =>
+    apiFetch<void>(`/access/rules/${ruleId}`, { method: 'DELETE' }),
+
+  getSettings: () =>
+    apiFetch<AccessSettingOut[]>('/access/settings'),
+
+  updateSetting: (settingId: string, enabled: boolean) =>
+    apiFetch<AccessSettingOut[]>(`/access/settings/${settingId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    }),
+}
+
+// ── Emergency Access API ──────────────────────────────────────────────────────
+
+export const emergencyApi = {
+  activate: () =>
+    apiFetch<{ message: string; dev_otp?: string }>('/emergency/activate', { method: 'POST' }),
+
+  verifyOtp: (otp: string) =>
+    apiFetch<EmergencyTokenOut>('/emergency/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ otp }),
+    }),
+
+  deactivate: () =>
+    apiFetch<{ message: string }>('/emergency/deactivate', { method: 'POST' }),
+
+  history: () =>
+    apiFetch<EmergencyHistoryItem[]>('/emergency/history'),
+
+  getPublicData: (token: string) =>
+    apiFetch<EmergencyDataOut>(`/emergency/${token}`, { auth: false }),
 }
 
 export default apiFetch
