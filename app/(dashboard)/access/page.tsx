@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Shield, Users, Eye, Plus, Trash2, Check, X, Lock, Globe } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Shield, Users, Plus, Trash2, Check, X, Lock, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -9,62 +9,68 @@ import { Toggle } from '@/components/ui/Toggle'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
+import { accessApi, type AccessRuleOut, type AccessSettingOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-interface AccessRule {
-  id: string
-  grantedTo: string
-  grantedToName: string
-  grantedToRole: string
-  resource: string
-  permissions: string[]
-  isActive: boolean
-}
-
-const INITIAL_RULES: AccessRule[] = [
-  {
-    id: 'rule_001',
-    grantedTo: 'usr_doctor_001',
-    grantedToName: 'Dr. Arjun Mehta',
-    grantedToRole: 'doctor',
-    resource: 'All Health Records',
-    permissions: ['view', 'export'],
-    isActive: true,
-  },
-  {
-    id: 'rule_002',
-    grantedTo: 'fm_002',
-    grantedToName: 'Rohit Sharma',
-    grantedToRole: 'family_admin',
-    resource: 'Family Health Records',
-    permissions: ['view', 'upload'],
-    isActive: true,
-  },
-]
-
-const GLOBAL_SETTINGS = [
-  { id: 'anon_research', label: 'Anonymous Research Sharing', desc: 'Allow anonymised health data for public health research (no PII)', enabled: false },
-  { id: 'emergency', label: 'Emergency Access', desc: 'Allow any verified doctor to view critical records in emergency', enabled: true },
-  { id: 'family_view', label: 'Family View Access', desc: 'Family admins can see summary of your health records', enabled: true },
-  { id: 'ngo_access', label: 'NGO Field Worker Access', desc: 'Allow assigned NGO workers to add field records', enabled: false },
-]
-
 export default function AccessControlPage() {
-  const [rules, setRules] = useState<AccessRule[]>(INITIAL_RULES)
-  const [settings, setSettings] = useState(GLOBAL_SETTINGS)
-  const [showAdd, setShowAdd] = useState(false)
+  const [rules, setRules]         = useState<AccessRuleOut[]>([])
+  const [settings, setSettings]   = useState<AccessSettingOut[]>([])
+  const [showAdd, setShowAdd]     = useState(false)
+  const [newEmail, setNewEmail]   = useState('')
+  const [newResource, setNewResource] = useState('all')
+  const [isAdding, setIsAdding]   = useState(false)
+  const [error, setError]         = useState<string | null>(null)
 
-  function toggleRule(id: string) {
-    setRules((prev) => prev.map((r) => r.id === id ? { ...r, isActive: !r.isActive } : r))
+  const load = useCallback(async () => {
+    const [r, s] = await Promise.all([accessApi.listRules(), accessApi.getSettings()])
+    setRules(r)
+    setSettings(s)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function addRule() {
+    if (!newEmail.trim()) return
+    setIsAdding(true)
+    setError(null)
+    try {
+      const rule = await accessApi.createRule(newEmail.trim(), newResource)
+      setRules((prev) => [rule, ...prev])
+      setNewEmail('')
+      setNewResource('all')
+      setShowAdd(false)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to add rule')
+    } finally {
+      setIsAdding(false)
+    }
   }
 
-  function removeRule(id: string) {
-    setRules((prev) => prev.filter((r) => r.id !== id))
+  async function toggleRule(id: string) {
+    try {
+      const updated = await accessApi.toggleRule(id)
+      setRules((prev) => prev.map((r) => r.id === id ? updated : r))
+    } catch { /* ignore */ }
   }
 
-  function toggleSetting(id: string) {
-    setSettings((prev) => prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s))
+  async function removeRule(id: string) {
+    try {
+      await accessApi.deleteRule(id)
+      setRules((prev) => prev.filter((r) => r.id !== id))
+    } catch { /* ignore */ }
   }
+
+  async function toggleSetting(id: string) {
+    const current = settings.find((s) => s.id === id)
+    if (!current) return
+    try {
+      const updated = await accessApi.updateSetting(id, !current.enabled)
+      setSettings(updated)
+    } catch { /* ignore */ }
+  }
+
+  const activeCount  = rules.filter((r) => r.is_active).length
+  const blockedCount = rules.filter((r) => !r.is_active).length
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -76,9 +82,9 @@ export default function AccessControlPage() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Active Rules', value: rules.filter((r) => r.isActive).length, icon: Shield, color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
-          { label: 'People with Access', value: rules.filter((r) => r.isActive).length, icon: Users, color: 'text-gold-deep', bg: 'bg-gold-whisper' },
-          { label: 'Blocked', value: rules.filter((r) => !r.isActive).length, icon: Lock, color: 'text-error-DEFAULT', bg: 'bg-error-soft' },
+          { label: 'Active Rules',       value: activeCount,  icon: Shield, color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
+          { label: 'People with Access', value: activeCount,  icon: Users,  color: 'text-gold-deep',       bg: 'bg-gold-whisper' },
+          { label: 'Blocked',            value: blockedCount, icon: Lock,   color: 'text-error-DEFAULT',   bg: 'bg-error-soft' },
         ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
             <div className={cn('w-9 h-9 rounded-full flex items-center justify-center mx-auto mb-2', s.bg)}>
@@ -108,35 +114,51 @@ export default function AccessControlPage() {
           {showAdd && (
             <div className="bg-gold-whisper/30 border border-gold-soft/30 rounded-xl p-4 space-y-3">
               <p className="text-sm font-body font-semibold text-charcoal-deep">New Access Rule</p>
-              <Input label="Email or User ID" placeholder="doctor@hospital.in" />
+              <Input
+                label="Email"
+                placeholder="doctor@hospital.in"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+              />
               <Select
                 label="Resource"
                 options={[
-                  { value: 'all', label: 'All Health Records' },
-                  { value: 'lab', label: 'Lab Reports Only' },
+                  { value: 'all',    label: 'All Health Records' },
+                  { value: 'lab',    label: 'Lab Reports Only' },
                   { value: 'vitals', label: 'Vitals Only' },
                 ]}
-                value="all"
-                onChange={() => {}}
+                value={newResource}
+                onChange={(e) => setNewResource(e.target.value)}
               />
+              {error && <p className="text-xs text-error-DEFAULT font-body">{error}</p>}
               <div className="flex gap-2">
-                <Button className="flex-1" size="sm">Add Rule</Button>
-                <Button variant="outline" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
+                <Button className="flex-1" size="sm" isLoading={isAdding} onClick={addRule} disabled={!newEmail.trim()}>
+                  Add Rule
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setShowAdd(false); setNewEmail(''); setError(null) }}>
+                  Cancel
+                </Button>
               </div>
             </div>
           )}
 
+          {rules.length === 0 && !showAdd && (
+            <div className="py-8 text-center">
+              <Shield className="w-8 h-8 text-greige mx-auto mb-2" />
+              <p className="text-sm text-greige font-body">No access rules yet</p>
+              <p className="text-xs text-greige font-body mt-1">Add a rule to grant specific people access to your records</p>
+            </div>
+          )}
+
           {rules.map((rule) => (
-            <div key={rule.id} className={cn('flex items-start gap-3 p-4 rounded-xl border transition-all', rule.isActive ? 'bg-ivory-warm border-sand-light' : 'bg-parchment border-sand-light opacity-60')}>
-              <Avatar name={rule.grantedToName} size="md" />
+            <div key={rule.id} className={cn('flex items-start gap-3 p-4 rounded-xl border transition-all', rule.is_active ? 'bg-ivory-warm border-sand-light' : 'bg-parchment border-sand-light opacity-60')}>
+              <Avatar name={rule.granted_to_name} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{rule.grantedToName}</p>
-                  <Badge variant={rule.isActive ? 'success' : 'default'}>
-                    {rule.isActive ? 'Active' : 'Blocked'}
-                  </Badge>
+                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{rule.granted_to_name}</p>
+                  <Badge variant={rule.is_active ? 'success' : 'default'}>{rule.is_active ? 'Active' : 'Blocked'}</Badge>
                 </div>
-                <p className="text-xs text-greige truncate capitalize">{rule.grantedToRole.replace(/_/g, ' ')} · {rule.resource}</p>
+                <p className="text-xs text-greige truncate capitalize">{rule.granted_to_role.replace(/_/g, ' ')} · {rule.resource}</p>
                 <div className="flex gap-1.5 mt-1.5 flex-wrap">
                   {rule.permissions.map((p) => (
                     <span key={p} className="text-[10px] font-body bg-parchment border border-sand-light rounded-full px-2 py-0.5 text-stone capitalize">{p}</span>
@@ -144,8 +166,8 @@ export default function AccessControlPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => toggleRule(rule.id)} className={cn('p-1.5 rounded-lg transition-colors', rule.isActive ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}>
-                  {rule.isActive ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                <button onClick={() => toggleRule(rule.id)} className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}>
+                  {rule.is_active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </button>
                 <button onClick={() => removeRule(rule.id)} className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4" />
