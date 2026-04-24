@@ -797,6 +797,16 @@ export const adminApi = {
   /** Super admin: list all organisations on the platform */
   listAllOrgs: (search = '') =>
     apiFetch<AdminOrgItem[]>(`/admin/organizations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Admin: list all consent records platform-wide */
+  listConsents: (params: { status?: string; patient_email?: string; requester_email?: string } = {}) => {
+    const q = new URLSearchParams()
+    if (params.status)          q.set('status', params.status)
+    if (params.patient_email)   q.set('patient_email', params.patient_email)
+    if (params.requester_email) q.set('requester_email', params.requester_email)
+    const qs = q.toString()
+    return apiFetch<ConsentRequest[]>(`/admin/consents${qs ? `?${qs}` : ''}`)
+  },
 }
 
 // ─── Intake API ───────────────────────────────────────────────────────────────

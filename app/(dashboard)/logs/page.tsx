@@ -1,33 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
+import { Pagination } from '@/components/ui/Pagination'
 import { cn } from '@/lib/utils'
 
-// Map backend action strings → display metadata
 const ACTION_META: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  // Intake audit trail actions
-  upload:        { icon: Upload,   label: 'Record Uploaded',   color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
-  confirm:       { icon: FileText, label: 'Record Confirmed',  color: 'text-gold-deep',       bg: 'bg-gold-whisper' },
-  manual_entry:  { icon: FileText, label: 'Manual Entry',      color: 'text-gold-deep',       bg: 'bg-gold-whisper' },
-  read:          { icon: Eye,      label: 'Record Viewed',     color: 'text-stone',           bg: 'bg-parchment' },
-  read_list:     { icon: Eye,      label: 'Records Listed',    color: 'text-stone',           bg: 'bg-parchment' },
-  download_url:  { icon: Download, label: 'Download Issued',   color: 'text-sapphire-deep',   bg: 'bg-azure-whisper' },
-  share:         { icon: Shield,   label: 'Record Shared',     color: 'text-gold-deep',       bg: 'bg-gold-whisper' },
-  revoke_share:  { icon: Shield,   label: 'Access Revoked',    color: 'text-error-DEFAULT',   bg: 'bg-error-soft' },
-  bulk_import:   { icon: Upload,   label: 'Bulk Import',       color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
-  // Admin audit log actions
-  assign_patient:   { icon: User,     label: 'Patient Assigned',  color: 'text-stone',         bg: 'bg-parchment' },
-  invite_doctor:    { icon: User,     label: 'Doctor Invited',    color: 'text-gold-deep',     bg: 'bg-gold-whisper' },
-  update_role:      { icon: Shield,   label: 'Role Updated',      color: 'text-sapphire-deep', bg: 'bg-azure-whisper' },
-  delete_user:      { icon: User,     label: 'User Deleted',      color: 'text-error-DEFAULT', bg: 'bg-error-soft' },
-  ai_analysis:      { icon: Bot,      label: 'AI Analysis',       color: 'text-charcoal-deep', bg: 'bg-ivory-warm' },
+  upload:         { icon: Upload,   label: 'Record Uploaded',  color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  confirm:        { icon: FileText, label: 'Record Confirmed', color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  manual_entry:   { icon: FileText, label: 'Manual Entry',     color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  read:           { icon: Eye,      label: 'Record Viewed',    color: 'text-stone',           bg: 'bg-parchment'      },
+  read_list:      { icon: Eye,      label: 'Records Listed',   color: 'text-stone',           bg: 'bg-parchment'      },
+  download_url:   { icon: Download, label: 'Download Issued',  color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  share:          { icon: Shield,   label: 'Record Shared',    color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  revoke_share:   { icon: Shield,   label: 'Access Revoked',   color: 'text-error-DEFAULT',   bg: 'bg-error-soft'     },
+  bulk_import:    { icon: Upload,   label: 'Bulk Import',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  assign_patient: { icon: User,     label: 'Patient Assigned', color: 'text-stone',           bg: 'bg-parchment'      },
+  invite_doctor:  { icon: User,     label: 'Doctor Invited',   color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  update_role:    { icon: Shield,   label: 'Role Updated',     color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  delete_user:    { icon: User,     label: 'User Deleted',     color: 'text-error-DEFAULT',   bg: 'bg-error-soft'     },
+  ai_analysis:    { icon: Bot,      label: 'AI Analysis',      color: 'text-charcoal-deep',   bg: 'bg-ivory-warm'     },
 }
 
 function getMeta(action: string) {
@@ -41,16 +39,14 @@ function formatDate(iso: string) {
 const ACCESS_ACTIONS = new Set(['read', 'read_list', 'download_url', 'share', 'revoke_share'])
 
 const TABS = [
-  { id: 'activity', label: 'Activity Logs',  icon: <Activity className="w-4 h-4" /> },
-  { id: 'access',   label: 'Access Logs',    icon: <Eye className="w-4 h-4" /> },
+  { id: 'activity', label: 'Activity Logs', icon: <Activity className="w-4 h-4" /> },
+  { id: 'access',   label: 'Access Logs',   icon: <Eye      className="w-4 h-4" /> },
 ]
-
-// ─── Unified log entry shape ──────────────────────────────────────────────────
 
 interface LogRow {
   id: string
   action: string
-  actor: string   // user_id or performed_by
+  actor: string
   detail: string
   severity?: string
   timestamp: string
@@ -59,12 +55,9 @@ interface LogRow {
 function fromTrail(e: AuditTrailEntry): LogRow {
   return { id: e.id, action: e.action, actor: '', detail: e.detail, timestamp: e.timestamp }
 }
-
 function fromAdminLog(e: AuditLogOut): LogRow {
   return { id: e.id, action: e.action, actor: e.performed_by, detail: e.detail ?? '', severity: e.severity, timestamp: e.timestamp }
 }
-
-// ─── Single log row ───────────────────────────────────────────────────────────
 
 function LogEntry({ row }: { row: LogRow }) {
   const meta = getMeta(row.action)
@@ -95,41 +88,131 @@ function LogEntry({ row }: { row: LogRow }) {
   )
 }
 
+// ─── Filter bar shared component ─────────────────────────────────────────────
+
+interface FilterPillsProps {
+  label: string
+  options: string[]
+  value: string
+  onChange: (v: string) => void
+}
+
+function FilterPills({ label, options, value, onChange }: FilterPillsProps) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider shrink-0">{label}:</span>
+      {options.map((o) => (
+        <button
+          key={o}
+          onClick={() => onChange(o)}
+          className={cn(
+            'px-2.5 py-1 rounded-full text-xs font-body transition-all capitalize',
+            value === o ? 'bg-charcoal-deep text-ivory-cream' : 'bg-parchment text-greige hover:text-charcoal-deep'
+          )}
+        >
+          {o}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LogsPage() {
   const { user } = useAuth()
-  const [rows, setRows]       = useState<LogRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
+  const PAGE_SIZE = 20
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
 
+  // Shared
+  const [rows, setRows]     = useState<LogRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch]   = useState('')
+  const [page, setPage]       = useState(1)
+
+  // Admin-specific filters (sent to backend)
+  const [severity, setSeverity]     = useState('all')
+  const [actionFilter, setActionFilter] = useState('all')
+
+  // Patient/doctor-specific filters (client-side)
+  const [actionType, setActionType] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]     = useState('')
+
+  // Debounce admin search to avoid hammering the backend
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function reloadAdmin(sev: string, act: string, q: string) {
+    setLoading(true)
+    adminApi.getAuditLogs({
+      search: q || undefined,
+      severity: sev !== 'all' ? sev : undefined,
+      limit: 500,
+    }).then((logs) => {
+      let result = logs.map(fromAdminLog)
+      if (act !== 'all') result = result.filter((r) => r.action === act)
+      setRows(result)
+    })
+    .catch(() => setRows([]))
+    .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
-
-    const fetch = isAdmin
-      ? adminApi.getAuditLogs({ limit: 200 }).then((logs) => logs.map(fromAdminLog))
-      : intakeApi.getAuditTrail(200).then((entries) => entries.map(fromTrail))
-
-    fetch
-      .then(setRows)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    if (isAdmin) {
+      reloadAdmin(severity, actionFilter, search)
+    } else {
+      intakeApi.getAuditTrail(500).then((entries) => setRows(entries.map(fromTrail)))
+        .catch(() => setRows([]))
+        .finally(() => setLoading(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
-  const filtered = rows.filter((r) => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return r.action.includes(q) || r.detail.toLowerCase().includes(q) || r.actor.toLowerCase().includes(q)
+  // Admin: re-fetch when severity or actionFilter changes
+  useEffect(() => {
+    if (!isAdmin) return
+    reloadAdmin(severity, actionFilter, search)
+    setPage(1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [severity, actionFilter])
+
+  // Admin: debounced search
+  function handleSearch(q: string) {
+    setSearch(q)
+    setPage(1)
+    if (!isAdmin) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => reloadAdmin(severity, actionFilter, q), 400)
+  }
+
+  // Patient/doctor: client-side filter
+  const patientFiltered = rows.filter((r) => {
+    if (search && !r.action.toLowerCase().includes(search.toLowerCase()) && !r.detail.toLowerCase().includes(search.toLowerCase())) return false
+    if (actionType !== 'all') {
+      if (actionType === 'uploads'  && !['upload', 'confirm', 'manual_entry', 'bulk_import'].includes(r.action)) return false
+      if (actionType === 'views'    && !['read', 'read_list'].includes(r.action)) return false
+      if (actionType === 'shares'   && !['share', 'revoke_share'].includes(r.action)) return false
+      if (actionType === 'downloads' && r.action !== 'download_url') return false
+    }
+    if (dateFrom && r.timestamp < dateFrom) return false
+    if (dateTo   && r.timestamp > dateTo + 'T23:59:59') return false
+    return true
   })
 
-  const activityRows = filtered
-  const accessRows   = filtered.filter((r) => ACCESS_ACTIONS.has(r.action))
+  const displayRows = isAdmin ? rows : patientFiltered
+  const totalPages  = Math.ceil(displayRows.length / PAGE_SIZE)
+  const pageSlice   = displayRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const totalEvents  = rows.length
-  const viewCount    = rows.filter((r) => r.action === 'read' || r.action === 'read_list').length
-  const exportCount  = rows.filter((r) => r.action === 'download_url').length
+  // reset page on patient filters change
+  useEffect(() => { setPage(1) }, [actionType, dateFrom, dateTo])
+
+  const totalEvents = rows.length
+  const viewCount   = rows.filter((r) => r.action === 'read' || r.action === 'read_list').length
+  const exportCount = rows.filter((r) => r.action === 'download_url').length
+
+  const adminActions = [...new Set(rows.map((r) => r.action))].sort()
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -144,7 +227,7 @@ export default function LogsPage() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total Events', value: loading ? '—' : totalEvents, icon: Activity },
-          { label: 'Record Views', value: loading ? '—' : viewCount,   icon: Eye },
+          { label: 'Record Views', value: loading ? '—' : viewCount,   icon: Eye      },
           { label: 'Downloads',    value: loading ? '—' : exportCount,  icon: Download },
         ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
@@ -160,16 +243,84 @@ export default function LogsPage() {
         <Search className="w-4 h-4 text-greige shrink-0" />
         <input
           type="text"
-          placeholder="Search logs…"
+          placeholder={isAdmin ? 'Search by action, target, or user ID…' : 'Search logs…'}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="flex-1 bg-transparent text-sm font-body text-charcoal-deep placeholder:text-greige outline-none"
         />
+        {search && (
+          <button onClick={() => handleSearch('')} className="text-greige hover:text-charcoal-deep transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {/* Admin filters */}
+      {isAdmin && (
+        <div className="space-y-3 p-4 bg-parchment rounded-xl border border-sand-light">
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-greige" />
+            <span className="text-xs font-body font-semibold text-greige">Admin Filters</span>
+          </div>
+          <FilterPills
+            label="Severity"
+            options={['all', 'info', 'warning', 'critical']}
+            value={severity}
+            onChange={setSeverity}
+          />
+          <FilterPills
+            label="Action"
+            options={['all', ...adminActions]}
+            value={actionFilter}
+            onChange={setActionFilter}
+          />
+        </div>
+      )}
+
+      {/* Patient / Doctor filters */}
+      {!isAdmin && (
+        <div className="space-y-3 p-4 bg-parchment rounded-xl border border-sand-light">
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-greige" />
+            <span className="text-xs font-body font-semibold text-greige">Filters</span>
+          </div>
+          <FilterPills
+            label="Type"
+            options={['all', 'uploads', 'views', 'shares', 'downloads']}
+            value={actionType}
+            onChange={setActionType}
+          />
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider">Date:</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="text-xs border border-sand-light rounded-lg px-2.5 py-1.5 bg-white font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            />
+            <span className="text-xs text-greige">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="text-xs border border-sand-light rounded-lg px-2.5 py-1.5 bg-white font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo('') }}
+                className="text-xs text-greige hover:text-charcoal-deep transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <Tabs tabs={TABS}>
         {(activeTab) => {
-          const list = activeTab === 'activity' ? activityRows : accessRows
+          const list = activeTab === 'activity' ? pageSlice : pageSlice.filter((r) => ACCESS_ACTIONS.has(r.action))
+          const tabTotal = activeTab === 'activity' ? displayRows.length : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action)).length
           return (
             <Card>
               <CardHeader>
@@ -178,14 +329,14 @@ export default function LogsPage() {
                 </CardTitle>
                 <CardDescription>
                   {activeTab === 'activity'
-                    ? `${activityRows.length} events recorded`
-                    : `${accessRows.length} access events — who viewed your data`}
+                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${totalPages > 1 ? ` · page ${page} of ${totalPages}` : ''}`
+                    : `${tabTotal} access event${tabTotal !== 1 ? 's' : ''} — who viewed your data`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 px-5">
                 {loading ? (
                   <div className="space-y-4 py-4">
-                    {[1,2,3].map((i) => (
+                    {[1, 2, 3].map((i) => (
                       <div key={i} className="flex gap-3 animate-pulse">
                         <div className="w-9 h-9 rounded-full bg-sand-light shrink-0" />
                         <div className="flex-1 space-y-2">
@@ -204,6 +355,11 @@ export default function LogsPage() {
                   list.map((row) => <LogEntry key={row.id} row={row} />)
                 )}
               </CardContent>
+              {activeTab === 'activity' && totalPages > 1 && (
+                <div className="px-5 pb-4">
+                  <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
+              )}
             </Card>
           )
         }}
