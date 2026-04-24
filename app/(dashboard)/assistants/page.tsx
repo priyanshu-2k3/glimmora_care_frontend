@@ -5,7 +5,6 @@ import { Send, Bot, User, Info, AlertTriangle, RotateCcw, ChevronRight } from 'l
 import { useAuth } from '@/context/AuthContext'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
 import type { Persona } from '@/types/chat'
-import { ROLES } from '@/lib/constants'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -67,12 +66,11 @@ function TypingIndicator() {
 
 export default function AssistantsPage() {
   const { user } = useAuth()
-  const defaultPersona: Persona = user?.role ? ROLE_TO_PERSONA[user.role as Role] : 'patient'
-  const [activePersona, setActivePersona] = useState<Persona>(defaultPersona)
-  const { messages, isTyping, sendMessage, clearMessages } = useGeminiChat(activePersona)
+  const persona: Persona = user?.role ? ROLE_TO_PERSONA[user.role as Role] : 'patient'
+  const { messages, isTyping, sendMessage, clearMessages } = useGeminiChat(persona)
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const config = PERSONA_CONFIG[activePersona]
+  const config = PERSONA_CONFIG[persona]
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -85,14 +83,6 @@ export default function AssistantsPage() {
     await sendMessage(trimmed)
   }
 
-  function switchPersona(p: Persona) {
-    setActivePersona(p)
-    clearMessages()
-    setInput('')
-  }
-
-  const personas = Object.entries(PERSONA_CONFIG) as [Persona, typeof PERSONA_CONFIG[Persona]][]
-
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="mb-6">
@@ -103,7 +93,7 @@ export default function AssistantsPage() {
         </div>
         <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">AI Assistant</h1>
         <p className="text-sm text-stone font-body mt-2">
-          Persona-based intelligence · Non-diagnostic · Confidence-scored
+          {config.label} · Non-diagnostic · Confidence-scored
         </p>
       </div>
 
@@ -117,31 +107,14 @@ export default function AssistantsPage() {
         </p>
       </div>
 
-      {/* Persona selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {personas.map(([persona, cfg]) => (
-          <button
-            key={persona}
-            onClick={() => switchPersona(persona)}
-            className={cn(
-              'text-left px-3 py-3 rounded-xl border text-sm font-body transition-all duration-200',
-              activePersona === persona
-                ? cfg.color + ' border-transparent shadow-sm'
-                : 'bg-ivory-warm border-sand-light text-stone hover:border-sand-DEFAULT'
-            )}
-          >
-            <p className="font-medium text-xs">{cfg.label}</p>
-            <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{cfg.description}</p>
-          </button>
-        ))}
-      </div>
-
       {/* Chat window */}
       <Card className="flex flex-col" style={{ height: '500px' }}>
         <CardHeader className="border-b border-sand-light shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-body font-semibold">{config.label}</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className={cn('px-2.5 py-1 rounded-full text-xs font-body font-medium', config.color)}>
+                {config.label}
+              </div>
               <CardDescription>{config.description}</CardDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={clearMessages} className="text-greige">
