@@ -747,6 +747,19 @@ export interface AdminPatientOut {
   last_name: string
 }
 
+export interface AdminOrgItem {
+  id: string
+  name: string
+  admin_id: string
+  admin_email: string | null
+  address: string | null
+  phone: string | null
+  website: string | null
+  doctor_count: number
+  patient_count: number
+  created_at: string | null
+}
+
 export const adminApi = {
   /** List all users (searchable) */
   listUsers: (search = '') =>
@@ -780,6 +793,10 @@ export const adminApi = {
   /** List all patients (admin + super_admin) */
   listPatients: (search = '') =>
     apiFetch<AdminPatientOut[]>(`/admin/patients${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Super admin: list all organisations on the platform */
+  listAllOrgs: (search = '') =>
+    apiFetch<AdminOrgItem[]>(`/admin/organizations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 }
 
 // ─── Intake API ───────────────────────────────────────────────────────────────

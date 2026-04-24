@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { Select } from '@/components/ui/Select'
 import { adminApi, ApiError, type AdminUserOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -199,10 +200,12 @@ function UserRow({ u, currentUserId, onUpdated, onDeleted }: UserRowProps) {
 
 export default function ManageUsersPage() {
   const { user } = useAuth()
+  const PAGE_SIZE = 20
   const [users, setUsers] = useState<AdminUserOut[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const load = useCallback(async (q = '') => {
     setLoading(true)
@@ -223,11 +226,14 @@ export default function ManageUsersPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   function handleSearch(q: string) {
     setSearch(q)
+    setPage(1)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => load(q), 400)
   }
 
   const filtered = users
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pageSlice = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const stats = {
     total: users.length,
@@ -294,8 +300,11 @@ export default function ManageUsersPage() {
           <EmptyState icon={Users} title="No users found" description="Try a different search term." />
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-greige font-body">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</p>
-            {filtered.map((u) => (
+            <p className="text-xs text-greige font-body">
+              {filtered.length} user{filtered.length !== 1 ? 's' : ''}
+              {totalPages > 1 && ` · page ${page} of ${totalPages}`}
+            </p>
+            {pageSlice.map((u) => (
               <UserRow
                 key={u.id}
                 u={u}
@@ -304,6 +313,7 @@ export default function ManageUsersPage() {
                 onDeleted={(id) => setUsers((prev) => prev.filter((x) => x.id !== id))}
               />
             ))}
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         )}
       </div>
