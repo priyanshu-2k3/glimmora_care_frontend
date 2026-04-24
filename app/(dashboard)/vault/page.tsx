@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EncryptionBadge } from '@/components/vault/EncryptionBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { formatDate, getInitials, cn } from '@/lib/utils'
 
 function adaptMockRecord(r: MockHealthRecord): HealthRecord {
@@ -60,11 +61,13 @@ export default function VaultPage() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const selectedPatientId = searchParams.get('patient')
+  const PAGE_SIZE = 10
   const [search, setSearch] = useState('')
   const [records, setRecords] = useState<HealthRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isDemo, setIsDemo] = useState(false)
+  const [page, setPage] = useState(1)
 
   if (!user) return null
 
@@ -119,6 +122,8 @@ export default function VaultPage() {
       r.source.toLowerCase().includes(search.toLowerCase())
     )
   })
+  const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE)
+  const pageSlice  = filteredRecords.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   /* ── Doctor: single-patient record view (from patient card click) ── */
   if (isDoctor && selectedPatientId) {
@@ -163,7 +168,7 @@ export default function VaultPage() {
             placeholder="Search records..."
             leftIcon={<Search className="w-4 h-4" />}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
 
@@ -257,7 +262,7 @@ export default function VaultPage() {
             placeholder="Search patients by name..."
             leftIcon={<Search className="w-4 h-4" />}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
 
@@ -354,7 +359,7 @@ export default function VaultPage() {
           placeholder="Search records by title, lab, source..."
           leftIcon={<Search className="w-4 h-4" />}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
         />
       </div>
 
@@ -392,7 +397,7 @@ export default function VaultPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {filteredRecords.map((rec) => {
+            {pageSlice.map((rec) => {
               const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
               return (
                 <Link href={`/vault/${rec.id}`} key={rec.id} className="block group">
@@ -449,6 +454,7 @@ export default function VaultPage() {
                 </Link>
               )
             })}
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} className="mt-2" />
           </div>
         )
       )}

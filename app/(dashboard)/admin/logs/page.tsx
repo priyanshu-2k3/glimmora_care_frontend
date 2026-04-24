@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Pagination } from '@/components/ui/Pagination'
 import { adminApi, type AuditLogOut } from '@/lib/api'
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
@@ -26,13 +27,15 @@ function formatDateTime(ts: string) {
 }
 
 export default function AdminLogsPage() {
+  const PAGE_SIZE = 25
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     let active = true
-    adminApi.getAuditLogs({ limit: 200 })
+    adminApi.getAuditLogs({ limit: 500 })
       .then((l) => { if (active) setLogs(l) })
       .catch(() => { if (active) setLogs([]) })
       .finally(() => { if (active) setLoading(false) })
@@ -46,6 +49,14 @@ export default function AdminLogsPage() {
     l.performed_by.toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pageSlice  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  function handleSearch(q: string) {
+    setSearch(q)
+    setPage(1)
+  }
+
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -57,14 +68,14 @@ export default function AdminLogsPage() {
             </h1>
             <p className="text-sm text-greige font-body mt-1">Audit trail of all admin operations.</p>
           </div>
-          <Badge variant="dark">{loading ? '…' : filtered.length} entries</Badge>
+          <Badge variant="dark">{loading ? '…' : `${filtered.length} entries`}</Badge>
         </div>
 
         <Input
-          placeholder="Search logs..."
+          placeholder="Search by action, target, or user ID…"
           leftIcon={<Search className="w-4 h-4" />}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
         />
 
         {loading ? (
@@ -73,7 +84,11 @@ export default function AdminLogsPage() {
           <EmptyState icon={ClipboardList} title="No logs found" description="Actions will appear here once admins perform operations." />
         ) : (
           <div className="space-y-2">
-            {filtered.map((log) => (
+            <p className="text-xs text-greige font-body">
+              {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}
+              {totalPages > 1 && ` · page ${page} of ${totalPages}`}
+            </p>
+            {pageSlice.map((log) => (
               <Card key={log.id} data-testid="log-entry">
                 <CardContent>
                   <div className="flex items-start gap-3">
@@ -90,6 +105,7 @@ export default function AdminLogsPage() {
                 </CardContent>
               </Card>
             ))}
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} className="mt-4" />
           </div>
         )}
       </div>

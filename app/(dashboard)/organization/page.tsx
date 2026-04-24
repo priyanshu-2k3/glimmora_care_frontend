@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, UserCheck, Settings, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
-import { orgApi, ApiError, type OrgOut, type PatientOut } from '@/lib/api'
+import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 // ─── Admin view ────────────────────────────────────────────────────────────────
 function AdminOrgView() {
@@ -234,6 +235,131 @@ function AdminOrgView() {
   )
 }
 
+// ─── Super Admin view ─────────────────────────────────────────────────────────
+function SuperAdminOrgView() {
+  const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    adminApi.listAllOrgs()
+      .then((data) => { if (active) setOrgs(data) })
+      .catch(() => { if (active) setOrgs([]) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filtered = orgs.filter((o) =>
+    !search ||
+    o.name.toLowerCase().includes(search.toLowerCase()) ||
+    (o.admin_email ?? '').toLowerCase().includes(search.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-gold-soft" />
+            All Organisations
+          </h1>
+          <p className="text-sm text-greige font-body mt-1">Platform-wide view of all registered organisations.</p>
+        </div>
+        <Badge variant="dark">{filtered.length} org{filtered.length !== 1 ? 's' : ''}</Badge>
+      </div>
+
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total Orgs',      value: orgs.length },
+          { label: 'Total Doctors',   value: orgs.reduce((s, o) => s + o.doctor_count, 0) },
+          { label: 'Total Patients',  value: orgs.reduce((s, o) => s + o.patient_count, 0) },
+        ].map((s) => (
+          <Card key={s.label} className="p-4">
+            <p className="font-display text-2xl text-charcoal-deep">{s.value}</p>
+            <p className="text-xs text-greige font-body mt-0.5">{s.label}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Search */}
+      <Input
+        placeholder="Search by org name or admin email…"
+        leftIcon={<Search className="w-4 h-4" />}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* Org list */}
+      {filtered.length === 0 ? (
+        <Card className="text-center py-12">
+          <Building2 className="w-10 h-10 text-greige mx-auto mb-3" />
+          <p className="text-sm text-greige font-body">No organisations found.</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((org) => (
+            <Card key={org.id} hover>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5 text-gold-deep" />
+                      </div>
+                      <div>
+                        <p className="font-body font-semibold text-charcoal-deep">{org.name}</p>
+                        {org.admin_email && <p className="text-xs text-greige">Admin: {org.admin_email}</p>}
+                        {org.address && <p className="text-xs text-greige">{org.address}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
+                      <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
+                      <button
+                        onClick={() => setExpanded(expanded === org.id ? null : org.id)}
+                        className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"
+                      >
+                        <ChevronDown className={cn('w-4 h-4 transition-transform', expanded === org.id && 'rotate-180')} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {expanded === org.id && (
+                    <div className="pt-3 border-t border-sand-light grid grid-cols-2 gap-x-6 gap-y-2">
+                      {[
+                        { label: 'Org ID',   value: org.id },
+                        { label: 'Phone',    value: org.phone ?? 'Not set' },
+                        { label: 'Website',  value: org.website ?? 'Not set' },
+                        { label: 'Created',  value: org.created_at ? new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex flex-col">
+                          <span className="text-xs text-greige">{label}</span>
+                          <span className="text-charcoal-deep text-xs font-medium truncate">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Doctor view ───────────────────────────────────────────────────────────────
 function DoctorOrgView() {
   const router = useRouter()
@@ -317,7 +443,8 @@ export default function OrganizationPage() {
   const { user } = useAuth()
 
   if (!user) return null
-  if (user.role === 'admin' || user.role === 'super_admin') return <AdminOrgView />
+  if (user.role === 'super_admin') return <SuperAdminOrgView />
+  if (user.role === 'admin') return <AdminOrgView />
   if (user.role === 'doctor') return <DoctorOrgView />
 
   return (
