@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, UserCheck, FileCheck, ClipboardList, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Users, UserCheck, FileCheck, ClipboardList, TrendingUp, AlertTriangle, Building2, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { RoleGuard } from '@/components/auth/RoleGuard'
@@ -71,11 +71,13 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-greige font-body mt-1">Operational overview of your team and patients.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users} label="Total Doctors" value={loading ? '—' : (stats?.total_doctors ?? 0)} href="/admin/manage-team" color="#2563EB" />
-          <StatCard icon={UserCheck} label="Patient Assignments" value={loading ? '—' : (stats?.total_assignments ?? 0)} href="/admin/doctor-management" color="#059669" />
-          <StatCard icon={FileCheck} label="Total Patients" value={loading ? '—' : (stats?.total_patients ?? 0)} href="/admin/doctor-management" color="#D97706" />
-          <StatCard icon={AlertTriangle} label="New Users (30d)" value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)} href="/admin/doctor-management" color="#DC2626" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <StatCard icon={Users}        label="Total Users"        value={loading ? '—' : (stats?.total_users ?? 0)}              href="/manage-users"                  color="#6366F1" />
+          <StatCard icon={FileCheck}    label="Total Patients"     value={loading ? '—' : (stats?.total_patients ?? 0)}           href="/admin/doctor-management"       color="#D97706" />
+          <StatCard icon={UserCheck}    label="Total Doctors"      value={loading ? '—' : (stats?.total_doctors ?? 0)}            href="/admin/manage-team"             color="#2563EB" />
+          <StatCard icon={Shield}       label="Admins"             value={loading ? '—' : (stats?.total_admins ?? 0)}             href="/manage-users"                  color="#7C3AED" />
+          <StatCard icon={Building2}    label="Organisations"      value={loading ? '—' : (stats?.total_organizations ?? 0)}      href="/organization"                  color="#0891B2" />
+          <StatCard icon={AlertTriangle} label="New Users (30d)"   value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}   href="/manage-users"                  color="#DC2626" />
         </div>
 
         <Card>
