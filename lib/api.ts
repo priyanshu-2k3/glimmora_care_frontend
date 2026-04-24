@@ -748,6 +748,19 @@ export interface AdminPatientOut {
   last_name: string
 }
 
+export interface AdminOrgItem {
+  id: string
+  name: string
+  admin_id: string
+  admin_email: string | null
+  address: string | null
+  phone: string | null
+  website: string | null
+  doctor_count: number
+  patient_count: number
+  created_at: string | null
+}
+
 export const adminApi = {
   /** List all users (searchable) */
   listUsers: (search = '') =>
@@ -781,6 +794,20 @@ export const adminApi = {
   /** List all patients (admin + super_admin) */
   listPatients: (search = '') =>
     apiFetch<AdminPatientOut[]>(`/admin/patients${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Super admin: list all organisations on the platform */
+  listAllOrgs: (search = '') =>
+    apiFetch<AdminOrgItem[]>(`/admin/organizations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Admin: list all consent records platform-wide */
+  listConsents: (params: { status?: string; patient_email?: string; requester_email?: string } = {}) => {
+    const q = new URLSearchParams()
+    if (params.status)          q.set('status', params.status)
+    if (params.patient_email)   q.set('patient_email', params.patient_email)
+    if (params.requester_email) q.set('requester_email', params.requester_email)
+    const qs = q.toString()
+    return apiFetch<ConsentRequest[]>(`/admin/consents${qs ? `?${qs}` : ''}`)
+  },
 }
 
 // ─── Intake API ───────────────────────────────────────────────────────────────
