@@ -15,6 +15,7 @@ import type {
   BulkPreviewResponse,
   ConfirmResponse,
   HealthRecord,
+  KnownMarker,
   ManualEntryData,
   ManualEntryResponse,
   MarkerIn,
@@ -784,12 +785,19 @@ export const adminApi = {
 
 // ─── Intake API ───────────────────────────────────────────────────────────────
 export const intakeApi = {
-  /** Upload a lab report file and run Gemini OCR */
-  upload: async (file: File, patientId: string): Promise<UploadResponse> => {
+  /** Upload a lab report file and run OCR.  ``reportDate`` (YYYY-MM-DD) is
+   *  the user's chosen date from the review UI; persisted on the draft so
+   *  the date is right from the moment the record lands in the vault. */
+  upload: async (
+    file: File,
+    patientId: string,
+    reportDate?: string | null,
+  ): Promise<UploadResponse> => {
     const token = getAccessToken()
     const formData = new FormData()
     formData.append('file', file)
     formData.append('patient_id', patientId)
+    if (reportDate) formData.append('report_date', reportDate)
     const res = await fetch(`${API_BASE}/intake/upload`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -802,11 +810,18 @@ export const intakeApi = {
     return res.json()
   },
 
-  /** Confirm a draft record after user review */
-  confirm: (recordId: string, markers: MarkerIn[], title: string, notes?: string | null) =>
+  /** Confirm a draft record after user review.  Pass ``date`` (YYYY-MM-DD)
+   *  to override the upload-day default with the user's chosen report date. */
+  confirm: (
+    recordId: string,
+    markers: MarkerIn[],
+    title: string,
+    notes?: string | null,
+    date?: string | null,
+  ) =>
     apiFetch<ConfirmResponse>('/intake/confirm', {
       method: 'POST',
-      body: JSON.stringify({ recordId, markers, title, notes }),
+      body: JSON.stringify({ recordId, markers, title, notes, date }),
     }),
 
   /** Create a record from manual form entry */
@@ -844,6 +859,23 @@ export const intakeApi = {
   /** Get the current user's own health record audit trail */
   getAuditTrail: (limit = 100) =>
     apiFetch<AuditTrailEntry[]>(`/intake/audit-trail?limit=${limit}`),
+
+  /** Canonical-marker dropdown list — used by the review UI to match
+   *  unrecognised names to a known marker. */
+  getKnownMarkers: () => apiFetch<KnownMarker[]>('/intake/known-markers'),
+
+  /** Register a new alias → canonical mapping so future intakes recognise
+   *  ``rawName``.  Auto-approved today; admin-approval flow will land later. */
+  createMarker: (req: {
+    rawName: string
+    canonical: string
+    display: string
+    category?: string
+  }) =>
+    apiFetch<{ alias: string; canonical: string; display: string; existed: boolean }>(
+      '/intake/markers',
+      { method: 'POST', body: JSON.stringify(req) },
+    ),
 }
 
 export interface AuditTrailEntry {

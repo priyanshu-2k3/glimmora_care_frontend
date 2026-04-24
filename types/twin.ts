@@ -9,6 +9,11 @@ export interface TwinMarkerPoint {
   date: string
   value: number
   unit: string
+  /** Raw reading as it appeared on the user's lab report, preserved
+   *  whenever it differs from the chart's display unit (the chart
+   *  re-expresses historical points into the latest reading's unit). */
+  originalValue?: number
+  originalUnit?: string
   isAbnormal?: boolean
   source?: string
   anomaly?: TwinAnomaly
