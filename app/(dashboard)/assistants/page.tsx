@@ -66,7 +66,8 @@ function TypingIndicator() {
 
 export default function AssistantsPage() {
   const { user } = useAuth()
-  const persona: Persona = user?.role ? ROLE_TO_PERSONA[user.role as Role] : 'patient'
+  const role = (user?.role ?? 'patient') as Role
+  const persona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
   const { messages, isTyping, sendMessage, clearMessages } = useGeminiChat(persona)
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
