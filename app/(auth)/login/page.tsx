@@ -48,12 +48,17 @@ function LoginPageInner() {
   }
 
   async function handleGoogleLogin() {
+    clearError()
     setIsGoogleLoading(true)
     setGoogleLoginAttempted(true)
     try {
       await googleLogin()
-      // If needs_role: pendingGoogleRole modal will appear, handleGoogleRoleSelect navigates.
-      // If no role needed: useEffect above will push to /dashboard when user is set.
+    } catch (err: unknown) {
+      // Popup blocked or closed — don't leave spinner hanging
+      const msg = err instanceof Error ? err.message : ''
+      if (!msg.includes('popup-closed') && !msg.includes('cancelled')) {
+        // error is set in AuthContext for real failures; popup-close is silent
+      }
     } finally {
       setIsGoogleLoading(false)
     }
@@ -161,10 +166,11 @@ function LoginPageInner() {
             type="submit"
             className="w-full mt-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
             isLoading={isLoading}
+            disabled={!email || !password}
             size="lg"
           >
             <LogIn className="w-4 h-4" />
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {isLoading ? 'Signing in...' : 'Login'}
           </Button>
 
           <div className="relative my-1">
