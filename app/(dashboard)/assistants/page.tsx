@@ -69,12 +69,10 @@ function TypingIndicator() {
 
 export default function AssistantsPage() {
   const { user } = useAuth()
-  const defaultPersona: Persona = user?.role ? ROLE_TO_PERSONA[user.role as Role] : 'patient'
+  const role = (user?.role ?? 'patient') as Role
+  const defaultPersona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
   const [activePersona, setActivePersona] = useState<Persona>(defaultPersona)
 
-  // Patient picker state — only used when persona is doctor / admin.
-  // Patient persona ignores this; the backend resolves the patient from
-  // the JWT sub on its own.
   const [patients, setPatients] = useState<PatientOut[]>([])
   const [patientsLoading, setPatientsLoading] = useState(false)
   const [selectedPatientId, setSelectedPatientId] = useState<string>('')
@@ -82,8 +80,6 @@ export default function AssistantsPage() {
   const needsPatientPicker =
     activePersona === 'doctor' || activePersona === 'admin'
 
-  // Load the doctor's / admin's visible patient list once per persona change.
-  // Doctors see only their assignments; admins see the whole org.
   useEffect(() => {
     if (!needsPatientPicker || !getAccessToken()) return
     setPatientsLoading(true)
@@ -104,10 +100,11 @@ export default function AssistantsPage() {
 
   const {
     messages, isTyping, sendMessage, clearMessages,
-  } = useGeminiChat(activePersona, needsPatientPicker ? selectedPatientId || null : null)
+    } = useGeminiChat(activePersona)
+
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const config = PERSONA_CONFIG[persona]
+  const config = PERSONA_CONFIG[activePersona]
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -124,8 +121,6 @@ export default function AssistantsPage() {
     setActivePersona(p)
     clearMessages()
     setInput('')
-    // Dropping the chat when persona changes is already handled; we also
-    // clear the picker so the next persona doesn't carry over a stale pick.
     setSelectedPatientId('')
   }
 
@@ -157,13 +152,13 @@ export default function AssistantsPage() {
 
       {/* Persona selector */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {personas.map(([persona, cfg]) => (
+        {personas.map(([p, cfg]) => (
           <button
-            key={persona}
-            onClick={() => switchPersona(persona)}
+            key={p}
+            onClick={() => switchPersona(p)}
             className={cn(
               'text-left px-3 py-3 rounded-xl border text-sm font-body transition-all duration-200',
-              activePersona === persona
+              activePersona === p
                 ? cfg.color + ' border-transparent shadow-sm'
                 : 'bg-ivory-warm border-sand-light text-stone hover:border-sand-DEFAULT'
             )}
@@ -202,8 +197,6 @@ export default function AssistantsPage() {
                 value={selectedPatientId}
                 onChange={(e) => {
                   setSelectedPatientId(e.target.value)
-                  // Switching patient resets the chat — keeps the model from
-                  // bleeding one patient's context into the next conversation.
                   clearMessages()
                 }}
               />
