@@ -364,6 +364,20 @@ export const authApi = {
       auth: false,
     }),
 
+  loginEmailOtp: (email: string) =>
+    apiFetch<{ message: string }>('/auth/login-email-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      auth: false,
+    }),
+
+  verifyEmailOtp: (email: string, otp: string) =>
+    apiFetch<LoginResponse>('/auth/verify-email-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+      auth: false,
+    }),
+
   verifyPhoneToken: (firebase_id_token: string) =>
     apiFetch<LoginResponse>('/auth/verify-phone-token', {
       method: 'POST',
