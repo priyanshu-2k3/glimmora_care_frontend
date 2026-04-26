@@ -3,35 +3,30 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, ArrowLeft, RefreshCw, Phone } from 'lucide-react'
+import { Shield, ArrowLeft, RefreshCw, Mail } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { useAuth } from '@/context/AuthContext'
 import { authApi, setTokens, backendRoleToFrontend, ApiError } from '@/lib/api'
-import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/firebase'
 import { decodeJwtPayload } from '@/types/auth'
 import { cn } from '@/lib/utils'
-import type { ConfirmationResult } from 'firebase/auth'
 
-const PHONE_SESSION_KEY = 'gc_otp_phone'
+const EMAIL_SESSION_KEY = 'gc_otp_email'
 
 export default function OtpVerifyPage() {
   const router = useRouter()
-  const { demoLogin } = useAuth()
 
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
-  const [phone, setPhone] = useState('')
+  const [step, setStep] = useState<'email' | 'otp'>('email')
+  const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [error, setError] = useState('')
-  const confirmationRef = useRef<ConfirmationResult | null>(null)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(PHONE_SESSION_KEY)
-    if (stored) { setPhone(stored); setStep('otp') }
+    const stored = sessionStorage.getItem(EMAIL_SESSION_KEY)
+    if (stored) { setEmail(stored); setStep('otp') }
   }, [])
 
   useEffect(() => {
@@ -50,13 +45,15 @@ export default function OtpVerifyPage() {
     setIsLoading(true)
     setError('')
     try {
-      confirmationRef.current = await sendPhoneOtp(phone)
-      sessionStorage.setItem(PHONE_SESSION_KEY, phone)
+      await authApi.loginEmailOtp(email)
+      sessionStorage.setItem(EMAIL_SESSION_KEY, email)
       setStep('otp')
-      setResendCooldown(30)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to send OTP'
-      setError(msg.includes('invalid-phone') ? 'Invalid phone number format. Use +91XXXXXXXXXX.' : msg)
+      setResendCooldown(60)
+    } catch {
+      // Non-blocking — always advance to OTP step
+      sessionStorage.setItem(EMAIL_SESSION_KEY, email)
+      setStep('otp')
+      setResendCooldown(60)
     } finally {
       setIsLoading(false)
     }
@@ -90,39 +87,33 @@ export default function OtpVerifyPage() {
     e.preventDefault()
     const code = otp.join('')
     if (code.length < 6) { setError('Please enter all 6 digits'); return }
-    if (!confirmationRef.current) { setError('Session expired. Please request a new OTP.'); return }
     setIsLoading(true)
     setError('')
     try {
-      const firebaseIdToken = await verifyPhoneOtp(confirmationRef.current, code)
-      const data = await authApi.verifyPhoneToken(firebaseIdToken)
+      const data = await authApi.verifyEmailOtp(email, code)
       setTokens(data.accessToken, data.refreshToken)
 
       const payload = decodeJwtPayload(data.accessToken)
       const role = backendRoleToFrontend((payload?.role as string) ?? 'patient')
       const firstProfile = data.profiles?.[0]
-      const name = firstProfile?.name ?? phone
+      const name = firstProfile?.name ?? email
 
-      const newUser = {
+      localStorage.setItem('glimmora_care_user', JSON.stringify({
         id: (payload?.sub as string) ?? '',
         name,
-        email: '',
+        email,
         role,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         accessToken: data.accessToken,
-      }
-
-      localStorage.setItem('glimmora_care_user', JSON.stringify(newUser))
-      sessionStorage.removeItem(PHONE_SESSION_KEY)
+      }))
+      sessionStorage.removeItem(EMAIL_SESSION_KEY)
       window.location.href = '/dashboard'
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.status === 400 ? 'Invalid or expired OTP. Please try again.' : err.detail)
-      } else if (err instanceof Error && err.message.includes('invalid-verification-code')) {
-        setError('Invalid OTP. Please check and try again.')
+        setError(err.status === 400 ? 'Invalid or expired code. Please try again.' : err.detail)
       } else {
-        setError('Verification failed. Please try again.')
+        setError('Connection error. Please try again.')
       }
     } finally {
       setIsLoading(false)
@@ -130,50 +121,42 @@ export default function OtpVerifyPage() {
   }
 
   async function handleResend() {
-    setResendCooldown(30)
+    setResendCooldown(60)
     setOtp(['', '', '', '', '', ''])
     setError('')
     inputRefs.current[0]?.focus()
-    try {
-      confirmationRef.current = await sendPhoneOtp(phone)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to resend OTP'
-      setError(msg)
-    }
+    try { await authApi.loginEmailOtp(email) } catch { /* non-blocking */ }
   }
 
   return (
     <Card className="shadow-lg">
-      {/* invisible reCAPTCHA container — required by Firebase Phone Auth */}
-      <div id="recaptcha-container" />
-
       <div className="flex items-center gap-2 mb-6">
         <Shield className="w-4 h-4 text-gold-soft" />
         <span className="text-xs text-greige font-body uppercase tracking-widest">OTP Verification</span>
       </div>
 
-      {step === 'phone' ? (
+      {step === 'email' ? (
         <>
           <div className="text-center mb-6">
             <div className="w-14 h-14 bg-gold-whisper rounded-full flex items-center justify-center mx-auto mb-4 border border-gold-soft/40">
-              <Phone className="w-6 h-6 text-gold-deep" />
+              <Mail className="w-6 h-6 text-gold-deep" />
             </div>
             <h2 className="font-display text-xl text-charcoal-deep mb-1">Login with OTP</h2>
-            <p className="text-sm text-greige font-body">Enter your registered phone number to receive a one-time code.</p>
+            <p className="text-sm text-greige font-body">Enter your registered email to receive a one-time code.</p>
           </div>
 
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <Input
-              label="Phone Number"
-              type="tel"
-              placeholder="+91 98765 43210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              label="Email Address"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
             {error && <p className="text-xs text-error-DEFAULT font-body">{error}</p>}
-            <Button type="submit" className="w-full" isLoading={isLoading} size="lg">
-              Send OTP
+            <Button type="submit" className="w-full" isLoading={isLoading} disabled={!email} size="lg">
+              Send Code
             </Button>
           </form>
         </>
@@ -183,10 +166,10 @@ export default function OtpVerifyPage() {
             <div className="w-14 h-14 bg-gold-whisper rounded-full flex items-center justify-center mx-auto mb-4 border border-gold-soft/40">
               <Shield className="w-6 h-6 text-gold-deep" />
             </div>
-            <h2 className="font-display text-xl text-charcoal-deep mb-1">Verify your identity</h2>
+            <h2 className="font-display text-xl text-charcoal-deep mb-1">Check your email</h2>
             <p className="text-sm text-greige font-body">
-              We&apos;ve sent a 6-digit code to{' '}
-              <span className="font-medium text-charcoal-deep">{phone}</span>
+              We sent a 6-digit code to{' '}
+              <span className="font-medium text-charcoal-deep">{email}</span>
             </p>
           </div>
 
@@ -216,13 +199,13 @@ export default function OtpVerifyPage() {
             {error && <p className="text-center text-xs text-error-DEFAULT font-body">{error}</p>}
 
             <Button type="submit" className="w-full" isLoading={isLoading} size="lg" disabled={otp.join('').length < 6}>
-              {isLoading ? 'Verifying...' : 'Verify OTP'}
+              {isLoading ? 'Verifying...' : 'Verify Code'}
             </Button>
 
             <div className="text-center">
               {resendCooldown > 0 ? (
                 <p className="text-xs text-greige font-body">
-                  Resend code in <span className="font-medium text-charcoal-deep">{resendCooldown}s</span>
+                  Resend in <span className="font-medium text-charcoal-deep">{resendCooldown}s</span>
                 </p>
               ) : (
                 <button
@@ -231,17 +214,17 @@ export default function OtpVerifyPage() {
                   className="flex items-center justify-center gap-1.5 mx-auto text-sm text-gold-deep hover:text-gold-muted font-body transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Resend OTP
+                  Resend Code
                 </button>
               )}
             </div>
           </form>
 
           <button
-            onClick={() => { setStep('phone'); setOtp(['','','','','','']); setError('') }}
+            onClick={() => { setStep('email'); setOtp(['','','','','','']); setError('') }}
             className="flex items-center justify-center gap-1.5 mt-4 w-full text-xs text-greige hover:text-charcoal-deep font-body transition-colors"
           >
-            Change phone number
+            Change email address
           </button>
         </>
       )}

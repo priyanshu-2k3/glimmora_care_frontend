@@ -193,8 +193,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       persistUser(mapped)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
-      if (code !== 'auth/popup-closed-by-user') {
-        setError('Google sign-in failed. Please try again.')
+      const message = (err as { message?: string }).message ?? ''
+      console.error('[Google login error] code:', code, 'message:', message, err)
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        if (code === 'auth/unauthorized-domain') {
+          setError('This domain is not authorized in Firebase. Add it to Firebase Console → Authentication → Authorized domains.')
+        } else if (code === 'auth/operation-not-allowed') {
+          setError('Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.')
+        } else if (code === 'auth/popup-blocked') {
+          setError('Popup was blocked by your browser. Please allow popups for this site.')
+        } else {
+          setError(`Google sign-in failed: ${code ?? message}`)
+        }
       }
     } finally {
       setIsLoading(false)

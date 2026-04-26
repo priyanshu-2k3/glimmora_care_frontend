@@ -22,7 +22,7 @@ const firebaseConfig = {
 // Firebase must only initialize in the browser — never during SSR/build
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
-const googleProvider = new GoogleAuthProvider()
+let googleProvider: GoogleAuthProvider | null = null
 
 function getFirebase(): { app: FirebaseApp; auth: Auth } {
   if (typeof window === 'undefined') {
@@ -31,13 +31,14 @@ function getFirebase(): { app: FirebaseApp; auth: Auth } {
   if (!app) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
     auth = getAuth(app)
+    googleProvider = new GoogleAuthProvider()
   }
   return { app, auth: auth! }
 }
 
 export async function signInWithGoogle() {
   const { auth: a } = getFirebase()
-  const result = await signInWithPopup(a, googleProvider)
+  const result = await signInWithPopup(a, googleProvider!)
   return result.user
 }
 
