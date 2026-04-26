@@ -9,7 +9,7 @@ interface HistoryMessage {
   parts: string
 }
 
-export function useGeminiChat(persona: Persona) {
+export function useGeminiChat(persona: Persona, patientId?: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const historyRef = useRef<HistoryMessage[]>([])
@@ -38,6 +38,10 @@ export function useGeminiChat(persona: Persona) {
             message: content,
             persona,
             history: historyRef.current,
+            // Doctor / admin personas: lets the backend load the selected
+            // patient's records + insights into the prompt context.
+            // Patient persona ignores this (server uses the JWT sub).
+            ...(patientId ? { patient_id: patientId } : {}),
           }),
         })
 
@@ -86,7 +90,7 @@ export function useGeminiChat(persona: Persona) {
         setIsTyping(false)
       }
     },
-    [persona]
+    [persona, patientId]
   )
 
   const clearMessages = useCallback(() => {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Upload, Sparkles, Save, Check, ChevronRight, UserCircle } from 'lucide-react'
 import { FileUploader } from '@/components/intake/FileUploader'
 import { OcrProcessingAnimation } from '@/components/intake/OcrProcessingAnimation'
-import { MarkerExtractionForm } from '@/components/intake/MarkerExtractionForm'
+import { MarkerReviewForm, countUnresolved } from '@/components/intake/MarkerReviewForm'
 import { ManualEntryForm } from '@/components/intake/ManualEntryForm'
 import { BulkImportPanel } from '@/components/intake/BulkImportPanel'
 import { Button } from '@/components/ui/Button'
@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { intakeApi, orgApi, getAccessToken } from '@/lib/api'
 import type { PatientOut } from '@/lib/api'
 import type { MarkerOut } from '@/types/intake'
-import type { HealthMarker } from '@/types/health'
 
 const STEPS = ['Select Patient', 'Upload', 'Review Markers', 'Save']
 
@@ -57,6 +56,8 @@ export default function IntakePage() {
     : (realPatients[0]?.patient_id ?? '')
 
   const [selectedPatient, setSelectedPatient] = useState('')
+  const today = new Date().toISOString().split('T')[0]
+  const [reportDate, setReportDate] = useState(today)
 
   // Set default once real patients load
   useEffect(() => {
@@ -82,25 +83,7 @@ export default function IntakePage() {
 
   const showPatientSelector = !isPatient || profiles.length > 0
 
-  // Adapt MarkerOut[] → HealthMarker[] for MarkerExtractionForm.
-  // Use sentinel -1 to mean "not provided" — resolveRange() in
-  // MarkerExtractionForm will replace it via the reference DB lookup.
-  const displayMarkers: HealthMarker[] = extractedMarkers.map((m) => ({
-    id: m.id ?? m.name,
-    name: m.name,
-    standardName: m.name,
-    value: m.value,
-    unit: m.unit,
-    normalRange: {
-      min: m.normalMin ?? -1,
-      max: m.normalMax ?? -1,
-      unit: m.unit,
-    },
-    category: (m.category as HealthMarker['category']) ?? 'blood',
-    timestamp: new Date().toISOString(),
-    extractionConfidence: Math.round((m.extractionConfidence ?? 1) * 100),
-    isAbnormal: m.isAbnormal,
-  }))
+  const unresolvedCount = countUnresolved(extractedMarkers)
 
   const currentStep = isSaved ? 4 : processComplete ? 3 : filesSelected ? 2 : 1
 
@@ -110,7 +93,7 @@ export default function IntakePage() {
     setProcessComplete(false)
     setSaveError(null)
     try {
-      const result = await intakeApi.upload(uploadedFile, selectedPatient)
+      const result = await intakeApi.upload(uploadedFile, selectedPatient, reportDate || null)
       setDraftRecordId(result.recordId)
       setExtractedMarkers(result.markers)
       setOcrConfidence(Math.round(result.ocrConfidence * 100))
@@ -141,9 +124,11 @@ export default function IntakePage() {
           normalMin: m.normalMin ?? null,
           normalMax: m.normalMax ?? null,
           category: m.category ?? null,
+          keepAsNote: !!m.keepAsNote,
         })),
         `Lab Report — ${uploadedFile?.name ?? 'Uploaded'}`,
-        null
+        null,
+        reportDate || null,
       )
       setIsSaved(true)
     } catch (err) {
@@ -293,7 +278,19 @@ export default function IntakePage() {
                   <Badge variant="info">OCR Enabled</Badge>
                 </div>
               </div>
-              <div className="p-5">
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-xs font-body font-semibold text-charcoal-deep mb-1 block">
+                    Report Date
+                  </label>
+                  <input
+                    type="date"
+                    max={today}
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    className="w-full border border-sand-light rounded-xl px-3 py-2 text-sm font-body text-charcoal-deep bg-ivory-cream focus:outline-none focus:border-gold-soft transition-colors"
+                  />
+                </div>
                 <FileUploader
                   onFilesSelected={(files) => {
                     setFilesSelected(files.length > 0)
@@ -323,7 +320,7 @@ export default function IntakePage() {
             )}
 
             {/* Extracted markers */}
-            {processComplete && displayMarkers.length > 0 && (
+            {processComplete && extractedMarkers.length > 0 && (
               <div className="bg-white border border-sand-light rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-5 pt-5 pb-4 border-b border-sand-light/60 flex items-center justify-between">
                   <div>
@@ -335,7 +332,10 @@ export default function IntakePage() {
                   </div>
                 </div>
                 <div className="p-5">
-                  <MarkerExtractionForm markers={displayMarkers} />
+                  <MarkerReviewForm
+                    markers={extractedMarkers}
+                    onChange={setExtractedMarkers}
+                  />
                   <div className="mt-6 pt-4 border-t border-sand-light flex gap-3 flex-col">
                     {saveError && (
                       <p className="text-xs text-error-DEFAULT font-body">{saveError}</p>
@@ -348,24 +348,34 @@ export default function IntakePage() {
                         Record saved to vault successfully
                       </div>
                     ) : (
-                      <div className="flex gap-3">
-                        <Button
-                          onClick={handleSave}
-                          isLoading={isSaving}
-                          className="flex-1 bg-gradient-to-r from-gold-deep to-gold-muted text-ivory-cream shadow-md hover:opacity-90 border-0"
-                        >
-                          <Save className="w-4 h-4" />
-                          Save to Health Vault
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setProcessComplete(false)
-                            setFilesSelected(false)
-                          }}
-                        >
-                          Discard
-                        </Button>
+                      <div className="flex flex-col gap-2">
+                        {unresolvedCount > 0 && (
+                          <p className="text-[11px] text-warning-DEFAULT font-body">
+                            Resolve {unresolvedCount} unrecognised marker
+                            {unresolvedCount === 1 ? '' : 's'} before saving — rename, keep as note, or discard.
+                          </p>
+                        )}
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={handleSave}
+                            isLoading={isSaving}
+                            disabled={unresolvedCount > 0 || extractedMarkers.length === 0}
+                            className="flex-1 bg-gradient-to-r from-gold-deep to-gold-muted text-ivory-cream shadow-md hover:opacity-90 border-0 disabled:opacity-50"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save to Health Vault
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setProcessComplete(false)
+                              setFilesSelected(false)
+                              setExtractedMarkers([])
+                            }}
+                          >
+                            Discard
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>

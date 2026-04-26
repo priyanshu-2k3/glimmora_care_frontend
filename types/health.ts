@@ -22,6 +22,7 @@ export interface HealthMarker {
   extractionConfidence: number // 0-100
   isAbnormal: boolean
   trend?: 'rising' | 'falling' | 'stable'
+  unrecognized?: boolean
 }
 
 export interface HealthRecord {
