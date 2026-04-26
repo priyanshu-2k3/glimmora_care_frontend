@@ -363,6 +363,13 @@ export const authApi = {
       auth: false,
     }),
 
+  verifyPhoneToken: (firebase_id_token: string) =>
+    apiFetch<LoginResponse>('/auth/verify-phone-token', {
+      method: 'POST',
+      body: JSON.stringify({ firebase_id_token }),
+      auth: false,
+    }),
+
   getSessions: () =>
     apiFetch<BackendSession[]>('/auth/sessions'),
 
@@ -385,16 +392,10 @@ export const authApi = {
         body: JSON.stringify({ code }),
       }),
 
-    smsSetup: (phone: string) =>
+    smsSetup: (firebase_id_token: string) =>
       apiFetch<{ message: string }>('/auth/2fa/sms/setup', {
         method: 'POST',
-        body: JSON.stringify({ phone }),
-      }),
-
-    smsVerify: (code: string) =>
-      apiFetch<{ message: string }>('/auth/2fa/sms/verify', {
-        method: 'POST',
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ firebase_id_token }),
       }),
 
     disable: () =>

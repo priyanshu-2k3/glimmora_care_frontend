@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, setTokens, backendRoleToFrontend, ApiError } from '@/lib/api'
+import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/firebase'
 import { decodeJwtPayload } from '@/types/auth'
 import { cn } from '@/lib/utils'
+import type { ConfirmationResult } from 'firebase/auth'
 
 const PHONE_SESSION_KEY = 'gc_otp_phone'
 
@@ -18,17 +20,16 @@ export default function OtpVerifyPage() {
   const router = useRouter()
   const { demoLogin } = useAuth()
 
-  // Step 1: enter phone — Step 2: enter OTP
   const [step, setStep] = useState<'phone' | 'otp'>('phone')
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [error, setError] = useState('')
+  const confirmationRef = useRef<ConfirmationResult | null>(null)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
-    // Restore phone if coming back to this page
     const stored = sessionStorage.getItem(PHONE_SESSION_KEY)
     if (stored) { setPhone(stored); setStep('otp') }
   }, [])
@@ -49,15 +50,13 @@ export default function OtpVerifyPage() {
     setIsLoading(true)
     setError('')
     try {
-      await authApi.loginOtp(phone)
+      confirmationRef.current = await sendPhoneOtp(phone)
       sessionStorage.setItem(PHONE_SESSION_KEY, phone)
       setStep('otp')
       setResendCooldown(30)
-    } catch (err) {
-      // Non-blocking by design — always show success
-      sessionStorage.setItem(PHONE_SESSION_KEY, phone)
-      setStep('otp')
-      setResendCooldown(30)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send OTP'
+      setError(msg.includes('invalid-phone') ? 'Invalid phone number format. Use +91XXXXXXXXXX.' : msg)
     } finally {
       setIsLoading(false)
     }
@@ -91,10 +90,12 @@ export default function OtpVerifyPage() {
     e.preventDefault()
     const code = otp.join('')
     if (code.length < 6) { setError('Please enter all 6 digits'); return }
+    if (!confirmationRef.current) { setError('Session expired. Please request a new OTP.'); return }
     setIsLoading(true)
     setError('')
     try {
-      const data = await authApi.verifyOtp(phone, code)
+      const firebaseIdToken = await verifyPhoneOtp(confirmationRef.current, code)
+      const data = await authApi.verifyPhoneToken(firebaseIdToken)
       setTokens(data.accessToken, data.refreshToken)
 
       const payload = decodeJwtPayload(data.accessToken)
@@ -114,13 +115,14 @@ export default function OtpVerifyPage() {
 
       localStorage.setItem('glimmora_care_user', JSON.stringify(newUser))
       sessionStorage.removeItem(PHONE_SESSION_KEY)
-      // Use full navigation so AuthContext rehydrates from localStorage on the new page
       window.location.href = '/dashboard'
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.status === 400 ? 'Invalid or expired OTP. Please try again.' : err.detail)
+      } else if (err instanceof Error && err.message.includes('invalid-verification-code')) {
+        setError('Invalid OTP. Please check and try again.')
       } else {
-        setError('Connection error. Please try again.')
+        setError('Verification failed. Please try again.')
       }
     } finally {
       setIsLoading(false)
@@ -133,14 +135,18 @@ export default function OtpVerifyPage() {
     setError('')
     inputRefs.current[0]?.focus()
     try {
-      await authApi.loginOtp(phone)
-    } catch {
-      // Non-blocking
+      confirmationRef.current = await sendPhoneOtp(phone)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to resend OTP'
+      setError(msg)
     }
   }
 
   return (
     <Card className="shadow-lg">
+      {/* invisible reCAPTCHA container — required by Firebase Phone Auth */}
+      <div id="recaptcha-container" />
+
       <div className="flex items-center gap-2 mb-6">
         <Shield className="w-4 h-4 text-gold-soft" />
         <span className="text-xs text-greige font-body uppercase tracking-widest">OTP Verification</span>
@@ -165,6 +171,7 @@ export default function OtpVerifyPage() {
               onChange={(e) => setPhone(e.target.value)}
               required
             />
+            {error && <p className="text-xs text-error-DEFAULT font-body">{error}</p>}
             <Button type="submit" className="w-full" isLoading={isLoading} size="lg">
               Send OTP
             </Button>
@@ -178,7 +185,7 @@ export default function OtpVerifyPage() {
             </div>
             <h2 className="font-display text-xl text-charcoal-deep mb-1">Verify your identity</h2>
             <p className="text-sm text-greige font-body">
-              We've sent a 6-digit code to{' '}
+              We&apos;ve sent a 6-digit code to{' '}
               <span className="font-medium text-charcoal-deep">{phone}</span>
             </p>
           </div>

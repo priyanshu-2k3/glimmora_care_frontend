@@ -1,5 +1,14 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, type Auth } from 'firebase/auth'
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  type Auth,
+  type ConfirmationResult,
+} from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -39,4 +48,29 @@ export async function signOutFromFirebase() {
 
 export function getFirebaseAuth(): Auth {
   return getFirebase().auth
+}
+
+// ── Phone Auth ────────────────────────────────────────────────────────────────
+
+let recaptchaVerifier: RecaptchaVerifier | null = null
+
+export function setupRecaptcha(containerId: string): RecaptchaVerifier {
+  const { auth: a } = getFirebase()
+  if (recaptchaVerifier) {
+    recaptchaVerifier.clear()
+    recaptchaVerifier = null
+  }
+  recaptchaVerifier = new RecaptchaVerifier(a, containerId, { size: 'invisible' })
+  return recaptchaVerifier
+}
+
+export async function sendPhoneOtp(phone: string, containerId = 'recaptcha-container'): Promise<ConfirmationResult> {
+  const { auth: a } = getFirebase()
+  const verifier = setupRecaptcha(containerId)
+  return signInWithPhoneNumber(a, phone, verifier)
+}
+
+export async function verifyPhoneOtp(confirmationResult: ConfirmationResult, otp: string): Promise<string> {
+  const credential = await confirmationResult.confirm(otp)
+  return credential.user.getIdToken()
 }
