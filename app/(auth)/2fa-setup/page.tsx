@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Shield, Mail, Key, Check, Copy, ArrowLeft, ArrowRight, AlertCircle, Loader2, Download, Smartphone } from 'lucide-react'
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { authApi, ApiError } from '@/lib/api'
+import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/firebase'
+import type { ConfirmationResult } from 'firebase/auth'
 
 type Step = 'choose' | 'app' | 'sms' | 'email' | 'verify' | 'done'
 type Method = 'app' | 'sms' | 'email'
@@ -28,6 +30,7 @@ export default function TwoFASetupPage() {
   const [totpSecret, setTotpSecret] = useState('')
   const [totpQr, setTotpQr] = useState('')
   const [backupCodes, setBackupCodes] = useState<string[]>([])
+  const smsConfirmationRef = useRef<ConfirmationResult | null>(null)
 
   function copySecret() {
     navigator.clipboard.writeText(totpSecret).catch(() => {})
@@ -85,10 +88,11 @@ export default function TwoFASetupPage() {
     setIsLoading(true)
     setError(null)
     try {
-      await authApi.twofa.smsSetup(smsPhone.trim())
+      smsConfirmationRef.current = await sendPhoneOtp(smsPhone.trim(), 'recaptcha-2fa')
       setStep('verify')
-    } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to send OTP')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send OTP'
+      setError(msg.includes('invalid-phone') ? 'Invalid phone number. Use international format e.g. +91XXXXXXXXXX' : msg)
     } finally {
       setIsLoading(false)
     }
@@ -117,7 +121,9 @@ export default function TwoFASetupPage() {
       if (method === 'app') {
         await authApi.twofa.totpVerify(otp)
       } else if (method === 'sms') {
-        await authApi.twofa.smsVerify(otp)
+        if (!smsConfirmationRef.current) throw new Error('Session expired. Please restart SMS setup.')
+        const firebaseIdToken = await verifyPhoneOtp(smsConfirmationRef.current, otp)
+        await authApi.twofa.smsSetup(firebaseIdToken)
       } else {
         await authApi.twofa.emailVerify(otp)
       }
@@ -131,6 +137,9 @@ export default function TwoFASetupPage() {
 
   return (
     <Card className="shadow-lg">
+      {/* invisible reCAPTCHA container for Firebase SMS 2FA */}
+      <div id="recaptcha-2fa" />
+
       <div className="flex items-center gap-2 mb-6">
         <Shield className="w-4 h-4 text-gold-soft" />
         <span className="text-xs text-greige font-body uppercase tracking-widest">Two-Factor Authentication</span>
