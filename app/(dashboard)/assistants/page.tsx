@@ -9,8 +9,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
+import { Select } from '@/components/ui/Select'
 import { formatConfidence } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { orgApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
 import type { Role } from '@/types/auth'
 
 const PERSONA_CONFIG: Record<Persona, { label: string; description: string; color: string; starterPrompts: string[] }> = {
@@ -67,11 +70,41 @@ function TypingIndicator() {
 export default function AssistantsPage() {
   const { user } = useAuth()
   const role = (user?.role ?? 'patient') as Role
-  const persona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
-  const { messages, isTyping, sendMessage, clearMessages } = useGeminiChat(persona)
+  const defaultPersona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
+  const [activePersona, setActivePersona] = useState<Persona>(defaultPersona)
+
+  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [patientsLoading, setPatientsLoading] = useState(false)
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
+
+  const needsPatientPicker =
+    activePersona === 'doctor' || activePersona === 'admin'
+
+  useEffect(() => {
+    if (!needsPatientPicker || !getAccessToken()) return
+    setPatientsLoading(true)
+    const fetch = activePersona === 'doctor'
+      ? orgApi.getDoctorPatients()
+      : orgApi.listPatients()
+    fetch
+      .then((list) => {
+        setPatients(list)
+        if (list.length > 0 && !selectedPatientId) {
+          setSelectedPatientId(list[0].patient_id)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPatientsLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePersona, needsPatientPicker])
+
+  const {
+    messages, isTyping, sendMessage, clearMessages,
+  } = useGeminiChat(activePersona)
+
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const config = PERSONA_CONFIG[persona]
+  const config = PERSONA_CONFIG[activePersona]
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -83,6 +116,15 @@ export default function AssistantsPage() {
     setInput('')
     await sendMessage(trimmed)
   }
+
+  function switchPersona(p: Persona) {
+    setActivePersona(p)
+    clearMessages()
+    setInput('')
+    setSelectedPatientId('')
+  }
+
+  const personas = Object.entries(PERSONA_CONFIG) as [Persona, typeof PERSONA_CONFIG[Persona]][]
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
@@ -107,6 +149,59 @@ export default function AssistantsPage() {
           <strong>Important:</strong> This assistant provides informational context only. It does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical decisions.
         </p>
       </div>
+
+      {/* Persona selector */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {personas.map(([p, cfg]) => (
+          <button
+            key={p}
+            onClick={() => switchPersona(p)}
+            className={cn(
+              'text-left px-3 py-3 rounded-xl border text-sm font-body transition-all duration-200',
+              activePersona === p
+                ? cfg.color + ' border-transparent shadow-sm'
+                : 'bg-ivory-warm border-sand-light text-stone hover:border-sand-DEFAULT'
+            )}
+          >
+            <p className="font-medium text-xs">{cfg.label}</p>
+            <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{cfg.description}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Patient picker — doctor / admin only */}
+      {needsPatientPicker && (
+        <Card>
+          <CardContent>
+            {patientsLoading ? (
+              <div className="h-10 bg-sand-light rounded-lg animate-pulse" />
+            ) : patients.length === 0 ? (
+              <p className="text-sm text-greige font-body">
+                No patients assigned yet — the assistant will answer without any
+                patient-specific context.
+              </p>
+            ) : (
+              <Select
+                label="Discuss patient"
+                options={[
+                  { value: '', label: 'No specific patient (generic questions only)' },
+                  ...patients.map((p) => ({
+                    value: p.patient_id,
+                    label: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()
+                      || p.email
+                      || p.patient_id,
+                  })),
+                ]}
+                value={selectedPatientId}
+                onChange={(e) => {
+                  setSelectedPatientId(e.target.value)
+                  clearMessages()
+                }}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Chat window */}
       <Card className="flex flex-col" style={{ height: '500px' }}>
