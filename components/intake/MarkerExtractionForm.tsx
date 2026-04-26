@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Info, HelpCircle } from 'lucide-react'
 import type { HealthMarker } from '@/types/health'
 import { lookupMarkerRange } from '@/data/markers'
 import { Badge } from '@/components/ui/Badge'
@@ -43,14 +43,20 @@ function resolveRange(m: HealthMarker): { min: number | null; max: number | null
 export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
   if (!markers.length) return null
 
-  const abnormalCount = markers.filter((m) => m.isAbnormal).length
-  const normalCount = markers.filter((m) => !m.isAbnormal).length
+  const unrecognizedCount = markers.filter((m) => m.unrecognized).length
+  const abnormalCount = markers.filter((m) => !m.unrecognized && m.isAbnormal).length
+  const normalCount = markers.filter((m) => !m.unrecognized && !m.isAbnormal).length
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-body font-semibold text-sm text-black">Extracted Markers ({markers.length})</h3>
         <div className="flex items-center gap-2">
+          {unrecognizedCount > 0 && (
+            <Badge variant="warning" className="bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm">
+              <HelpCircle className="w-3 h-3" /> {unrecognizedCount} unrecognized
+            </Badge>
+          )}
           {abnormalCount > 0 && (
             <Badge variant="warning" className="bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm">
               <AlertTriangle className="w-3 h-3" /> {abnormalCount} abnormal
@@ -61,6 +67,17 @@ export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
           </Badge>
         </div>
       </div>
+      {unrecognizedCount > 0 && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-warning-soft/50 border border-warning-DEFAULT/30 text-xs text-warning-DEFAULT font-body">
+          <HelpCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p>
+            <span className="font-semibold">{unrecognizedCount}</span> marker
+            {unrecognizedCount === 1 ? ' name was' : ' names were'} not recognised as a
+            standard health marker. Please rename to match a known marker or discard before
+            saving — unrecognised markers won&apos;t contribute to trends or insights.
+          </p>
+        </div>
+      )}
       <div className="overflow-x-auto rounded-xl border border-sand-light/80">
         <table className="w-full text-sm font-body">
           <thead>
@@ -80,12 +97,18 @@ export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
                   key={m.id}
                   className={cn(
                     'transition-colors hover:bg-parchment/40',
-                    m.isAbnormal ? 'bg-warning-soft/10' : 'bg-white'
+                    m.unrecognized
+                      ? 'bg-warning-soft/40'
+                      : m.isAbnormal
+                      ? 'bg-warning-soft/10'
+                      : 'bg-white'
                   )}
                 >
                   <td className="px-4 py-3">
                     <p className="font-semibold text-black">{m.standardName}</p>
-                    <p className="text-xs text-greige capitalize mt-0.5">{m.category}</p>
+                    <p className="text-xs text-greige capitalize mt-0.5">
+                      {m.unrecognized ? 'Not a standard marker' : m.category}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     {m.value != null ? (
@@ -97,7 +120,9 @@ export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs whitespace-nowrap">
-                    {range ? (() => {
+                    {m.unrecognized ? (
+                      <span className="text-greige italic">—</span>
+                    ) : range ? (() => {
                       const unit = (range.unit || m.unit || '').trim()
                       const minStr = range.min != null ? String(range.min) : '—'
                       const maxStr = range.max != null ? String(range.max) : '—'
@@ -111,7 +136,11 @@ export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {m.isAbnormal ? (
+                    {m.unrecognized ? (
+                      <Badge variant="warning" className="bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm whitespace-normal">
+                        <HelpCircle className="w-3 h-3" /> Unrecognized: please match or discard
+                      </Badge>
+                    ) : m.isAbnormal ? (
                       <Badge variant="warning" className="bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm">
                         <AlertTriangle className="w-3 h-3" /> Abnormal
                       </Badge>

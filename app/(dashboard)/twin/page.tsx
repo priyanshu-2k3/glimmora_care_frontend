@@ -66,6 +66,68 @@ function RiskTooltip({ active, payload }: RiskTooltipProps) {
   )
 }
 
+// Custom tooltip for the marker-overlay chart.  Shows the displayed value
+// (in the latest reading's unit) PLUS the original reading from the lab
+// report when the chart had to convert it — so users never have to wonder
+// "why does this chart show 99 when my report said 5.5?".
+interface MarkerTooltipProps {
+  active?: boolean
+  payload?: Array<{
+    name?: string
+    value?: number
+    color?: string
+    dataKey?: string
+    payload: Record<string, unknown>
+  }>
+  label?: string
+}
+function MarkerTooltip({ active, payload, label }: MarkerTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+  const row = payload[0].payload
+  return (
+    <div className="rounded-xl border border-sand-light bg-ivory-cream/95 p-3 text-[11px] font-body shadow-md min-w-[200px]">
+      <p className="text-charcoal-deep font-semibold mb-1.5">{label}</p>
+      <ul className="space-y-1.5">
+        {payload.map((entry, idx) => {
+          const id = entry.dataKey
+          if (!id) return null
+          const value = entry.value
+          const unit = (row[`${id}__unit`] as string | undefined) ?? ''
+          const orig = row[`${id}__orig`] as number | undefined
+          const origUnit = (row[`${id}__origUnit`] as string | undefined) ?? ''
+          const anom = row[`${id}__anom`] as string | undefined
+          const showOriginal =
+            orig !== undefined && origUnit && (origUnit !== unit || orig !== value)
+          return (
+            <li key={idx} className="leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: entry.color }}
+                />
+                <span className="text-charcoal-deep font-semibold">
+                  {entry.name}
+                </span>
+              </div>
+              <div className="ml-3.5 text-charcoal-deep">
+                {value}{unit ? ` ${unit}` : ''}
+                {showOriginal && (
+                  <span className="ml-1 text-greige text-[10px]">
+                    (report: {orig} {origUnit})
+                  </span>
+                )}
+              </div>
+              {anom && (
+                <div className="ml-3.5 text-[10px] text-warning-soft">⚠ {anom}</div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 // Custom dot renderer for marker lines — draws a warning triangle on points
 // flagged as personal-baseline deviations or sudden changes.  The `anomKey`
 // arg tells it which extra field on the row carries the anomaly reason.
@@ -199,14 +261,21 @@ export default function TwinPage() {
     (twin?.markerOverlays ?? []).flatMap((m) => m.dataPoints.map((d) => d.date))
   )].sort()
 
-  // Marker-timeline rows carry per-cell value AND an `_anom` flag so the
-  // custom dot renderer can draw a warning triangle on anomaly points.
+  // Marker-timeline rows carry per-cell value + (optional) raw original
+  // reading + anomaly flag so the tooltip can show both the chart's
+  // display unit and what the user's report actually said, and the dot
+  // renderer can draw a warning triangle on anomaly points.
   const chartData = allDates.map((date) => {
     const row: Record<string, unknown> = { date }
     twin?.markerOverlays.forEach((marker) => {
       const point = marker.dataPoints.find((d) => d.date === date)
       if (point) {
         row[marker.markerId] = point.value
+        row[`${marker.markerId}__unit`] = marker.unit
+        if (point.originalValue !== undefined && point.originalUnit) {
+          row[`${marker.markerId}__orig`] = point.originalValue
+          row[`${marker.markerId}__origUnit`] = point.originalUnit
+        }
         if (point.anomaly) row[`${marker.markerId}__anom`] = point.anomaly.reason
       }
     })
@@ -331,9 +400,7 @@ export default function TwinPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5DFD3" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} />
-                  <Tooltip
-                    contentStyle={{ background: '#FAF8F5', border: '1px solid #E5DFD3', borderRadius: 12, fontSize: 11, fontFamily: 'Inter' }}
-                  />
+                  <Tooltip content={<MarkerTooltip />} />
                   {twin.markerOverlays.map((m) =>
                     visibleMarkers[m.markerId] ? (
                       <Line

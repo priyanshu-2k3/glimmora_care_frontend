@@ -100,7 +100,7 @@ export default function AssistantsPage() {
 
   const {
     messages, isTyping, sendMessage, clearMessages,
-  } = useGeminiChat(activePersona)
+    } = useGeminiChat(activePersona)
 
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -169,7 +169,9 @@ export default function AssistantsPage() {
         ))}
       </div>
 
-      {/* Patient picker — doctor / admin only */}
+      {/* Patient picker — doctor / admin only.  Scopes the health context
+           injected into the prompt.  When no patient is selected the AI
+           answers generically (no records / insights in context). */}
       {needsPatientPicker && (
         <Card>
           <CardContent>

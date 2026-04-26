@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Trash2, Save, Check, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, Save, Check, ArrowRight, HelpCircle, StickyNote } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { intakeApi } from '@/lib/api'
-import type { ManualEntryData, MarkerIn } from '@/types/intake'
+import type { KnownMarker, ManualEntryData, MarkerIn } from '@/types/intake'
 
 interface MarkerRow {
   name: string
@@ -14,6 +14,17 @@ interface MarkerRow {
   unit: string
   normalMin: string
   normalMax: string
+  keepAsNote: boolean
+}
+
+const KNOWN_MARKERS_DATALIST_ID = 'manual-known-markers'
+
+function isKnownMarkerName(name: string, known: KnownMarker[]): boolean {
+  const q = name.trim().toLowerCase()
+  if (!q) return false
+  return known.some(
+    (k) => k.display.toLowerCase() === q || k.canonical.toLowerCase() === q,
+  )
 }
 
 interface ManualEntryFormProps {
@@ -27,6 +38,7 @@ const emptyRow = (): MarkerRow => ({
   unit: '',
   normalMin: '',
   normalMax: '',
+  keepAsNote: false,
 })
 
 const inputClass =
@@ -43,8 +55,25 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
+  const [knownMarkers, setKnownMarkers] = useState<KnownMarker[]>([])
 
-  function updateRow(index: number, field: keyof MarkerRow, val: string) {
+  useEffect(() => {
+    let alive = true
+    intakeApi
+      .getKnownMarkers()
+      .then((list) => {
+        if (alive) setKnownMarkers(list)
+      })
+      .catch(() => {
+        // Non-fatal: datalist just stays empty; save-gate still works
+        // because the backend is the authoritative check.
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  function updateRow<K extends keyof MarkerRow>(index: number, field: K, val: MarkerRow[K]) {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: val } : r)))
   }
 
@@ -55,6 +84,12 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
   function removeRow(index: number) {
     setRows((prev) => prev.filter((_, i) => i !== index))
   }
+
+  const unresolvedCount = rows.filter((r) => {
+    const trimmed = r.name.trim()
+    if (!trimmed) return false
+    return !isKnownMarkerName(trimmed, knownMarkers) && !r.keepAsNote
+  }).length
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -69,6 +104,7 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
           unit: r.unit.trim(),
           normalMin: r.normalMin ? parseFloat(r.normalMin) : null,
           normalMax: r.normalMax ? parseFloat(r.normalMax) : null,
+          keepAsNote: r.keepAsNote,
         }))
 
       const data: ManualEntryData = {
@@ -180,21 +216,57 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
         />
       </div>
 
+      {/* Known-marker datalist for autocomplete */}
+      <datalist id={KNOWN_MARKERS_DATALIST_ID}>
+        {knownMarkers.map((k) => (
+          <option key={k.canonical} value={k.display} />
+        ))}
+      </datalist>
+
       {/* Marker rows */}
       <div>
         <label className={labelClass}>Health Markers</label>
         <div className="space-y-3">
-          {rows.map((row, i) => (
-            <div key={i} className="flex items-start gap-2">
+          {rows.map((row, i) => {
+            const trimmedName = row.name.trim()
+            const isUnrecognized =
+              trimmedName.length > 1 && !isKnownMarkerName(trimmedName, knownMarkers)
+            const showResolveHint = isUnrecognized && !row.keepAsNote
+            return (
+            <div
+              key={i}
+              className={cn(
+                'flex items-start gap-2 rounded-xl transition-colors p-1.5',
+                row.keepAsNote && 'bg-azure-whisper/40',
+              )}
+            >
               <div className="grid grid-cols-5 gap-2 flex-1">
-                <input
-                  type="text"
-                  placeholder="Marker name"
-                  required
-                  value={row.name}
-                  onChange={(e) => updateRow(i, 'name', e.target.value)}
-                  className={cn(inputClass, 'col-span-2')}
-                />
+                <div className="col-span-2">
+                  <input
+                    type="text"
+                    list={KNOWN_MARKERS_DATALIST_ID}
+                    placeholder="Marker name"
+                    required
+                    value={row.name}
+                    onChange={(e) => updateRow(i, 'name', e.target.value)}
+                    className={cn(
+                      inputClass,
+                      showResolveHint && 'border-warning-DEFAULT/60 bg-warning-soft/30'
+                    )}
+                  />
+                  {showResolveHint && (
+                    <p className="mt-1 flex items-center gap-1 text-[10px] font-body text-warning-DEFAULT">
+                      <HelpCircle className="w-3 h-3 shrink-0" />
+                      Unrecognised — pick a known marker, keep as note, or discard.
+                    </p>
+                  )}
+                  {row.keepAsNote && (
+                    <p className="mt-1 flex items-center gap-1 text-[10px] font-body text-sapphire-deep">
+                      <StickyNote className="w-3 h-3 shrink-0" />
+                      Kept as note · excluded from trends.
+                    </p>
+                  )}
+                </div>
                 <input
                   type="number"
                   placeholder="Value"
@@ -230,6 +302,21 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
                   />
                 </div>
               </div>
+              {isUnrecognized && (
+                <button
+                  type="button"
+                  onClick={() => updateRow(i, 'keepAsNote', !row.keepAsNote)}
+                  title={row.keepAsNote ? 'Undo keep-as-note' : 'Keep as note (excluded from trends)'}
+                  className={cn(
+                    'mt-1.5 p-1.5 rounded-lg transition-colors',
+                    row.keepAsNote
+                      ? 'bg-sapphire-mist/30 text-sapphire-deep'
+                      : 'text-stone hover:bg-azure-whisper hover:text-sapphire-deep',
+                  )}
+                >
+                  <StickyNote className="w-4 h-4" />
+                </button>
+              )}
               <button
                 type="button"
                 disabled={rows.length === 1}
@@ -244,7 +331,8 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         <button
@@ -262,11 +350,20 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
         <p className="text-xs text-error-DEFAULT font-body">{error}</p>
       )}
 
+      {/* Save gate hint */}
+      {unresolvedCount > 0 && (
+        <p className="text-[11px] text-warning-DEFAULT font-body">
+          Resolve {unresolvedCount} unrecognised marker
+          {unresolvedCount === 1 ? '' : 's'} before saving — rename, keep as note, or remove.
+        </p>
+      )}
+
       {/* Submit */}
       <Button
         type="submit"
         isLoading={isLoading}
-        className="w-full bg-gradient-to-r from-gold-deep to-gold-muted text-ivory-cream shadow-md hover:opacity-90 border-0"
+        disabled={unresolvedCount > 0}
+        className="w-full bg-gradient-to-r from-gold-deep to-gold-muted text-ivory-cream shadow-md hover:opacity-90 border-0 disabled:opacity-50"
       >
         <Save className="w-4 h-4" />
         Save to Health Vault

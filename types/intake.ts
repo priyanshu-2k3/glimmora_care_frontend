@@ -7,6 +7,9 @@ export interface MarkerIn {
   normalMin?: number | null
   normalMax?: number | null
   category?: string | null
+  /** User explicitly kept this unrecognised marker as a note only.
+   *  Ignored when the name matches a known canonical. */
+  keepAsNote?: boolean
 }
 
 export interface MarkerOut {
@@ -19,6 +22,17 @@ export interface MarkerOut {
   category?: string | null
   isAbnormal: boolean
   extractionConfidence?: number | null
+  unrecognized?: boolean | null
+  keepAsNote?: boolean | null
+}
+
+export interface KnownMarker {
+  canonical: string
+  display: string
+  /** All hygienised alias keys the backend accepts for this canonical.
+   *  Used by the review UI to flag a marker as recognised even when the
+   *  raw OCR text matches an alias (not just the display name). */
+  aliases?: string[]
 }
 
 export interface UploadResponse {
