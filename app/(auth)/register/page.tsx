@@ -185,7 +185,7 @@ export default function RegisterPage() {
               label="First Name *"
               placeholder="Priya"
               value={owner.firstName}
-              onChange={(e) => { setOwner((p) => ({ ...p, firstName: e.target.value })); setFieldErrors((p) => ({ ...p, firstName: undefined })) }}
+              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, ''); setOwner((p) => ({ ...p, firstName: v })); setFieldErrors((p) => ({ ...p, firstName: undefined })) }}
               required
               error={fieldErrors.firstName}
             />
@@ -193,7 +193,7 @@ export default function RegisterPage() {
               label="Last Name *"
               placeholder="Sharma"
               value={owner.lastName}
-              onChange={(e) => { setOwner((p) => ({ ...p, lastName: e.target.value })); setFieldErrors((p) => ({ ...p, lastName: undefined })) }}
+              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, ''); setOwner((p) => ({ ...p, lastName: v })); setFieldErrors((p) => ({ ...p, lastName: undefined })) }}
               required
               error={fieldErrors.lastName}
             />
@@ -214,7 +214,7 @@ export default function RegisterPage() {
                 type="tel"
                 placeholder="+91 98765 43210"
                 value={owner.phone}
-                onChange={(e) => { setOwner((p) => ({ ...p, phone: e.target.value })); setFieldErrors((p) => ({ ...p, phone: undefined })) }}
+                onChange={(e) => { const v = e.target.value.replace(/[^\d+\s-]/g, ''); setOwner((p) => ({ ...p, phone: v })); setFieldErrors((p) => ({ ...p, phone: undefined })) }}
                 required
                 error={fieldErrors.phone}
               />

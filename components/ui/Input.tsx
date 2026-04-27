@@ -31,7 +31,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'focus:outline-none focus:border-gold-soft focus:ring-1 focus:ring-gold-soft/30',
               'transition-all duration-200',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              error && 'border-error-soft focus:border-error-DEFAULT focus:ring-error-soft/30',
+              error && 'border-red-500 focus:border-red-600 focus:ring-red-200',
               leftIcon && 'pl-10',
               rightIcon && 'pr-10',
               className
@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-greige">{rightIcon}</span>
           )}
         </div>
-        {error && <p className="mt-1 text-xs text-error-DEFAULT font-body">{error}</p>}
+        {error && <p className="mt-1 text-xs text-red-600 font-body font-medium">{error}</p>}
         {hint && !error && <p className="mt-1 text-xs text-greige font-body">{hint}</p>}
       </div>
     )

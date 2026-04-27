@@ -4,13 +4,13 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut as firebaseSignOut,
   signInWithPhoneNumber,
   RecaptchaVerifier,
   type Auth,
   type ConfirmationResult,
+  type User as FirebaseUser,
 } from "firebase/auth"
 
 const firebaseConfig = {
@@ -42,54 +42,11 @@ export function getFirebaseAuth(): Auth {
   return getFirebase().auth
 }
 
-// ─── Google sign-in via redirect ─────────────────────────────────────────────
-// Redirect flow (vs popup) works reliably on production hosts where popups
-// are blocked, on mobile Safari, and behind COOP/COEP headers.
-
-export type GoogleAuthIntent = "login" | "connect"
-const INTENT_KEY = "glimmora_google_intent"
-
-export function startGoogleSignIn(intent: GoogleAuthIntent = "login"): Promise<void> {
+// ─── Google sign-in (popup) ─────────────────────────────────────────────────
+export async function signInWithGoogle(): Promise<FirebaseUser> {
   const { auth: a } = getFirebase()
-  try {
-    sessionStorage.setItem(INTENT_KEY, intent)
-  } catch {
-    // ignore — sessionStorage may be unavailable
-  }
-  return signInWithRedirect(a, googleProvider!)
-}
-
-export interface GoogleRedirectPayload {
-  intent: GoogleAuthIntent
-  idToken: string
-  email: string | null
-  name: string | null
-  picture: string | null
-}
-
-/** Call once on app mount. Returns the redirect result if we just came back from Google, else null. */
-export async function consumeGoogleRedirect(): Promise<GoogleRedirectPayload | null> {
-  const { auth: a } = getFirebase()
-  const result = await getRedirectResult(a)
-  if (!result?.user) return null
-
-  let intent: GoogleAuthIntent = "login"
-  try {
-    const stored = sessionStorage.getItem(INTENT_KEY)
-    if (stored === "connect" || stored === "login") intent = stored
-    sessionStorage.removeItem(INTENT_KEY)
-  } catch {
-    // ignore
-  }
-
-  const idToken = await result.user.getIdToken()
-  return {
-    intent,
-    idToken,
-    email: result.user.email,
-    name: result.user.displayName,
-    picture: result.user.photoURL,
-  }
+  const result = await signInWithPopup(a, googleProvider!)
+  return result.user
 }
 
 export async function signOutFromFirebase() {
@@ -97,8 +54,7 @@ export async function signOutFromFirebase() {
   await firebaseSignOut(a)
 }
 
-// ─── Phone Auth ──────────────────────────────────────────────────────────────
-
+// ─── Phone Auth ─────────────────────────────────────────────────────────────
 let recaptchaVerifier: RecaptchaVerifier | null = null
 
 export function setupRecaptcha(containerId: string): RecaptchaVerifier {
