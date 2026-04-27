@@ -77,7 +77,7 @@ function formatLastActive(iso: string | null | undefined) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const { user, logout, refreshUser, startConnectGoogle, googleRedirectMsg, clearGoogleRedirectMsg } = useAuth()
+  const { user, logout, refreshUser, connectGoogle } = useAuth()
   const router = useRouter()
 
   // Profile tab
@@ -128,23 +128,11 @@ export default function SettingsPage() {
   async function handleConnectGoogle() {
     setGoogleConnecting(true)
     setGoogleConnectMsg(null)
-    try {
-      // Page will redirect away; the post-redirect handler in AuthContext
-      // performs the backend exchange and surfaces the result via googleRedirectMsg.
-      await startConnectGoogle()
-    } catch {
-      setGoogleConnecting(false)
-      setGoogleConnectMsg('Failed to connect Google account. Please try again.')
-    }
+    const result = await connectGoogle()
+    setGoogleConnectMsg(result.message)
+    if (result.ok) await refreshUser()
+    setGoogleConnecting(false)
   }
-
-  // Surface AuthContext's post-redirect message (raised after we navigate back from Google)
-  useEffect(() => {
-    if (!googleRedirectMsg) return
-    setGoogleConnectMsg(googleRedirectMsg)
-    refreshUser()
-    clearGoogleRedirectMsg()
-  }, [googleRedirectMsg, refreshUser, clearGoogleRedirectMsg])
 
   // Sessions tab
   const [sessions, setSessions] = useState<BackendSession[]>([])
