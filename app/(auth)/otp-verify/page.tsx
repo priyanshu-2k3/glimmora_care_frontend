@@ -25,8 +25,10 @@ export default function OtpVerifyPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
+    // Prefill the email if we have one from a recent attempt, but always start
+    // on the email step so the user explicitly triggers the send.
     const stored = sessionStorage.getItem(EMAIL_SESSION_KEY)
-    if (stored) { setEmail(stored); setStep('otp') }
+    if (stored) setEmail(stored)
   }, [])
 
   useEffect(() => {
@@ -42,18 +44,29 @@ export default function OtpVerifyPage() {
 
   async function handleRequestOtp(e: React.FormEvent) {
     e.preventDefault()
+    const trimmed = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      setError('Enter a valid email address')
+      return
+    }
     setIsLoading(true)
     setError('')
     try {
-      await authApi.loginEmailOtp(email)
-      sessionStorage.setItem(EMAIL_SESSION_KEY, email)
+      await authApi.loginEmailOtp(trimmed)
+      // Backend returns a generic 200 even when the email isn't registered
+      // (avoids account enumeration). Only on success do we advance.
+      sessionStorage.setItem(EMAIL_SESSION_KEY, trimmed)
       setStep('otp')
       setResendCooldown(60)
-    } catch {
-      // Non-blocking — always advance to OTP step
-      sessionStorage.setItem(EMAIL_SESSION_KEY, email)
-      setStep('otp')
-      setResendCooldown(60)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        // 4xx from the backend — show the real reason
+        setError(err.detail || 'Could not send code. Please try again.')
+      } else {
+        // Network / connection failure — DO NOT advance; user would wait for
+        // a code that was never sent.
+        setError('Could not reach the server. Check your connection and try again.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -121,11 +134,16 @@ export default function OtpVerifyPage() {
   }
 
   async function handleResend() {
-    setResendCooldown(60)
     setOtp(['', '', '', '', '', ''])
     setError('')
     inputRefs.current[0]?.focus()
-    try { await authApi.loginEmailOtp(email) } catch { /* non-blocking */ }
+    try {
+      await authApi.loginEmailOtp(email)
+      setResendCooldown(60)
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.detail || 'Could not resend code.')
+      else setError('Could not reach the server. Please try again.')
+    }
   }
 
   return (
@@ -154,7 +172,7 @@ export default function OtpVerifyPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            {error && <p className="text-xs text-error-DEFAULT font-body">{error}</p>}
+            {error && <p className="text-xs text-red-600 font-body">{error}</p>}
             <Button type="submit" className="w-full" isLoading={isLoading} disabled={!email} size="lg">
               Send Code
             </Button>
@@ -189,14 +207,14 @@ export default function OtpVerifyPage() {
                   className={cn(
                     'w-11 h-13 text-center text-lg font-body font-semibold border rounded-xl transition-all duration-200 focus:outline-none bg-ivory-warm',
                     digit ? 'border-gold-soft bg-gold-whisper text-charcoal-deep' : 'border-sand-DEFAULT text-charcoal-deep',
-                    error && !digit ? 'border-error-DEFAULT' : '',
+                    error && !digit ? 'border-red-500' : '',
                     'focus:border-gold-soft focus:ring-2 focus:ring-gold-soft/20',
                   )}
                 />
               ))}
             </div>
 
-            {error && <p className="text-center text-xs text-error-DEFAULT font-body">{error}</p>}
+            {error && <p className="text-center text-xs text-red-600 font-body">{error}</p>}
 
             <Button type="submit" className="w-full" isLoading={isLoading} size="lg" disabled={otp.join('').length < 6}>
               {isLoading ? 'Verifying...' : 'Verify Code'}

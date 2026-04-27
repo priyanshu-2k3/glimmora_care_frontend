@@ -19,17 +19,23 @@ export default function ForgotPasswordPage() {
 
   async function handleSendEmail(e: React.FormEvent) {
     e.preventDefault()
+    const trimmed = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      setError('Enter a valid email address')
+      return
+    }
     setIsLoading(true)
     setError(null)
     try {
-      await authApi.forgotPassword(email)
+      await authApi.forgotPassword(trimmed)
       setStep('otp')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail)
       } else {
-        // Treat connection error gracefully — avoid email enumeration
-        setStep('otp')
+        // Network failure — DO NOT silently advance; user would wait for an
+        // email that was never sent.
+        setError('Could not reach the server. Check your connection and try again.')
       }
     } finally {
       setIsLoading(false)
