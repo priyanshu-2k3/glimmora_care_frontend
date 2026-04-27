@@ -93,9 +93,6 @@ export default function RegisterPage() {
     { label: 'Passwords match',        ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
   ]
 
-  const step1Valid =
-    owner.firstName && owner.lastName && owner.email && owner.phone && pwRules.every((r) => r.ok)
-
   async function handleSubmit() {
     setIsLoading(true)
     clearError()
@@ -307,7 +304,6 @@ export default function RegisterPage() {
           <Button
             type="submit"
             className="w-full mt-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
-            disabled={!step1Valid}
             size="lg"
           >
             Continue to Review
