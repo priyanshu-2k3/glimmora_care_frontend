@@ -2,7 +2,7 @@ Feature,Frontend %,Backend %,Integration %,Notes
 Login / Auth,100,100,100,Real JWT auth integrated
 Register,100,50,50,UI done; email verification backend done; frontend still uses mock demo login
 Dashboard,100,0,0,Role-aware UI complete; all data is mock
-Intake - File Upload + OCR,100,100,100,Gemini Vision OCR; AES-256-GCM encrypted markers
+Intake - File Upload + OCR,100,100,100,OpenAI gpt-4.1 vision OCR; AES-256-GCM encrypted markers
 Intake - Manual Entry,100,100,100,Dynamic marker form; REST API integrated
 Intake - Bulk CSV/Excel Import,100,100,100,pandas preview + confirm flow
 Health Vault (List),100,0,0,UI complete; backend health_records CRUD not yet wired to vault page

@@ -72,9 +72,9 @@ const config: Config = {
           DEFAULT: '#A68B3D',
         },
         error: {
-          soft: '#A67272',
-          DEFAULT: '#8B5252',
-          vivid: '#B07278',
+          soft: '#FEE2E2',
+          DEFAULT: '#DC2626',
+          vivid: '#B91C1C',
         },
         info: {
           soft: '#6B7A8A',

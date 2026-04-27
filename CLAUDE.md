@@ -55,7 +55,7 @@ Every time an API endpoint is created or integrated:
 ### Architecture
 - **Real API** — all data is fetched from the FastAPI backend via `lib/api.ts`
 - **No mock data for auth/health features** — `data/*.ts` is only for demo/fallback users
-- **Real AI** — Gemini 2.5 Flash via backend `/api/v1/chat`
+- **Real AI** — OpenAI gpt-4.1-mini (chat) and gpt-4.1 (OCR) via backend `/api/v1/chat`
 - App directory lives at root `app/` (NOT `src/app/`) — path alias `@/*` maps to project root
 
 ### Tailwind / Styling
