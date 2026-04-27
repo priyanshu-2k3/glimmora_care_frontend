@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, type BackendSession } from '@/lib/api'
-import { signInWithGoogle } from '@/lib/firebase'
 import { ROLES } from '@/lib/constants'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -78,7 +77,7 @@ function formatLastActive(iso: string | null | undefined) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const { user, logout, refreshUser } = useAuth()
+  const { user, logout, refreshUser, startConnectGoogle, googleRedirectMsg, clearGoogleRedirectMsg } = useAuth()
   const router = useRouter()
 
   // Profile tab
@@ -130,17 +129,22 @@ export default function SettingsPage() {
     setGoogleConnecting(true)
     setGoogleConnectMsg(null)
     try {
-      const firebaseUser = await signInWithGoogle()
-      const idToken = await firebaseUser.getIdToken()
-      await authApi.connectGoogle(idToken)
-      await refreshUser()
-      setGoogleConnectMsg('Google account connected successfully.')
+      // Page will redirect away; the post-redirect handler in AuthContext
+      // performs the backend exchange and surfaces the result via googleRedirectMsg.
+      await startConnectGoogle()
     } catch {
-      setGoogleConnectMsg('Failed to connect Google account. Please try again.')
-    } finally {
       setGoogleConnecting(false)
+      setGoogleConnectMsg('Failed to connect Google account. Please try again.')
     }
   }
+
+  // Surface AuthContext's post-redirect message (raised after we navigate back from Google)
+  useEffect(() => {
+    if (!googleRedirectMsg) return
+    setGoogleConnectMsg(googleRedirectMsg)
+    refreshUser()
+    clearGoogleRedirectMsg()
+  }, [googleRedirectMsg, refreshUser, clearGoogleRedirectMsg])
 
   // Sessions tab
   const [sessions, setSessions] = useState<BackendSession[]>([])

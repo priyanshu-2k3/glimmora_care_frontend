@@ -14,7 +14,7 @@ import {
   ApiError,
   type BackendUser,
 } from '@/lib/api'
-import { signInWithGoogle, signOutFromFirebase } from '@/lib/firebase'
+import { startGoogleSignIn, consumeGoogleRedirect, signOutFromFirebase } from '@/lib/firebase'
 
 // ─── Context shape ─────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -22,6 +22,9 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<User>
   googleLogin: () => Promise<void>
+  startConnectGoogle: () => Promise<void>
+  googleRedirectMsg: string | null
+  clearGoogleRedirectMsg: () => void
   googleLoginWithRole: (role: Role) => Promise<boolean>
   demoLogin: (role: Role) => Promise<void>
   register: (credentials: RegisterCredentials) => Promise<void>
@@ -168,47 +171,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  // ─── Google login ────────────────────────────────────────────────────────────
+  // ─── Google login (redirect flow) ───────────────────────────────────────────
+  // Initiates a redirect to Google. The page navigates away; the response is
+  // picked up by the redirect handler below when the user lands back in the app.
   const googleLogin = useCallback(async () => {
-    setIsLoading(true)
     setError(null)
     try {
-      const firebaseUser = await signInWithGoogle()
-      const idToken = await firebaseUser.getIdToken()
-      const result = await authApi.googleSignIn(idToken)
-
-      if ('needs_role' in result) {
-        setPendingGoogleRole({
-          email: result.email,
-          name: result.name,
-          picture: result.picture,
-          idToken,
-        })
-        return
-      }
-
-      setTokens(result.accessToken, result.refreshToken)
-      const me = await authApi.me()
-      const mapped = backendUserToUser(me, result.accessToken)
-      persistUser(mapped)
+      await startGoogleSignIn('login')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       const message = (err as { message?: string }).message ?? ''
-      console.error('[Google login error] code:', code, 'message:', message, err)
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        if (code === 'auth/unauthorized-domain') {
-          setError('This domain is not authorized in Firebase. Add it to Firebase Console → Authentication → Authorized domains.')
-        } else if (code === 'auth/operation-not-allowed') {
-          setError('Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.')
-        } else if (code === 'auth/popup-blocked') {
-          setError('Popup was blocked by your browser. Please allow popups for this site.')
-        } else {
-          setError(`Google sign-in failed: ${code ?? message}`)
-        }
+      console.error('[Google login redirect error]', code, message, err)
+      if (code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized in Firebase. Add it to Firebase Console → Authentication → Authorized domains.')
+      } else if (code === 'auth/operation-not-allowed') {
+        setError('Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.')
+      } else {
+        setError(`Google sign-in failed: ${code ?? message}`)
       }
-    } finally {
-      setIsLoading(false)
     }
+  }, [])
+
+  const startConnectGoogle = useCallback(async () => {
+    setError(null)
+    try {
+      await startGoogleSignIn('connect')
+    } catch (err) {
+      console.error('[Google connect redirect error]', err)
+      setError('Failed to start Google connect flow.')
+    }
+  }, [])
+
+  // ─── Handle return from Google redirect ─────────────────────────────────────
+  const [googleRedirectMsg, setGoogleRedirectMsg] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const payload = await consumeGoogleRedirect()
+        if (!payload || cancelled) return
+
+        if (payload.intent === 'connect') {
+          setIsLoading(true)
+          try {
+            await authApi.connectGoogle(payload.idToken)
+            const token = getAccessToken()
+            if (token) {
+              const me = await authApi.me()
+              persistUser(backendUserToUser(me, token))
+            }
+            setGoogleRedirectMsg('Google account connected successfully.')
+          } catch (err) {
+            console.error('[Google connect error]', err)
+            setError('Failed to connect Google account. Please try again.')
+          } finally {
+            setIsLoading(false)
+          }
+          return
+        }
+
+        // intent === 'login'
+        setIsLoading(true)
+        try {
+          const result = await authApi.googleSignIn(payload.idToken)
+          if ('needs_role' in result) {
+            setPendingGoogleRole({
+              email: result.email,
+              name: result.name,
+              picture: result.picture,
+              idToken: payload.idToken,
+            })
+          } else {
+            setTokens(result.accessToken, result.refreshToken)
+            const me = await authApi.me()
+            persistUser(backendUserToUser(me, result.accessToken))
+          }
+        } catch (err) {
+          console.error('[Google login exchange error]', err)
+          setError('Google sign-in failed. Please try again.')
+        } finally {
+          setIsLoading(false)
+        }
+      } catch (err) {
+        console.error('[consumeGoogleRedirect]', err)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const googleLoginWithRole = useCallback(async (role: Role): Promise<boolean> => {
@@ -314,6 +362,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       googleLogin,
+      startConnectGoogle,
+      googleRedirectMsg,
+      clearGoogleRedirectMsg: () => setGoogleRedirectMsg(null),
       googleLoginWithRole,
       demoLogin,
       register,

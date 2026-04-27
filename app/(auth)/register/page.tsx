@@ -52,6 +52,39 @@ export default function RegisterPage() {
     password: '', confirmPassword: '', role: 'patient',
     organization: '', gender: '', location: '',
   })
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof OwnerForm, string>>>({})
+
+  const NAME_RE = /^[A-Za-z][A-Za-z\s'-]*$/
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+  // Accepts +<country><10-digit>, or plain 10 digits, allowing spaces/dashes
+  const PHONE_RE = /^(\+\d{1,3}[\s-]?)?(\d[\s-]?){9,14}\d$/
+
+  function validateAll(): Partial<Record<keyof OwnerForm, string>> {
+    const errs: Partial<Record<keyof OwnerForm, string>> = {}
+    if (!owner.firstName.trim()) errs.firstName = 'First name is required'
+    else if (!NAME_RE.test(owner.firstName.trim())) errs.firstName = 'Only letters allowed'
+    if (!owner.lastName.trim()) errs.lastName = 'Last name is required'
+    else if (!NAME_RE.test(owner.lastName.trim())) errs.lastName = 'Only letters allowed'
+    if (!owner.email.trim()) errs.email = 'Email is required'
+    else if (!EMAIL_RE.test(owner.email.trim())) errs.email = 'Enter a valid email address'
+    if (!owner.phone.trim()) errs.phone = 'Phone number is required'
+    else {
+      const digits = owner.phone.replace(/\D/g, '')
+      if (digits.length < 10 || digits.length > 15) errs.phone = 'Enter a valid phone number'
+    }
+    if (owner.password.length < 8) errs.password = 'At least 8 characters'
+    else if (!/[A-Z]/.test(owner.password)) errs.password = 'Must include uppercase letter'
+    else if (!/\d/.test(owner.password)) errs.password = 'Must include a number'
+    if (owner.confirmPassword !== owner.password) errs.confirmPassword = 'Passwords do not match'
+    return errs
+  }
+
+  function handleStep1Submit(e: React.FormEvent) {
+    e.preventDefault()
+    const errs = validateAll()
+    setFieldErrors(errs)
+    if (Object.keys(errs).length === 0) setStep(2)
+  }
 
   const pwRules = [
     { label: 'At least 8 characters', ok: owner.password.length >= 8 },
@@ -141,7 +174,7 @@ export default function RegisterPage() {
 
       {/* ─── STEP 1: Account Owner ─── */}
       {step === 1 && (
-        <div className="space-y-4">
+        <form onSubmit={handleStep1Submit} className="space-y-4">
           <div>
             <h3 className="font-display text-xl text-charcoal-deep mb-0.5">Your Details</h3>
             <p className="text-xs text-greige font-body">You'll be the account owner and family admin.</p>
@@ -149,37 +182,41 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="First Name"
+              label="First Name *"
               placeholder="Priya"
               value={owner.firstName}
-              onChange={(e) => setOwner((p) => ({ ...p, firstName: e.target.value }))}
+              onChange={(e) => { setOwner((p) => ({ ...p, firstName: e.target.value })); setFieldErrors((p) => ({ ...p, firstName: undefined })) }}
               required
+              error={fieldErrors.firstName}
             />
             <Input
-              label="Last Name"
+              label="Last Name *"
               placeholder="Sharma"
               value={owner.lastName}
-              onChange={(e) => setOwner((p) => ({ ...p, lastName: e.target.value }))}
+              onChange={(e) => { setOwner((p) => ({ ...p, lastName: e.target.value })); setFieldErrors((p) => ({ ...p, lastName: undefined })) }}
               required
+              error={fieldErrors.lastName}
             />
             <div className="col-span-2">
               <Input
-                label="Email Address"
+                label="Email Address *"
                 type="email"
                 placeholder="priya@example.com"
                 value={owner.email}
-                onChange={(e) => setOwner((p) => ({ ...p, email: e.target.value }))}
+                onChange={(e) => { setOwner((p) => ({ ...p, email: e.target.value })); setFieldErrors((p) => ({ ...p, email: undefined })) }}
                 required
+                error={fieldErrors.email}
               />
             </div>
             <div className="col-span-2 sm:col-span-1">
               <Input
-                label="Phone Number"
+                label="Phone Number *"
                 type="tel"
                 placeholder="+91 98765 43210"
                 value={owner.phone}
-                onChange={(e) => setOwner((p) => ({ ...p, phone: e.target.value }))}
+                onChange={(e) => { setOwner((p) => ({ ...p, phone: e.target.value })); setFieldErrors((p) => ({ ...p, phone: undefined })) }}
                 required
+                error={fieldErrors.phone}
               />
             </div>
             <div className="col-span-2 sm:col-span-1">
@@ -218,11 +255,12 @@ export default function RegisterPage() {
             </div>
             <div className="col-span-2">
               <Input
-                label="Password"
+                label="Password *"
                 type={showPw ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={owner.password}
-                onChange={(e) => setOwner((p) => ({ ...p, password: e.target.value }))}
+                onChange={(e) => { setOwner((p) => ({ ...p, password: e.target.value })); setFieldErrors((p) => ({ ...p, password: undefined })) }}
+                error={fieldErrors.password}
                 rightIcon={
                   <button
                     type="button"
@@ -236,11 +274,12 @@ export default function RegisterPage() {
             </div>
             <div className="col-span-2">
               <Input
-                label="Confirm Password"
+                label="Confirm Password *"
                 type={showPw ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={owner.confirmPassword}
-                onChange={(e) => setOwner((p) => ({ ...p, confirmPassword: e.target.value }))}
+                onChange={(e) => { setOwner((p) => ({ ...p, confirmPassword: e.target.value })); setFieldErrors((p) => ({ ...p, confirmPassword: undefined })) }}
+                error={fieldErrors.confirmPassword}
               />
             </div>
           </div>
@@ -266,15 +305,15 @@ export default function RegisterPage() {
           )}
 
           <Button
+            type="submit"
             className="w-full mt-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
             disabled={!step1Valid}
-            onClick={() => setStep(2)}
             size="lg"
           >
             Continue to Review
             <ArrowRight className="w-4 h-4" />
           </Button>
-        </div>
+        </form>
       )}
 
       {/* ─── STEP 2: Review ─── */}

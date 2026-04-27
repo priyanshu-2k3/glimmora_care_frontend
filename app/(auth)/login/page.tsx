@@ -40,6 +40,9 @@ function LoginPageInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
   const selectedUser = MOCK_USERS.find((u) => u.role === selectedRole)
 
@@ -73,8 +76,13 @@ function LoginPageInner() {
 
   async function handleRealLogin(e: React.FormEvent) {
     e.preventDefault()
+    setEmailError(null)
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError('Enter a valid email address')
+      return
+    }
     try {
-      const loggedInUser = await login({ email, password })
+      const loggedInUser = await login({ email: email.trim(), password })
       if (loggedInUser?.emailVerified === false) {
         router.push('/verify-email')
       } else {
@@ -146,8 +154,9 @@ function LoginPageInner() {
             type="email"
             placeholder="you@example.com"
             value={email}
-            onChange={(e) => { setEmail(e.target.value); handleFieldChange() }}
+            onChange={(e) => { setEmail(e.target.value); setEmailError(null); handleFieldChange() }}
             required
+            error={emailError ?? undefined}
           />
           <Input
             label="Password"
