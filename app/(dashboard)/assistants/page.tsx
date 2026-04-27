@@ -100,7 +100,10 @@ export default function AssistantsPage() {
 
   const {
     messages, isTyping, sendMessage, clearMessages,
-    } = useGeminiChat(activePersona)
+    } = useGeminiChat(
+      activePersona,
+      needsPatientPicker ? selectedPatientId || null : null,
+    )
 
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
