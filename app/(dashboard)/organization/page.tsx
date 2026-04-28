@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, ChevronUp, UserCheck, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -235,12 +235,144 @@ function AdminOrgView() {
   )
 }
 
+// ─── Assign Admin modal ────────────────────────────────────────────────────────
+function AssignAdminModal({
+  org,
+  onClose,
+  onSuccess,
+}: {
+  org: AdminOrgItem
+  onClose: () => void
+  onSuccess: (updatedOrg: AdminOrgItem) => void
+}) {
+  const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = email.trim()
+    if (!trimmed) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await adminApi.assignAdmin(org.id, { email: trimmed })
+      setSuccess(true)
+      setTimeout(() => {
+        onSuccess({ ...org, admin_email: trimmed })
+      }, 800)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to assign admin.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <Card className="relative z-10 w-full max-w-md animate-fade-in">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="font-body text-base flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-gold-soft" />
+                {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
+              </CardTitle>
+              <CardDescription className="mt-0.5">
+                {org.admin_email
+                  ? <>Replacing <span className="font-medium text-charcoal-deep">{org.admin_email}</span> on <span className="font-medium text-charcoal-deep">{org.name}</span></>
+                  : <>Assigning to: <span className="font-medium text-charcoal-deep">{org.name}</span></>}
+              </CardDescription>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {success ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <CheckCircle className="w-10 h-10 text-success-DEFAULT" />
+              <p className="text-sm font-body text-charcoal-deep font-medium">
+                {org.admin_email ? 'Admin switched successfully!' : 'Admin assigned successfully!'}
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                ref={inputRef}
+                label="User Email"
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(null) }}
+                required
+              />
+              <p className="text-xs text-greige font-body">
+                The user&apos;s role will be promoted to <span className="font-medium text-charcoal-deep">Admin</span> and linked to this organisation.
+              </p>
+              {error && (
+                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+                  <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+                <Button type="submit" isLoading={submitting} disabled={!email.trim()} className="flex-1">
+                  <UserCheck className="w-4 h-4" />
+                  Assign
+                </Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 function SuperAdminOrgView() {
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+
+  // Create org state
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createAddress, setCreateAddress] = useState('')
+  const [createPhone, setCreatePhone] = useState('')
+  const [createWebsite, setCreateWebsite] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState(false)
+
+  // Assign admin state
+  const [assignOrgTarget, setAssignOrgTarget] = useState<AdminOrgItem | null>(null)
+
+  function loadOrgs() {
+    return adminApi.listAllOrgs()
+      .then((data) => setOrgs(data))
+      .catch(() => setOrgs([]))
+  }
 
   useEffect(() => {
     let active = true
@@ -257,6 +389,35 @@ function SuperAdminOrgView() {
     (o.admin_email ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
+  async function handleCreateOrg(e: React.FormEvent) {
+    e.preventDefault()
+    if (!createName.trim()) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      await adminApi.createOrg(createName.trim())
+      setCreateSuccess(true)
+      setCreateName('')
+      setCreateAddress('')
+      setCreatePhone('')
+      setCreateWebsite('')
+      await loadOrgs()
+      setTimeout(() => {
+        setCreateSuccess(false)
+        setShowCreateForm(false)
+      }, 1200)
+    } catch (err) {
+      setCreateError(err instanceof ApiError ? err.detail : 'Failed to create organisation.')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  function handleAssignSuccess(updatedOrg: AdminOrgItem) {
+    setOrgs((prev) => prev.map((o) => o.id === updatedOrg.id ? updatedOrg : o))
+    setAssignOrgTarget(null)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -267,6 +428,14 @@ function SuperAdminOrgView() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {assignOrgTarget && (
+        <AssignAdminModal
+          org={assignOrgTarget}
+          onClose={() => setAssignOrgTarget(null)}
+          onSuccess={handleAssignSuccess}
+        />
+      )}
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
@@ -291,6 +460,83 @@ function SuperAdminOrgView() {
           </Card>
         ))}
       </div>
+
+      {/* ── Create New Organisation card ── */}
+      <Card className={cn('overflow-hidden transition-all duration-300', showCreateForm && 'border-gold-soft/50')}>
+        <button
+          type="button"
+          onClick={() => { setShowCreateForm((v) => !v); setCreateError(null); setCreateSuccess(false) }}
+          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-parchment/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Plus className="w-4 h-4 text-gold-soft" />
+            <span className="font-body font-semibold text-charcoal-deep text-sm">Create New Organisation</span>
+          </div>
+          {showCreateForm
+            ? <ChevronUp className="w-4 h-4 text-greige" />
+            : <ChevronDown className="w-4 h-4 text-greige" />}
+        </button>
+
+        {showCreateForm && (
+          <div className="border-t border-sand-light px-5 pb-5 pt-4">
+            {createSuccess ? (
+              <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
+                <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
+                <p className="text-xs font-body text-success-DEFAULT">Organisation created successfully.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateOrg} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Organisation Name *"
+                    placeholder="e.g. Sunrise Health Clinic"
+                    value={createName}
+                    onChange={(e) => { setCreateName(e.target.value); setCreateError(null) }}
+                    required
+                    className="sm:col-span-2"
+                  />
+                  <Input
+                    label="Address"
+                    placeholder="123 Medical Street, Mumbai"
+                    value={createAddress}
+                    onChange={(e) => setCreateAddress(e.target.value)}
+                  />
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={createPhone}
+                    onChange={(e) => setCreatePhone(e.target.value)}
+                  />
+                  <Input
+                    label="Website"
+                    type="url"
+                    placeholder="https://clinic.example.com"
+                    value={createWebsite}
+                    onChange={(e) => setCreateWebsite(e.target.value)}
+                    className="sm:col-span-2"
+                  />
+                </div>
+                {createError && (
+                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+                    <p className="text-xs font-body text-error-DEFAULT">{createError}</p>
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" isLoading={creating} disabled={!createName.trim()}>
+                    <Plus className="w-4 h-4" />
+                    Create Organisation
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* Search */}
       <Input
@@ -319,13 +565,24 @@ function SuperAdminOrgView() {
                       </div>
                       <div>
                         <p className="font-body font-semibold text-charcoal-deep">{org.name}</p>
-                        {org.admin_email && <p className="text-xs text-greige">Admin: {org.admin_email}</p>}
+                        {org.admin_email
+                          ? <p className="text-xs text-greige">Admin: {org.admin_email}</p>
+                          : <p className="text-xs text-warning-DEFAULT italic">No admin assigned</p>}
                         {org.address && <p className="text-xs text-greige">{org.address}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
                       <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAssignOrgTarget(org)}
+                        className="text-xs px-2 py-1 h-auto"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
+                      </Button>
                       <button
                         onClick={() => setExpanded(expanded === org.id ? null : org.id)}
                         className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"

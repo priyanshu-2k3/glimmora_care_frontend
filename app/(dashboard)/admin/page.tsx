@@ -201,7 +201,7 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
     if (!assignOrgId || !assignUserId) return
     setAssigning(true); setAssignError(null); setAssignMsg(null)
     try {
-      await adminApi.assignAdmin(assignOrgId, assignUserId)
+      await adminApi.assignAdmin(assignOrgId, { userId: assignUserId })
       setAssignMsg('Admin assigned successfully.')
       setAssignOrgId(''); setAssignUserId('')
       adminApi.listAllOrgs().then(setOrgs).catch(() => {})
