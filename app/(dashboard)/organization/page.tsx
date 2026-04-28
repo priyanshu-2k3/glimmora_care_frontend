@@ -287,10 +287,12 @@ function AssignAdminModal({
             <div>
               <CardTitle className="font-body text-base flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-gold-soft" />
-                Assign Admin
+                {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
               </CardTitle>
               <CardDescription className="mt-0.5">
-                Assigning to: <span className="font-medium text-charcoal-deep">{org.name}</span>
+                {org.admin_email
+                  ? <>Replacing <span className="font-medium text-charcoal-deep">{org.admin_email}</span> on <span className="font-medium text-charcoal-deep">{org.name}</span></>
+                  : <>Assigning to: <span className="font-medium text-charcoal-deep">{org.name}</span></>}
               </CardDescription>
             </div>
             <button
@@ -305,7 +307,9 @@ function AssignAdminModal({
           {success ? (
             <div className="flex flex-col items-center gap-3 py-4">
               <CheckCircle className="w-10 h-10 text-success-DEFAULT" />
-              <p className="text-sm font-body text-charcoal-deep font-medium">Admin assigned successfully!</p>
+              <p className="text-sm font-body text-charcoal-deep font-medium">
+                {org.admin_email ? 'Admin switched successfully!' : 'Admin assigned successfully!'}
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -577,7 +581,7 @@ function SuperAdminOrgView() {
                         className="text-xs px-2 py-1 h-auto"
                       >
                         <UserCheck className="w-3.5 h-3.5" />
-                        Assign Admin
+                        {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
                       </Button>
                       <button
                         onClick={() => setExpanded(expanded === org.id ? null : org.id)}
