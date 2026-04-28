@@ -52,7 +52,9 @@ export function useGeminiChat(persona: Persona, patientId?: string | null) {
 
         const data = await res.json() as {
           response: string
-          confidence_score: number
+          // Null when the model didn't emit a "Confidence: XX%" line —
+          // we hide the confidence chip in that case rather than fake a number.
+          confidence_score: number | null
           disclaimer: string
           source_markers?: string[]
         }
@@ -70,7 +72,7 @@ export function useGeminiChat(persona: Persona, patientId?: string | null) {
           content: data.response,
           timestamp: new Date().toISOString(),
           persona,
-          confidenceScore: data.confidence_score,
+          confidenceScore: data.confidence_score ?? undefined,
           disclaimer: data.disclaimer,
           sourceMarkers: data.source_markers ?? [],
         }
