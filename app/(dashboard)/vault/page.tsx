@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft } from 'lucide-react'
+import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -56,6 +56,15 @@ const RECORD_TYPE_LABELS: Record<string, string> = {
   vitals: 'Vitals',
   ngo_field_entry: 'NGO Field Entry',
   manual_entry: 'Manual Entry',
+}
+
+async function openFile(recordId: string) {
+  try {
+    const { url } = await intakeApi.getFileUrl(recordId)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } catch {
+    // No file attached — silently ignore
+  }
 }
 
 export default function VaultPage() {
@@ -210,31 +219,45 @@ export default function VaultPage() {
         {!isLoading && patientRecords.length > 0 && (
           <div className="space-y-3">
             {patientRecords.map((record) => (
-              <Link key={record.id} href={`/vault/${record.id}`}>
-                <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-body font-semibold text-charcoal-deep text-sm truncate">{record.title}</p>
-                      <p className="text-xs text-greige font-body mt-0.5">{record.source} · {record.date}</p>
+              <div key={record.id} className="relative">
+                <Link href={`/vault/${record.id}`}>
+                  <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body font-semibold text-charcoal-deep text-sm truncate">{record.title}</p>
+                        <p className="text-xs text-greige font-body mt-0.5">{record.source} · {record.date}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {record.fileSize && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); openFile(record.id) }}
+                            title="View original file"
+                            className="p-1.5 rounded-lg text-greige hover:text-sapphire-deep hover:bg-azure-whisper transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <Badge variant={record.consentStatus === 'granted' ? 'success' : 'warning'}>
+                          {RECORD_TYPE_LABELS[record.type] ?? record.type}
+                        </Badge>
+                      </div>
                     </div>
-                    <Badge variant={record.consentStatus === 'granted' ? 'success' : 'warning'}>
-                      {RECORD_TYPE_LABELS[record.type] ?? record.type}
-                    </Badge>
+                    {record.markers.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {record.markers.slice(0, 4).map((m) => (
+                          <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-error-DEFAULT' : 'bg-parchment text-stone')}>
+                            {m.name}: {m.value} {m.unit}
+                          </span>
+                        ))}
+                        {record.markers.length > 4 && (
+                          <span className="text-[10px] text-greige font-body px-2 py-0.5">+{record.markers.length - 4} more</span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {record.markers.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {record.markers.slice(0, 4).map((m) => (
-                        <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-error-DEFAULT' : 'bg-parchment text-stone')}>
-                          {m.name}: {m.value} {m.unit}
-                        </span>
-                      ))}
-                      {record.markers.length > 4 && (
-                        <span className="text-[10px] text-greige font-body px-2 py-0.5">+{record.markers.length - 4} more</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         )}
@@ -420,7 +443,8 @@ export default function VaultPage() {
             {pageSlice.map((rec) => {
               const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
               return (
-                <Link href={`/vault/${rec.id}`} key={rec.id} className="block group">
+                <div key={rec.id} className="block group">
+                  <Link href={`/vault/${rec.id}`}>
                   <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-md transition-all duration-200 flex gap-0 overflow-hidden">
                     <div className="w-0.5 bg-gradient-to-b from-gold-deep to-gold-soft rounded-full shrink-0 mr-4" />
                     <div className="flex-1 min-w-0">
@@ -432,6 +456,16 @@ export default function VaultPage() {
                           <div className="flex items-start justify-between gap-2 flex-wrap">
                             <p className="font-body font-medium text-charcoal-deep text-sm">{rec.title}</p>
                             <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                              {rec.fileSize && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); openFile(rec.id) }}
+                                  title="View original file"
+                                  className="p-1.5 rounded-lg text-greige hover:text-sapphire-deep hover:bg-azure-whisper transition-colors"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <EncryptionBadge isEncrypted={rec.isEncrypted} />
                               <Badge
                                 variant={rec.consentStatus === 'granted' ? 'success' : rec.consentStatus === 'revoked' ? 'error' : 'warning'}
@@ -472,6 +506,7 @@ export default function VaultPage() {
                     </div>
                   </div>
                 </Link>
+                </div>
               )
             })}
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} className="mt-2" />

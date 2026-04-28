@@ -950,6 +950,13 @@ export const intakeApi = {
       '/intake/markers',
       { method: 'POST', body: JSON.stringify(req) },
     ),
+
+  /** Get a short-lived presigned download URL for the record's uploaded file.
+   *  Returns 404 if no file is attached (manual entry). */
+  getFileUrl: (recordId: string): Promise<{ url: string; filename?: string | null }> =>
+    apiFetch<{ url: string; filename?: string | null }>(
+      `/intake/records/${recordId}/download-url`,
+    ),
 }
 
 export interface AuditTrailEntry {
