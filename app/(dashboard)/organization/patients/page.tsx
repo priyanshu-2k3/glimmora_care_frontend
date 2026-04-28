@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/ui/Avatar'
 import { orgApi, ApiError, type PatientOut, type DoctorOut } from '@/lib/api'
@@ -58,10 +57,13 @@ export default function OrgPatientsPage() {
     }
   }
 
-  const doctorOptions = doctors.map((d) => ({
-    value: d.user_id,
-    label: [d.first_name, d.last_name].filter(Boolean).join(' ') || d.email,
-  }))
+  const doctorOptions = doctors.map((d) => {
+    const name = [d.first_name, d.last_name].filter(Boolean).join(' ')
+    return {
+      value: d.user_id,
+      label: d.email ? (name ? `${d.email} (${name})` : d.email) : name || d.user_id,
+    }
+  })
 
   if (loading) {
     return (
@@ -114,17 +116,24 @@ export default function OrgPatientsPage() {
         <Card className="border-gold-soft/40">
           <CardHeader>
             <CardTitle className="font-body text-base">Assign Patient to Doctor</CardTitle>
-            <CardDescription>Enter the patient&apos;s user ID and select a doctor</CardDescription>
+            <CardDescription>Select a patient and a doctor from your organisation</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAssign} className="space-y-4">
-              <Input
-                label="Patient User ID"
-                placeholder="e.g. 6650b2e9..."
+              <Select
+                label="Patient"
+                options={[
+                  { value: '', label: 'Select a patient…' },
+                  ...patients.map((p) => {
+                    const name = [p.first_name, p.last_name].filter(Boolean).join(' ')
+                    return {
+                      value: p.patient_id,
+                      label: p.email ? (name ? `${p.email} (${name})` : p.email) : name || p.patient_id,
+                    }
+                  }),
+                ]}
                 value={patientId}
                 onChange={(e) => { setPatientId(e.target.value); setAssignError(null) }}
-                hint="The user ID of the patient's GlimmoraCare account"
-                required
               />
               <Select
                 label="Assign to Doctor"
@@ -168,13 +177,15 @@ export default function OrgPatientsPage() {
           ) : (
             <div className="divide-y divide-sand-light">
               {patients.map((p) => {
-                const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email || p.patient_id
+                const name = [p.first_name, p.last_name].filter(Boolean).join(' ')
+                const primaryLabel = p.email || name || p.patient_id
+                const secondaryLabel = p.email && name ? name : undefined
                 return (
                   <div key={p.patient_id} className="flex items-center gap-3 py-3">
-                    <Avatar name={name} size="md" />
+                    <Avatar name={primaryLabel} size="md" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-body font-semibold text-charcoal-deep">{name}</p>
-                      {p.email && <p className="text-xs text-greige truncate">{p.email}</p>}
+                      <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{primaryLabel}</p>
+                      {secondaryLabel && <p className="text-xs text-greige truncate">{secondaryLabel}</p>}
                     </div>
                     <div className="text-right">
                       {p.assigned_doctor_name ? (
