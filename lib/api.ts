@@ -839,11 +839,17 @@ export const adminApi = {
       body: JSON.stringify({ name }),
     }),
 
-  /** Super admin: assign an admin user to an organisation */
-  assignAdmin: (orgId: string, userId: string) =>
+  /** Super admin: assign an admin user to an organisation.
+   *  Pass either `userId` (ObjectId) or `email` — backend resolves both. */
+  assignAdmin: (orgId: string, opts: { userId: string } | { email: string }) =>
     apiFetch<{ message: string; org_id: string; user_id: string }>(
       `/admin/organizations/${orgId}/assign-admin`,
-      { method: 'POST', body: JSON.stringify({ user_id: userId }) },
+      {
+        method: 'POST',
+        body: JSON.stringify(
+          'userId' in opts ? { user_id: opts.userId } : { email: opts.email },
+        ),
+      },
     ),
 
   /** Admin: list all consent records platform-wide */
