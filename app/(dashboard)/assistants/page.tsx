@@ -70,8 +70,7 @@ function TypingIndicator() {
 export default function AssistantsPage() {
   const { user } = useAuth()
   const role = (user?.role ?? 'patient') as Role
-  const defaultPersona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
-  const [activePersona, setActivePersona] = useState<Persona>(defaultPersona)
+  const activePersona: Persona = ROLE_TO_PERSONA[role] ?? 'patient'
 
   const [patients, setPatients] = useState<PatientOut[]>([])
   const [patientsLoading, setPatientsLoading] = useState(false)
@@ -120,15 +119,6 @@ export default function AssistantsPage() {
     await sendMessage(trimmed)
   }
 
-  function switchPersona(p: Persona) {
-    setActivePersona(p)
-    clearMessages()
-    setInput('')
-    setSelectedPatientId('')
-  }
-
-  const personas = Object.entries(PERSONA_CONFIG) as [Persona, typeof PERSONA_CONFIG[Persona]][]
-
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="mb-6">
@@ -151,25 +141,6 @@ export default function AssistantsPage() {
         <p className="text-xs text-warning-DEFAULT font-body text-black">
           <strong>Important:</strong> This assistant provides informational context only. It does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical decisions.
         </p>
-      </div>
-
-      {/* Persona selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {personas.map(([p, cfg]) => (
-          <button
-            key={p}
-            onClick={() => switchPersona(p)}
-            className={cn(
-              'text-left px-3 py-3 rounded-xl border text-sm font-body transition-all duration-200',
-              activePersona === p
-                ? cfg.color + ' border-transparent shadow-sm'
-                : 'bg-ivory-warm border-sand-light text-stone hover:border-sand-DEFAULT'
-            )}
-          >
-            <p className="font-medium text-xs">{cfg.label}</p>
-            <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{cfg.description}</p>
-          </button>
-        ))}
       </div>
 
       {/* Patient picker — doctor / admin only.  Scopes the health context

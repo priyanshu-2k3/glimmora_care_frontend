@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardList, Search } from 'lucide-react'
+import { ClipboardList, Search, AlertCircle } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -31,13 +31,20 @@ export default function AdminLogsPage() {
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
 
   useEffect(() => {
     let active = true
+    setError(null)
     adminApi.getAuditLogs({ limit: 500 })
       .then((l) => { if (active) setLogs(l) })
-      .catch(() => { if (active) setLogs([]) })
+      .catch((err) => {
+        if (active) {
+          setLogs([])
+          setError(err?.detail ?? 'Failed to load audit logs. Check that the backend is running.')
+        }
+      })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
@@ -80,6 +87,11 @@ export default function AdminLogsPage() {
 
         {loading ? (
           <p className="text-sm text-greige font-body">Loading logs...</p>
+        ) : error ? (
+          <div className="flex items-center gap-3 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-4">
+            <AlertCircle className="w-5 h-5 text-error-DEFAULT shrink-0" />
+            <p className="text-sm font-body text-error-DEFAULT">{error}</p>
+          </div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={ClipboardList} title="No logs found" description="Actions will appear here once admins perform operations." />
         ) : (

@@ -7,7 +7,8 @@ import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
 import { MOCK_PATIENTS } from '@/data/patients'
-import { intakeApi, getAccessToken } from '@/lib/api'
+import { intakeApi, orgApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
 import type { HealthRecord } from '@/types/intake'
 import type { HealthRecord as MockHealthRecord } from '@/types/health'
 import { Input } from '@/components/ui/Input'
@@ -68,6 +69,7 @@ export default function VaultPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isDemo, setIsDemo] = useState(false)
   const [page, setPage] = useState(1)
+  const [realPatientList, setRealPatientList] = useState<PatientOut[]>([])
 
   if (!user) return null
 
@@ -101,14 +103,32 @@ export default function VaultPage() {
       .finally(() => setIsLoading(false))
   }, [isPatient])
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!canViewAll || !getAccessToken()) return
+    const fetch = user.role === 'doctor'
+      ? orgApi.getDoctorPatients()
+      : orgApi.listPatients()
+    fetch.then(setRealPatientList).catch(() => {})
+  }, [canViewAll, user.role])
+
+  // Build a patient_id → display name map from real API data (or mock fallback)
+  const realNameMap = new Map<string, string>()
+  for (const p of realPatientList) {
+    const displayName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id
+    realNameMap.set(p.patient_id, displayName)
+  }
+
   // Derive unique patients from real records (for doctor/admin card view)
   const patientMap = new Map<string, { name: string; consented: number; total: number; district?: string; age?: number }>()
   for (const rec of records) {
     const prev = patientMap.get(rec.patientId) ?? { name: rec.patientId, consented: 0, total: 0 }
     prev.total++
     if (rec.consentStatus === 'granted') prev.consented++
-    // If demo, enrich with mock patient details
-    if (isDemo) {
+    // Use real patient name if available, then mock, then fall back to ID
+    if (realNameMap.has(rec.patientId)) {
+      prev.name = realNameMap.get(rec.patientId)!
+    } else if (isDemo) {
       const mock = MOCK_PATIENTS.find((p) => p.id === rec.patientId)
       if (mock) { prev.name = mock.name; prev.district = mock.district; prev.age = mock.age }
     }

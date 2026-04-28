@@ -7,11 +7,17 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
-import { familyApi, emergencyApi, getAccessToken, type EmergencyHistoryItem } from '@/lib/api'
-import type { FamilyMember } from '@/types/profile'
+import { familyApi, emergencyApi, getAccessToken, type EmergencyHistoryItem, type BackendMember } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type EmergencyStep = 'idle' | 'confirm' | 'otp' | 'active'
+
+/** Minimal contact shape we use in the UI — derived from BackendMember */
+interface EmergencyContact {
+  id: string
+  name: string
+  relation: string
+}
 
 export default function EmergencyPage() {
   const { user } = useAuth()
@@ -21,17 +27,24 @@ export default function EmergencyPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [shareLink, setShareLink]   = useState('')
   const [expiresAt, setExpiresAt]   = useState<string | null>(null)
-  const [members, setMembers]       = useState<FamilyMember[]>([])
+  const [members, setMembers]       = useState<EmergencyContact[]>([])
   const [historyItems, setHistoryItems] = useState<EmergencyHistoryItem[]>([])
   const [otpError, setOtpError]     = useState<string | null>(null)
 
   // Load family members + history on mount
   useEffect(() => {
     if (!getAccessToken()) return
-    if (user?.role === 'patient') {
-      familyApi.get(user?.familyId ?? '').then((fam) => {
-        if (fam && 'members' in fam) setMembers((fam as { members: FamilyMember[] }).members ?? [])
-      }).catch(() => {})
+    if (user?.role === 'patient' && user.familyId) {
+      familyApi.getMembers(user.familyId)
+        .then((members: BackendMember[]) => {
+          const contacts: EmergencyContact[] = members.map((m) => ({
+            id: m.user_id,
+            name: `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.user_id,
+            relation: m.role ?? 'member',
+          }))
+          setMembers(contacts)
+        })
+        .catch(() => {})
     }
     emergencyApi.history().then(setHistoryItems).catch(() => {})
   }, [user])
@@ -39,7 +52,9 @@ export default function EmergencyPage() {
   async function handleConfirm() {
     setIsLoading(true)
     try {
-      await emergencyApi.activate()
+      const result = await emergencyApi.activate()
+      // In dev/staging, backend may return the OTP directly for testing
+      if (result.dev_otp) setOtp(result.dev_otp)
       setStep('otp')
     } catch (e: unknown) {
       console.error('Emergency activate failed', e)
@@ -218,7 +233,7 @@ export default function EmergencyPage() {
                       <Phone className="w-4 h-4 text-gold-soft shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm font-body font-medium text-charcoal-deep">{m.name}</p>
-                        <p className="text-xs text-greige capitalize">{m.role}</p>
+                        <p className="text-xs text-greige capitalize">{m.relation}</p>
                       </div>
                     </div>
                   ))

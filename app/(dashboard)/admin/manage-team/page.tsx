@@ -10,12 +10,40 @@ import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { orgApi, type DoctorOut } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
+import { orgApi, adminApi, type DoctorOut, type AdminDoctorOut } from '@/lib/api'
 
 type AddMode = 'invite' | 'direct'
 
+// Unified display shape
+interface DisplayDoctor {
+  user_id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  location: string | null
+  patient_count: number
+}
+
+function toDisplay(d: DoctorOut | AdminDoctorOut): DisplayDoctor {
+  if ('user_id' in d) {
+    return d as DisplayDoctor
+  }
+  return {
+    user_id: d.id,
+    email: d.email,
+    first_name: d.first_name,
+    last_name: d.last_name,
+    location: null,
+    patient_count: d.patient_count,
+  }
+}
+
 export default function ManageTeamPage() {
-  const [doctors, setDoctors] = useState<DoctorOut[]>([])
+  const { user } = useAuth()
+  const isSuperAdmin = user?.role === 'super_admin'
+
+  const [doctors, setDoctors] = useState<DisplayDoctor[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -34,7 +62,10 @@ export default function ManageTeamPage() {
   const [addError, setAddError] = useState<string | null>(null)
 
   function loadDoctors() {
-    orgApi.listDoctors()
+    const promise = isSuperAdmin
+      ? adminApi.listDoctors().then((list) => list.map(toDisplay))
+      : orgApi.listDoctors().then((list) => list.map(toDisplay))
+    promise
       .then(setDoctors)
       .catch(() => setDoctors([]))
       .finally(() => setLoading(false))
@@ -42,17 +73,23 @@ export default function ManageTeamPage() {
 
   useEffect(() => {
     let active = true
-    orgApi.listDoctors()
+    const promise = isSuperAdmin
+      ? adminApi.listDoctors().then((list) => list.map(toDisplay))
+      : orgApi.listDoctors().then((list) => list.map(toDisplay))
+    promise
       .then((d) => { if (active) setDoctors(d) })
       .catch(() => { if (active) setDoctors([]) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [isSuperAdmin])
 
   const filtered = doctors.filter((d) => {
     const name = `${d.first_name ?? ''} ${d.last_name ?? ''}`.toLowerCase()
     return !search || name.includes(search.toLowerCase()) || d.email.toLowerCase().includes(search.toLowerCase())
   })
+
+  const pageTitle = isSuperAdmin ? 'All Doctors (Platform-wide)' : 'Manage Team'
+  const pageDesc  = isSuperAdmin ? 'All registered doctors across all organisations.' : 'View and manage your team of doctors.'
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
@@ -107,14 +144,16 @@ export default function ManageTeamPage() {
           <div>
             <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
               <Users className="w-5 h-5 text-gold-soft" />
-              Manage Team
+              {pageTitle}
             </h1>
-            <p className="text-sm text-greige font-body mt-1">View and manage your team of doctors.</p>
+            <p className="text-sm text-greige font-body mt-1">{pageDesc}</p>
           </div>
-          <Button size="sm" onClick={() => setShowModal(true)}>
-            <UserPlus className="w-4 h-4" />
-            Add Doctor
-          </Button>
+          {!isSuperAdmin && (
+            <Button size="sm" onClick={() => setShowModal(true)}>
+              <UserPlus className="w-4 h-4" />
+              Add Doctor
+            </Button>
+          )}
         </div>
 
         <Input
@@ -150,7 +189,7 @@ export default function ManageTeamPage() {
           </div>
         )}
 
-        <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Doctor">
+        {!isSuperAdmin && <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Doctor">
           <div className="space-y-4">
             <div className="flex gap-2">
               <button
@@ -226,7 +265,7 @@ export default function ManageTeamPage() {
               </form>
             )}
           </div>
-        </Modal>
+        </Modal>}
       </div>
     </RoleGuard>
   )

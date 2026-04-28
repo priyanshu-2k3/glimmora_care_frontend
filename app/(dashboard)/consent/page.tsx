@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Shield, Clock, History, AlertCircle, Check, Users, ArrowRight, Search, Filter } from 'lucide-react'
-import { consentApi, adminApi, type ConsentRequest } from '@/lib/api'
+import {
+  Shield, Clock, History, AlertCircle, Check, Users, ArrowRight,
+  Search, Filter, Plus, Trash2, UserPlus, ChevronDown,
+} from 'lucide-react'
+import { consentApi, adminApi, orgApi, type ConsentRequest, type DoctorOut, type PatientOut } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -30,6 +33,14 @@ function formatDate(iso: string) {
 const STATUS_FILTERS = ['all', 'pending', 'approved', 'revoked', 'rejected', 'expired'] as const
 type StatusFilter = typeof STATUS_FILTERS[number]
 
+const ALL_SCOPES = ['view_records', 'view_trends', 'view_markers', 'view_timeline'] as const
+const SCOPE_LABELS: Record<string, string> = {
+  view_records:   'View Records',
+  view_trends:    'View Trends',
+  view_markers:   'View Markers',
+  view_timeline:  'View Timeline',
+}
+
 // ─── Admin / Super-admin view ─────────────────────────────────────────────────
 function AdminConsentView() {
   const PAGE_SIZE = 20
@@ -39,6 +50,20 @@ function AdminConsentView() {
   const [patientSearch, setPatientSearch] = useState('')
   const [doctorSearch, setDoctorSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // Request on behalf panel
+  const [doctors, setDoctors] = useState<DoctorOut[]>([])
+  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [reqDoctorEmail, setReqDoctorEmail] = useState('')
+  const [reqPatientEmail, setReqPatientEmail] = useState('')
+  const [reqReason, setReqReason] = useState('')
+  const [reqLoading, setReqLoading] = useState(false)
+  const [reqMsg, setReqMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    orgApi.listDoctors().then(setDoctors).catch(() => {})
+    orgApi.listPatients().then(setPatients).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -54,7 +79,6 @@ function AdminConsentView() {
     return () => { active = false }
   }, [statusFilter, patientSearch, doctorSearch])
 
-  // reset page on filter change
   useEffect(() => { setPage(1) }, [statusFilter, patientSearch, doctorSearch])
 
   const totalPages = Math.ceil(consents.length / PAGE_SIZE)
@@ -65,12 +89,97 @@ function AdminConsentView() {
     return acc
   }, {})
 
+  async function handleAdminRequest() {
+    if (!reqDoctorEmail || !reqPatientEmail) return
+    setReqLoading(true)
+    setReqMsg(null)
+    try {
+      await consentApi.adminRequest(reqDoctorEmail, reqPatientEmail, reqReason || undefined)
+      setReqMsg({ ok: true, text: 'Consent request sent successfully.' })
+      setReqDoctorEmail(''); setReqPatientEmail(''); setReqReason('')
+      // Refresh list
+      const data = await adminApi.listConsents({})
+      setConsents(data)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to send request'
+      setReqMsg({ ok: false, text: msg })
+    } finally {
+      setReqLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div>
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Consent Management</h1>
         <p className="text-sm text-greige font-body mt-1">Platform-wide view of all patient consent records.</p>
       </div>
+
+      {/* Request on behalf of doctor panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-body text-base flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-gold-deep" />
+            Request Consent on Behalf of a Doctor
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-greige font-body">
+            As an admin, you can initiate a consent request attributed to a doctor. The patient will see the doctor&apos;s name; your admin ID is logged for audit.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-greige font-body block mb-1">Doctor</label>
+              <select
+                value={reqDoctorEmail}
+                onChange={(e) => setReqDoctorEmail(e.target.value)}
+                className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+              >
+                <option value="">Select doctor…</option>
+                {doctors.map((d) => (
+                  <option key={d.user_id} value={d.email}>
+                    {d.first_name} {d.last_name} ({d.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] text-greige font-body block mb-1">Patient</label>
+              <select
+                value={reqPatientEmail}
+                onChange={(e) => setReqPatientEmail(e.target.value)}
+                className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+              >
+                <option value="">Select patient…</option>
+                {patients.map((p) => (
+                  <option key={p.patient_id} value={p.email ?? ''}>
+                    {p.first_name} {p.last_name} ({p.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <textarea
+            value={reqReason}
+            onChange={(e) => setReqReason(e.target.value)}
+            placeholder="Reason for request (optional)…"
+            rows={2}
+            className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
+          />
+          {reqMsg && (
+            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+              {reqMsg.text}
+            </p>
+          )}
+          <Button
+            size="sm"
+            onClick={handleAdminRequest}
+            disabled={reqLoading || !reqDoctorEmail || !reqPatientEmail}
+          >
+            {reqLoading ? 'Sending…' : 'Send Request'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -163,14 +272,12 @@ function AdminConsentView() {
             <Card key={c.id} hover>
               <CardContent>
                 <div className="grid grid-cols-12 gap-2 items-center">
-                  {/* Patient */}
                   <div className="col-span-12 sm:col-span-3 flex items-center gap-2">
                     <Avatar name={c.patient_email} size="sm" />
                     <div className="min-w-0">
                       <p className="text-xs font-body font-medium text-charcoal-deep truncate">{c.patient_email}</p>
                     </div>
                   </div>
-                  {/* Requester */}
                   <div className="col-span-12 sm:col-span-3 flex items-center gap-2">
                     <Avatar name={c.requester_name} size="sm" />
                     <div className="min-w-0">
@@ -178,17 +285,14 @@ function AdminConsentView() {
                       <p className="text-[11px] text-greige truncate">{c.requester_email}</p>
                     </div>
                   </div>
-                  {/* Status */}
                   <div className="col-span-4 sm:col-span-2">
                     <Badge variant={STATUS_VARIANT[c.status] ?? 'default'} className="capitalize text-[11px]">
                       {c.status}
                     </Badge>
                   </div>
-                  {/* Scope */}
                   <div className="col-span-4 sm:col-span-2">
                     <span className="text-xs text-greige font-body">{c.scope.length} permission{c.scope.length !== 1 ? 's' : ''}</span>
                   </div>
-                  {/* Date */}
                   <div className="col-span-4 sm:col-span-2">
                     <p className="text-[11px] text-greige font-body">{formatDate(c.requested_at)}</p>
                     {c.revocation_reason && (
@@ -209,23 +313,30 @@ function AdminConsentView() {
   )
 }
 
-// ─── Patient / Doctor view (unchanged) ────────────────────────────────────────
-function PatientDoctorConsentView() {
-  const [pending, setPending] = useState<ConsentRequest[]>([])
+// ─── Doctor view ───────────────────────────────────────────────────────────────
+function DoctorConsentView() {
   const [active, setActive] = useState<ConsentRequest[]>([])
   const [history, setHistory] = useState<ConsentRequest[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Request access panel
+  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [reqPatientEmail, setReqPatientEmail] = useState('')
+  const [reqReason, setReqReason] = useState('')
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([...ALL_SCOPES])
+  const [reqLoading, setReqLoading] = useState(false)
+  const [reqMsg, setReqMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
     let alive = true
     async function load() {
       try {
-        const [p, a, h] = await Promise.all([
-          consentApi.getIncoming(),
+        const [a, h, p] = await Promise.all([
           consentApi.getActive(),
           consentApi.getHistory(),
+          orgApi.getDoctorPatients(),
         ])
-        if (alive) { setPending(p); setActive(a); setHistory(h) }
+        if (alive) { setActive(a); setHistory(h); setPatients(p) }
       } finally {
         if (alive) setLoading(false)
       }
@@ -233,6 +344,240 @@ function PatientDoctorConsentView() {
     load()
     return () => { alive = false }
   }, [])
+
+  function toggleScope(s: string) {
+    setSelectedScopes((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    )
+  }
+
+  async function handleRequestAccess() {
+    if (!reqPatientEmail || selectedScopes.length === 0) return
+    setReqLoading(true)
+    setReqMsg(null)
+    try {
+      await consentApi.request(reqPatientEmail, selectedScopes, reqReason || undefined)
+      setReqMsg({ ok: true, text: 'Request sent. The patient will be notified.' })
+      setReqPatientEmail(''); setReqReason('')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to send request'
+      setReqMsg({ ok: false, text: msg })
+    } finally {
+      setReqLoading(false)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <div>
+        <h1 className="font-body text-2xl font-bold text-charcoal-deep">Consent Management</h1>
+        <p className="text-sm text-greige font-body mt-1">Manage patient access permissions granted to you</p>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Active Consents', value: loading ? '…' : active.length,  icon: Shield,  href: '/consent/active',   color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
+          { label: 'Past Consents',   value: loading ? '…' : history.length,  icon: History, href: '/consent/history',  color: 'text-stone',          bg: 'bg-parchment'    },
+        ].map((stat) => (
+          <Link key={stat.label} href={stat.href}>
+            <Card className="p-4 text-center hover:border-gold-soft transition-all">
+              <div className={`w-9 h-9 rounded-full ${stat.bg} flex items-center justify-center mx-auto mb-2`}>
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+              </div>
+              <p className="font-display text-2xl text-charcoal-deep">{stat.value}</p>
+              <p className="text-[11px] text-greige font-body mt-0.5">{stat.label}</p>
+            </Card>
+          </Link>
+        ))}
+      </div>
+
+      {/* Request access panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-body text-base flex items-center gap-2">
+            <Plus className="w-4 h-4 text-gold-deep" />
+            Request Access to a Patient&apos;s Records
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <label className="text-[11px] text-greige font-body block mb-1">Patient</label>
+            <select
+              value={reqPatientEmail}
+              onChange={(e) => setReqPatientEmail(e.target.value)}
+              className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            >
+              <option value="">Select patient…</option>
+              {patients.map((p) => (
+                <option key={p.patient_id} value={p.email ?? ''}>
+                  {p.first_name} {p.last_name} ({p.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] text-greige font-body block mb-1">Permissions to request</label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SCOPES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => toggleScope(s)}
+                  className={cn(
+                    'text-[11px] font-body px-2.5 py-1 rounded-full border transition-all',
+                    selectedScopes.includes(s)
+                      ? 'bg-charcoal-deep text-ivory-cream border-charcoal-deep'
+                      : 'bg-parchment text-greige border-sand-light hover:border-gold-soft'
+                  )}
+                >
+                  {SCOPE_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <textarea
+            value={reqReason}
+            onChange={(e) => setReqReason(e.target.value)}
+            placeholder="Reason for request (optional — helps the patient decide)…"
+            rows={2}
+            className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
+          />
+          {reqMsg && (
+            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+              {reqMsg.text}
+            </p>
+          )}
+          <Button
+            size="sm"
+            onClick={handleRequestAccess}
+            disabled={reqLoading || !reqPatientEmail || selectedScopes.length === 0}
+          >
+            {reqLoading ? 'Sending…' : 'Send Request'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Active consents preview */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-body text-base">My Active Patient Consents</CardTitle>
+            <Link href="/consent/active" className="text-xs text-gold-deep hover:underline font-body">View all →</Link>
+          </div>
+        </CardHeader>
+        <CardContent className="divide-y divide-sand-light">
+          {active.length === 0 ? (
+            <div className="py-8 text-center">
+              <Shield className="w-8 h-8 text-greige mx-auto mb-2" />
+              <p className="text-sm text-greige font-body">No active patient consents</p>
+            </div>
+          ) : (
+            active.slice(0, 3).map((consent) => (
+              <div key={consent.id} className="flex items-center gap-3 py-3">
+                <Avatar name={consent.patient_email} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{consent.patient_email}</p>
+                  <p className="text-xs text-greige truncate">{consent.scope.length} permissions</p>
+                </div>
+                <Badge variant="success">Active</Badge>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick nav */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Active Consents', href: '/consent/active',  icon: Shield   },
+          { label: 'Consent History', href: '/consent/history', icon: History  },
+        ].map((item) => (
+          <Link key={item.label} href={item.href}>
+            <Card className="p-4 flex items-center gap-3 hover:border-gold-soft transition-all">
+              <item.icon className="w-4 h-4 text-gold-soft shrink-0" />
+              <span className="text-sm font-body font-medium text-charcoal-deep">{item.label}</span>
+              <ArrowRight className="w-4 h-4 text-greige ml-auto" />
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Patient view ──────────────────────────────────────────────────────────────
+function PatientConsentView() {
+  const [pending, setPending] = useState<ConsentRequest[]>([])
+  const [active, setActive] = useState<ConsentRequest[]>([])
+  const [history, setHistory] = useState<ConsentRequest[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Grant direct panel
+  const [doctors, setDoctors] = useState<DoctorOut[]>([])
+  const [grantDoctorEmail, setGrantDoctorEmail] = useState('')
+  const [grantScopes, setGrantScopes] = useState<string[]>([...ALL_SCOPES])
+  const [grantMsg, setGrantMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [grantLoading, setGrantLoading] = useState(false)
+
+  // Revoke state
+  const [revokeId, setRevokeId] = useState<string | null>(null)
+  const [revokeReason, setRevokeReason] = useState('')
+  const [revoking, setRevoking] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    async function load() {
+      try {
+        const [p, a, h, docs] = await Promise.all([
+          consentApi.getIncoming(),
+          consentApi.getActive(),
+          consentApi.getHistory(),
+          orgApi.listDoctorsForConsent(),
+        ])
+        if (alive) { setPending(p); setActive(a); setHistory(h); setDoctors(docs) }
+      } finally {
+        if (alive) setLoading(false)
+      }
+    }
+    load()
+    return () => { alive = false }
+  }, [])
+
+  function toggleScope(s: string) {
+    setGrantScopes((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    )
+  }
+
+  async function handleGrantDirect() {
+    if (!grantDoctorEmail || grantScopes.length === 0) return
+    setGrantLoading(true)
+    setGrantMsg(null)
+    try {
+      const result = await consentApi.grantDirect(grantDoctorEmail, grantScopes)
+      setActive((prev) => [result, ...prev])
+      setGrantMsg({ ok: true, text: 'Access granted successfully.' })
+      setGrantDoctorEmail('')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to grant access'
+      setGrantMsg({ ok: false, text: msg })
+    } finally {
+      setGrantLoading(false)
+    }
+  }
+
+  async function handleRevoke(id: string) {
+    if (!revokeReason.trim()) return
+    setRevoking(true)
+    try {
+      await consentApi.revoke(id, revokeReason)
+      setActive((prev) => prev.filter((c) => c.id !== id))
+      setRevokeId(null)
+      setRevokeReason('')
+    } finally {
+      setRevoking(false)
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -244,14 +589,14 @@ function PatientDoctorConsentView() {
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Pending Requests', value: loading ? '…' : pending.length, icon: Clock, href: '/consent/requests', color: 'text-warning-DEFAULT', bg: 'bg-warning-soft' },
-          { label: 'Active Consents',  value: loading ? '…' : active.length,  icon: Shield, href: '/consent/active',   color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
-          { label: 'Past Consents',    value: loading ? '…' : history.length,  icon: History, href: '/consent/history', color: 'text-stone',          bg: 'bg-parchment'    },
+          { label: 'Pending Requests', value: loading ? '…' : pending.length, icon: Clock,    href: '/consent/requests', color: 'text-warning-DEFAULT', bg: 'bg-warning-soft' },
+          { label: 'Active Consents',  value: loading ? '…' : active.length,  icon: Shield,   href: '/consent/active',   color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
+          { label: 'Past Consents',    value: loading ? '…' : history.length,  icon: History,  href: '/consent/history',  color: 'text-stone',           bg: 'bg-parchment'    },
         ].map((stat) => (
           <Link key={stat.label} href={stat.href}>
             <Card className="p-4 text-center hover:border-gold-soft transition-all">
               <div className={`w-9 h-9 rounded-full ${stat.bg} flex items-center justify-center mx-auto mb-2`}>
-                <stat.icon className={`w-4.5 h-4.5 ${stat.color}`} />
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
               </div>
               <p className="font-display text-2xl text-charcoal-deep">{stat.value}</p>
               <p className="text-[11px] text-greige font-body mt-0.5">{stat.label}</p>
@@ -276,7 +621,154 @@ function PatientDoctorConsentView() {
         </div>
       )}
 
-      {/* Pending preview */}
+      {/* Grant direct panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-body text-base flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-gold-deep" />
+            Grant Access to a Doctor
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-greige font-body">
+            You can proactively share your records with a doctor — no request needed from their side.
+          </p>
+          <div>
+            <label className="text-[11px] text-greige font-body block mb-1">Doctor</label>
+            <select
+              value={grantDoctorEmail}
+              onChange={(e) => setGrantDoctorEmail(e.target.value)}
+              className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            >
+              <option value="">Select doctor…</option>
+              {doctors.map((d) => (
+                <option key={d.user_id} value={d.email}>
+                  {d.first_name} {d.last_name} ({d.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] text-greige font-body block mb-1">Permissions to grant</label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SCOPES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => toggleScope(s)}
+                  className={cn(
+                    'text-[11px] font-body px-2.5 py-1 rounded-full border transition-all',
+                    grantScopes.includes(s)
+                      ? 'bg-charcoal-deep text-ivory-cream border-charcoal-deep'
+                      : 'bg-parchment text-greige border-sand-light hover:border-gold-soft'
+                  )}
+                >
+                  {SCOPE_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {grantMsg && (
+            <p className={cn('text-xs font-body', grantMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+              {grantMsg.text}
+            </p>
+          )}
+          <Button
+            size="sm"
+            onClick={handleGrantDirect}
+            disabled={grantLoading || !grantDoctorEmail || grantScopes.length === 0}
+          >
+            {grantLoading ? 'Granting…' : 'Grant Access'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Doctors with access — Bug 5 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-body text-base">Doctors with Access to My Records</CardTitle>
+            <Link href="/consent/active" className="text-xs text-gold-deep hover:underline font-body">View all →</Link>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-0 divide-y divide-sand-light">
+          {active.length === 0 ? (
+            <div className="py-8 text-center">
+              <Check className="w-8 h-8 text-success-DEFAULT mx-auto mb-2" />
+              <p className="text-sm text-greige font-body">No doctors currently have access</p>
+            </div>
+          ) : (
+            active.map((consent) => (
+              <div key={consent.id} className="py-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Avatar name={consent.requester_name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{consent.requester_name}</p>
+                    <p className="text-xs text-greige">
+                      Since {formatDate(consent.requested_at)} · {consent.scope.length} permission{consent.scope.length !== 1 ? 's' : ''}
+                      {consent.expires_at && ` · Expires ${formatDate(consent.expires_at)}`}
+                    </p>
+                  </div>
+                  <Badge variant="success">Active</Badge>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pl-10">
+                  {consent.scope.map((s) => (
+                    <span key={s} className="text-[10px] font-body bg-parchment border border-sand-light rounded-full px-2 py-0.5 text-stone">
+                      {SCOPE_LABELS[s] || s}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="pl-10">
+                  {revokeId === consent.id ? (
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={revokeReason}
+                        onChange={(e) => setRevokeReason(e.target.value)}
+                        placeholder="Reason for revoking…"
+                        className="flex-1 text-xs border border-sand-light rounded-lg px-3 py-1.5 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+                      />
+                      <button
+                        onClick={() => handleRevoke(consent.id)}
+                        disabled={revoking || !revokeReason.trim()}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-error-soft text-error-DEFAULT font-body disabled:opacity-50"
+                      >
+                        {revoking ? '…' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => { setRevokeId(null); setRevokeReason('') }}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-sand-light text-greige font-body"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRevokeId(consent.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Revoke
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+
+          {active.length > 0 && (
+            <div className="pt-3 pb-1">
+              <p className="text-[11px] text-greige font-body bg-azure-whisper/50 border border-sapphire-mist/20 rounded-lg px-3 py-2">
+                Multiple doctors can have access at the same time. Each consent is independent — revoking one does not affect others.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending requests preview */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -302,30 +794,6 @@ function PatientDoctorConsentView() {
               </div>
             ))
           )}
-        </CardContent>
-      </Card>
-
-      {/* Active preview */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="font-body text-base">Active Consents</CardTitle>
-            <Link href="/consent/active" className="text-xs text-gold-deep hover:underline font-body">View all →</Link>
-          </div>
-        </CardHeader>
-        <CardContent className="divide-y divide-sand-light">
-          {active.slice(0, 3).map((consent) => (
-            <div key={consent.id} className="flex items-center gap-3 py-3">
-              <div className="w-9 h-9 rounded-full bg-success-soft flex items-center justify-center">
-                <Users className="w-4 h-4 text-success-DEFAULT" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{consent.requester_name}</p>
-                <p className="text-xs text-greige truncate">{consent.scope.length} permissions</p>
-              </div>
-              <Badge variant="success">Active</Badge>
-            </div>
-          ))}
         </CardContent>
       </Card>
 
@@ -355,5 +823,6 @@ export default function ConsentDashboardPage() {
   const { user } = useAuth()
   if (!user) return null
   if (user.role === 'admin' || user.role === 'super_admin') return <AdminConsentView />
-  return <PatientDoctorConsentView />
+  if (user.role === 'doctor') return <DoctorConsentView />
+  return <PatientConsentView />
 }

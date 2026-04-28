@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react'
 import { ArrowLeft, Download, FileText, ChevronRight, Shield } from 'lucide-react'
 import Link from 'next/link'
-import { intakeApi, getAccessToken } from '@/lib/api'
+import { intakeApi, consentApi, getAccessToken, type ConsentRequest } from '@/lib/api'
 import type { HealthRecord, MarkerOut } from '@/types/intake'
 import type { HealthMarker, HealthRecord as MockHealthRecord } from '@/types/health'
 import { MOCK_PATIENTS } from '@/data/patients'
@@ -76,6 +76,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [consents, setConsents] = useState<ConsentEntry[]>([])
+  const [activeConsents, setActiveConsents] = useState<ConsentRequest[]>([])
 
   useEffect(() => {
     // Demo users have no JWT — show mock data only
@@ -97,6 +98,12 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
     intakeApi.getConsents(id)
       .then((data) => setConsents(data as ConsentEntry[]))
       .catch(() => {})
+    // Also load patient-level active consents from the consent system
+    if (getAccessToken()) {
+      consentApi.getActive()
+        .then(setActiveConsents)
+        .catch(() => {})
+    }
   }, [id])
 
   async function handleShare(email: string, scope: string[]) {
@@ -161,7 +168,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
 
   const TABS = [
     { id: 'markers',  label: 'Health Markers', count: record.markers.length },
-    { id: 'consent',  label: 'Consent',        count: consents.filter((c) => c.is_active).length },
+    { id: 'consent',  label: 'Consent',        count: activeConsents.length + consents.filter((c) => c.is_active).length },
     { id: 'audit',    label: 'Audit Trail',     count: auditEntries.length },
   ]
 
@@ -275,8 +282,8 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
                 )}
 
                 {activeTab === 'consent' && (
-                  <div>
-                    <div className="mb-4">
+                  <div className="space-y-5">
+                    <div>
                       <h2 className="font-display text-xl text-charcoal-deep tracking-tight">
                         Access Consent Management
                       </h2>
@@ -284,6 +291,48 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
                         Control who can view this patient&apos;s health records
                       </p>
                     </div>
+
+                    {/* Active patient-level consents */}
+                    {activeConsents.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-body font-semibold text-greige uppercase tracking-widest">Active Doctor Access</p>
+                        {activeConsents.map((c) => (
+                          <div key={c.id} className="flex items-center gap-3 bg-success-soft/30 border border-success-DEFAULT/20 rounded-xl px-4 py-3">
+                            <Shield className="w-4 h-4 text-success-DEFAULT shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-body font-semibold text-charcoal-deep">{c.requester_name}</p>
+                              <p className="text-xs text-greige">
+                                {c.requester_email} · Granted {new Date(c.requested_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {c.expires_at && ` · Expires ${new Date(c.expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {c.scope.map((s) => (
+                                  <span key={s} className="text-[10px] font-body bg-parchment border border-sand-light rounded-full px-2 py-0.5 text-stone">
+                                    {s.replace(/_/g, ' ')}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={async () => {
+                                const reason = window.prompt('Reason for revoking access:')
+                                if (!reason) return
+                                await consentApi.revoke(c.id, reason)
+                                setActiveConsents((prev) => prev.filter((x) => x.id !== c.id))
+                              }}
+                            >
+                              Revoke
+                            </Button>
+                          </div>
+                        ))}
+                        <p className="text-[11px] text-greige font-body px-1">
+                          Multiple doctors can have access at the same time. Each consent is independent.
+                        </p>
+                      </div>
+                    )}
+
                     <ConsentManager
                       recordId={id}
                       consents={consents}

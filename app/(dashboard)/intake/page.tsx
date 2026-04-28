@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Upload, Sparkles, Save, Check, ChevronRight, UserCircle } from 'lucide-react'
 import { FileUploader } from '@/components/intake/FileUploader'
 import { OcrProcessingAnimation } from '@/components/intake/OcrProcessingAnimation'
@@ -23,6 +24,7 @@ type IntakeTab = 'upload' | 'manual' | 'bulk'
 
 export default function IntakePage() {
   const { user } = useAuth()
+  const router = useRouter()
   const { profiles } = useProfile()
   const [realPatients, setRealPatients] = useState<PatientOut[]>([])
 
@@ -80,6 +82,12 @@ export default function IntakePage() {
   const [isSaving, setIsSaving] = useState(false)
 
   if (!user) return null
+
+  // Only patients and doctors may upload health records
+  if (user.role !== 'patient' && user.role !== 'doctor') {
+    router.replace('/dashboard')
+    return null
+  }
 
   const showPatientSelector = !isPatient || profiles.length > 0
 

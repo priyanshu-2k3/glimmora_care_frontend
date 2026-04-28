@@ -21,7 +21,8 @@ import type {
   MarkerIn,
   UploadResponse,
 } from '@/types/intake'
-import type { DigitalHealthTwin } from '@/types/twin'
+import type { DigitalHealthTwin, TwinNarrative } from '@/types/twin'
+import type { IntelligenceData } from '@/types/intelligence'
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000'
 export const API_BASE = `${API_HOST}/api/v1`
@@ -719,6 +720,10 @@ export const orgApi = {
   /** Patient: get my assigned doctor */
   getMyDoctor: () =>
     apiFetch<AssignedDoctorOut>('/patient/doctor'),
+
+  /** Any authenticated user: list doctors visible for consent pickers */
+  listDoctorsForConsent: () =>
+    apiFetch<DoctorOut[]>('/org/doctors'),
 }
 
 // ─── Admin API (super_admin only) ─────────────────────────────────────────────
@@ -776,6 +781,15 @@ export interface AdminOrgItem {
   created_at: string | null
 }
 
+export interface AdminDoctorOut {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  org_id: string | null
+  patient_count: number
+}
+
 export const adminApi = {
   /** List all users (searchable) */
   listUsers: (search = '') =>
@@ -806,13 +820,31 @@ export const adminApi = {
     return apiFetch<AuditLogOut[]>(`/admin/audit-logs${qs ? `?${qs}` : ''}`)
   },
 
-  /** List all patients (admin + super_admin) */
+  /** List patients — super_admin: platform-wide; admin: org-scoped */
   listPatients: (search = '') =>
     apiFetch<AdminPatientOut[]>(`/admin/patients${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** List doctors — super_admin: platform-wide; admin: org-scoped */
+  listDoctors: (search = '') =>
+    apiFetch<AdminDoctorOut[]>(`/admin/doctors${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 
   /** Super admin: list all organisations on the platform */
   listAllOrgs: (search = '') =>
     apiFetch<AdminOrgItem[]>(`/admin/organizations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+
+  /** Super admin: create a new organisation */
+  createOrg: (name: string) =>
+    apiFetch<OrgOut>('/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  /** Super admin: assign an admin user to an organisation */
+  assignAdmin: (orgId: string, userId: string) =>
+    apiFetch<{ message: string; org_id: string; user_id: string }>(
+      `/admin/organizations/${orgId}/assign-admin`,
+      { method: 'POST', body: JSON.stringify({ user_id: userId }) },
+    ),
 
   /** Admin: list all consent records platform-wide */
   listConsents: (params: { status?: string; patient_email?: string; requester_email?: string } = {}) => {
@@ -986,6 +1018,20 @@ export const consentApi = {
     }),
 
   getHistory: () => apiFetch<ConsentRequest[]>('/consent/history'),
+
+  /** Patient: proactively grant access to a doctor without a prior request */
+  grantDirect: (doctor_email: string, scope: string[], message?: string, expires_at?: string) =>
+    apiFetch<ConsentRequest>('/consent/grant-direct', {
+      method: 'POST',
+      body: JSON.stringify({ doctor_email, scope, message, expires_at }),
+    }),
+
+  /** Admin/super_admin: create a consent request on behalf of a doctor */
+  adminRequest: (doctor_email: string, patient_email: string, reason?: string) =>
+    apiFetch<ConsentRequest>('/consent/admin-request', {
+      method: 'POST',
+      body: JSON.stringify({ doctor_email, patient_email, reason }),
+    }),
 }
 
 // ─── Digital Twin API ─────────────────────────────────────────────────────────
@@ -1005,6 +1051,23 @@ export const twinApi = {
     apiFetch<{ status: string; patientId: string }>(`/twin/${patientId}/recompute`, {
       method: 'POST',
     }),
+
+  /** Fetch AI narrative summary for the twin. */
+  getNarrative(patientId?: string, regenerate = false): Promise<TwinNarrative> {
+    const path = patientId ? `/twin/${patientId}/narrative` : `/twin/me/narrative`
+    const qs = regenerate ? '?regenerate=true' : ''
+    return apiFetch<TwinNarrative>(`${path}${qs}`)
+  },
+}
+
+// ─── Intelligence API ─────────────────────────────────────────────────────────
+export const intelligenceApi = {
+  getMine(): Promise<IntelligenceData> {
+    return apiFetch<IntelligenceData>('/intelligence/me')
+  },
+  get(patientId: string): Promise<IntelligenceData> {
+    return apiFetch<IntelligenceData>(`/intelligence/${patientId}`)
+  },
 }
 
 // ─── Notifications API ────────────────────────────────────────────────────────
