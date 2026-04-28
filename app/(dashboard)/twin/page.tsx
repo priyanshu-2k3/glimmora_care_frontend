@@ -66,10 +66,16 @@ function RiskTooltip({ active, payload }: RiskTooltipProps) {
   )
 }
 
-// Custom tooltip for the marker-overlay chart.  Shows the displayed value
-// (in the latest reading's unit) PLUS the original reading from the lab
-// report when the chart had to convert it — so users never have to wonder
-// "why does this chart show 99 when my report said 5.5?".
+// Custom tooltip for the marker-overlay chart.  Shows ALL visible markers for
+// the hovered date — not just the series under the cursor — so the user can
+// read every value in one glance.  Also surfaces the original lab-report value
+// when the chart had to convert units, and flags anomaly points.
+interface MarkerOverlayInfo {
+  markerId: string
+  markerName: string
+  unit: string
+  color: string
+}
 interface MarkerTooltipProps {
   active?: boolean
   payload?: Array<{
@@ -80,41 +86,50 @@ interface MarkerTooltipProps {
     payload: Record<string, unknown>
   }>
   label?: string
+  allMarkers?: MarkerOverlayInfo[]
+  visibleMarkers?: Record<string, boolean>
 }
-function MarkerTooltip({ active, payload, label }: MarkerTooltipProps) {
+function MarkerTooltip({ active, payload, label, allMarkers, visibleMarkers }: MarkerTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
+  // `row` is the full chartData row for this date — carries all marker values
   const row = payload[0].payload
+
+  // Build a stable ordered list of all visible markers for this date
+  const markers = allMarkers ?? []
+  const visible = visibleMarkers ?? {}
+
+  // Collect color by markerId from the recharts payload (keyed by dataKey)
+  const colorByKey: Record<string, string> = {}
+  for (const entry of payload) {
+    if (entry.dataKey) colorByKey[entry.dataKey] = entry.color ?? ''
+  }
+
+  const items = markers.filter((m) => visible[m.markerId] && row[m.markerId] !== undefined)
+
   return (
-    <div className="rounded-xl border border-sand-light bg-ivory-cream/95 p-3 text-[11px] font-body shadow-md min-w-[200px]">
+    <div className="rounded-xl border border-sand-light bg-ivory-cream/95 p-3 text-[11px] font-body shadow-md min-w-[220px]">
       <p className="text-charcoal-deep font-semibold mb-1.5">{label}</p>
       <ul className="space-y-1.5">
-        {payload.map((entry, idx) => {
-          const id = entry.dataKey
-          if (!id) return null
-          const value = entry.value
-          const unit = (row[`${id}__unit`] as string | undefined) ?? ''
+        {items.map((m) => {
+          const id = m.markerId
+          const value = row[id] as number | undefined
+          const unit = (row[`${id}__unit`] as string | undefined) ?? m.unit ?? ''
           const orig = row[`${id}__orig`] as number | undefined
           const origUnit = (row[`${id}__origUnit`] as string | undefined) ?? ''
           const anom = row[`${id}__anom`] as string | undefined
-          const showOriginal =
-            orig !== undefined && origUnit && (origUnit !== unit || orig !== value)
+          const color = colorByKey[id] || m.color
+          const showOriginal = orig !== undefined && origUnit && (origUnit !== unit || orig !== value)
           return (
-            <li key={idx} className="leading-tight">
+            <li key={id} className="leading-tight">
               <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: entry.color }}
-                />
-                <span className="text-charcoal-deep font-semibold">
-                  {entry.name}
-                </span>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-charcoal-deep font-semibold">{m.markerName.split(' (')[0]}</span>
+                <span className="text-greige ml-auto text-[10px]">{unit}</span>
               </div>
               <div className="ml-3.5 text-charcoal-deep">
-                {value}{unit ? ` ${unit}` : ''}
+                {value ?? '—'}{unit ? ` ${unit}` : ''}
                 {showOriginal && (
-                  <span className="ml-1 text-greige text-[10px]">
-                    (report: {orig} {origUnit})
-                  </span>
+                  <span className="ml-1 text-greige text-[10px]">(report: {orig} {origUnit})</span>
                 )}
               </div>
               {anom && (
@@ -123,6 +138,9 @@ function MarkerTooltip({ active, payload, label }: MarkerTooltipProps) {
             </li>
           )
         })}
+        {items.length === 0 && (
+          <li className="text-greige italic">No readings on this date</li>
+        )}
       </ul>
     </div>
   )
@@ -152,6 +170,12 @@ function makeAnomalyDot(anomKey: string) {
     }
     return <circle cx={cx} cy={cy} r={3} fill={fill} />
   }
+}
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function formatLogDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
 }
 
 export default function TwinPage() {
@@ -424,7 +448,17 @@ export default function TwinPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5DFD3" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9A8F82' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9A8F82' }} />
-                  <Tooltip content={<MarkerTooltip />} />
+                  <Tooltip content={
+                    <MarkerTooltip
+                      allMarkers={twin.markerOverlays.map((m) => ({
+                        markerId: m.markerId,
+                        markerName: m.markerName,
+                        unit: m.unit,
+                        color: m.color,
+                      }))}
+                      visibleMarkers={visibleMarkers}
+                    />
+                  } />
                   {twin.markerOverlays.map((m) =>
                     visibleMarkers[m.markerId] ? (
                       <Line
@@ -443,6 +477,83 @@ export default function TwinPage() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {/* Reading Log table */}
+          {(() => {
+            const MAX_ROWS = 12
+            // Sorted ascending dates
+            const logDates: string[] = [...allDates].sort()
+            const totalRows = logDates.length
+            const displayDates: string[] = logDates.slice(-MAX_ROWS)
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-body font-semibold">Reading Log</CardTitle>
+                  <CardDescription>
+                    Chronological marker values per upload date · {totalRows} date{totalRows !== 1 ? 's' : ''} recorded
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[11px] font-body border-collapse">
+                      <thead>
+                        <tr className="border-b border-sand-light">
+                          <th className="py-2 px-3 text-left text-charcoal-deep font-semibold whitespace-nowrap">Date</th>
+                          {twin.markerOverlays.map((m) => (
+                            <th key={m.markerId} className="py-2 px-3 text-left text-charcoal-deep font-semibold whitespace-nowrap">
+                              {m.markerName.split(' (')[0]}
+                              {m.unit && (
+                                <span className="ml-1 text-greige text-[9px] font-normal">{m.unit}</span>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayDates.map((date: string, rowIdx: number) => {
+                          const rowData = chartData.find((r) => r.date === date)
+                          return (
+                            <tr
+                              key={date}
+                              className={cn(
+                                'border-b border-sand-light/50 transition-colors hover:bg-sand-light/30',
+                                rowIdx % 2 === 0 ? 'bg-ivory-cream' : 'bg-ivory-warm/40',
+                              )}
+                            >
+                              <td className="py-2 px-3 text-charcoal-deep font-medium whitespace-nowrap">
+                                {formatLogDate(date)}
+                              </td>
+                              {twin.markerOverlays.map((m) => {
+                                const val = rowData?.[m.markerId] as number | undefined
+                                const anom = rowData?.[`${m.markerId}__anom`] as string | undefined
+                                return (
+                                  <td key={m.markerId} className="py-2 px-3 whitespace-nowrap">
+                                    {val !== undefined ? (
+                                      <span className={cn('text-charcoal-deep', anom && 'text-warning-soft font-semibold')}>
+                                        {val}
+                                        {anom && <span className="ml-0.5 text-[9px]" title={anom}>⚠</span>}
+                                      </span>
+                                    ) : (
+                                      <span className="text-greige">—</span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {totalRows > MAX_ROWS && (
+                    <p className="mt-3 text-[10px] text-greige font-body text-center">
+                      Showing latest {MAX_ROWS} of {totalRows} readings
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })()}
 
           {/* Risk trajectory */}
           <Card>
