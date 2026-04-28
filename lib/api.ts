@@ -69,14 +69,41 @@ export function frontendRoleToBackend(role: Role): string {
 
 // ─── Error class ──────────────────────────────────────────────────────────────
 export class ApiError extends Error {
+  public detail: string
   constructor(
     public status: number,
-    public detail: string,
+    detail: unknown,
     message?: string,
   ) {
-    super(message ?? detail)
+    const flat = flattenDetail(detail)
+    super(message ?? flat)
+    this.detail = flat
     this.name = 'ApiError'
   }
+}
+
+function flattenDetail(d: unknown): string {
+  if (typeof d === 'string') return d
+  if (Array.isArray(d)) {
+    return d
+      .map((e) => {
+        if (typeof e === 'string') return e
+        if (e && typeof e === 'object' && 'msg' in (e as object)) {
+          const item = e as { msg?: unknown; loc?: unknown }
+          const loc = Array.isArray(item.loc) ? item.loc.join('.') : ''
+          return loc ? `${loc}: ${String(item.msg)}` : String(item.msg)
+        }
+        return JSON.stringify(e)
+      })
+      .join('; ')
+  }
+  if (d && typeof d === 'object') {
+    const obj = d as { msg?: unknown; detail?: unknown }
+    if ('msg' in obj) return String(obj.msg)
+    if ('detail' in obj) return flattenDetail(obj.detail)
+    return JSON.stringify(d)
+  }
+  return 'Request failed'
 }
 
 // ─── Base fetch ───────────────────────────────────────────────────────────────
