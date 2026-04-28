@@ -149,13 +149,15 @@ export default function OrgDoctorsPage() {
           ) : (
             <div className="divide-y divide-sand-light">
               {doctors.map((doc) => {
-                const name = [doc.first_name, doc.last_name].filter(Boolean).join(' ') || doc.email
+                const name = [doc.first_name, doc.last_name].filter(Boolean).join(' ')
+                const primaryLabel = doc.email || name || doc.user_id
+                const secondaryLabel = doc.email && name ? name : undefined
                 return (
                   <div key={doc.user_id} className="flex items-center gap-3 py-3">
-                    <Avatar name={name} size="md" />
+                    <Avatar name={primaryLabel} size="md" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-body font-semibold text-charcoal-deep">{name}</p>
-                      <p className="text-xs text-greige truncate">{doc.email}</p>
+                      <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{primaryLabel}</p>
+                      {secondaryLabel && <p className="text-xs text-greige truncate">{secondaryLabel}</p>}
                       {doc.location && <p className="text-xs text-greige">{doc.location}</p>}
                     </div>
                     <div className="text-right">

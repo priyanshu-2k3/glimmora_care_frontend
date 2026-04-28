@@ -6,7 +6,7 @@ import {
   Shield, Clock, History, AlertCircle, Check, Users, ArrowRight,
   Search, Filter, Plus, Trash2, UserPlus, ChevronDown,
 } from 'lucide-react'
-import { consentApi, adminApi, orgApi, type ConsentRequest, type DoctorOut, type PatientOut } from '@/lib/api'
+import { consentApi, adminApi, orgApi, type ConsentRequest, type DoctorOut, type PatientOut, type AdminDoctorOut, type AdminPatientOut } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -52,8 +52,8 @@ function AdminConsentView() {
   const [page, setPage] = useState(1)
 
   // Request on behalf panel
-  const [doctors, setDoctors] = useState<DoctorOut[]>([])
-  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [doctors, setDoctors] = useState<AdminDoctorOut[]>([])
+  const [patients, setPatients] = useState<AdminPatientOut[]>([])
   const [reqDoctorEmail, setReqDoctorEmail] = useState('')
   const [reqPatientEmail, setReqPatientEmail] = useState('')
   const [reqReason, setReqReason] = useState('')
@@ -61,8 +61,8 @@ function AdminConsentView() {
   const [reqMsg, setReqMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
-    orgApi.listDoctors().then(setDoctors).catch(() => {})
-    orgApi.listPatients().then(setPatients).catch(() => {})
+    adminApi.listDoctors().then(setDoctors).catch(() => {})
+    adminApi.listPatients().then(setPatients).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -137,8 +137,8 @@ function AdminConsentView() {
               >
                 <option value="">Select doctor…</option>
                 {doctors.map((d) => (
-                  <option key={d.user_id} value={d.email}>
-                    {d.first_name} {d.last_name} ({d.email})
+                  <option key={d.id} value={d.email}>
+                    {d.email}{(d.first_name || d.last_name) ? ` (${[d.first_name, d.last_name].filter(Boolean).join(' ')})` : ''}
                   </option>
                 ))}
               </select>
@@ -152,8 +152,8 @@ function AdminConsentView() {
               >
                 <option value="">Select patient…</option>
                 {patients.map((p) => (
-                  <option key={p.patient_id} value={p.email ?? ''}>
-                    {p.first_name} {p.last_name} ({p.email})
+                  <option key={p.id} value={p.email}>
+                    {p.email}{(p.first_name || p.last_name) ? ` (${[p.first_name, p.last_name].filter(Boolean).join(' ')})` : ''}
                   </option>
                 ))}
               </select>
