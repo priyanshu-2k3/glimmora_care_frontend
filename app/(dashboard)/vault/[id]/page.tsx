@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import { ArrowLeft, Download, FileText, ChevronRight, Shield } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info } from 'lucide-react'
 import Link from 'next/link'
 import { intakeApi, consentApi, getAccessToken, type ConsentRequest } from '@/lib/api'
 import type { HealthRecord, MarkerOut } from '@/types/intake'
@@ -70,6 +70,14 @@ function toHealthMarkers(markers: MarkerOut[], timestamp: string): HealthMarker[
   }))
 }
 
+function getFileType(url: string, filename?: string | null): 'pdf' | 'image' | 'other' {
+  const target = filename ?? url
+  const lower = target.toLowerCase().split('?')[0]
+  if (lower.endsWith('.pdf')) return 'pdf'
+  if (/\.(png|jpe?g|webp|gif)$/.test(lower)) return 'image'
+  return 'other'
+}
+
 export default function VaultRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [record, setRecord] = useState<HealthRecord | null>(null)
@@ -77,6 +85,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [notFound, setNotFound] = useState(false)
   const [consents, setConsents] = useState<ConsentEntry[]>([])
   const [activeConsents, setActiveConsents] = useState<ConsentRequest[]>([])
+  const [fileUrl, setFileUrl] = useState<{ url: string; filename?: string | null } | null>(null)
 
   useEffect(() => {
     // Demo users have no JWT — show mock data only
@@ -91,6 +100,16 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
       .then(setRecord)
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    // Only attempt download-url fetch for real users (JWT present)
+    if (getAccessToken()) {
+      intakeApi.getFileUrl(id)
+        .then(setFileUrl)
+        .catch(() => {}) // 404 = no file attached — silently ignore
+    }
   }, [id])
 
   useEffect(() => {
@@ -271,6 +290,90 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
             Record encrypted with AES-256-GCM · DPDP Act 2023 compliant · Uploaded {formatDate(record.date)}
           </p>
         </div>
+
+        {/* Original Document card */}
+        {fileUrl && (() => {
+          const fileType = getFileType(fileUrl.url, fileUrl.filename)
+          return (
+            <div className="bg-white border border-sand-light rounded-2xl overflow-hidden shadow-sm">
+              <div className="h-0.5 bg-gradient-to-r from-sapphire-deep via-sapphire-mist to-transparent" />
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-xl text-charcoal-deep tracking-tight">Original Document</h2>
+                  <a
+                    href={fileUrl.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-sapphire-deep hover:text-charcoal-deep transition-colors font-body"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open in new tab
+                  </a>
+                </div>
+
+                {fileType === 'pdf' && (
+                  <iframe
+                    src={fileUrl.url}
+                    className="w-full h-[600px] rounded-xl border border-sand-light"
+                    title={fileUrl.filename ?? 'Original document'}
+                  />
+                )}
+
+                {fileType === 'image' && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={fileUrl.url}
+                    alt={fileUrl.filename ?? 'Original document'}
+                    className="w-full max-h-[600px] object-contain rounded-xl border border-sand-light bg-parchment"
+                  />
+                )}
+
+                {fileType === 'other' && (
+                  <a
+                    href={fileUrl.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 bg-parchment border border-sand-light rounded-xl px-4 py-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200 group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-champagne border border-gold-soft/30 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-gold-deep" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body font-medium text-charcoal-deep text-sm truncate">
+                        {fileUrl.filename ?? 'Original document'}
+                      </p>
+                      <p className="text-xs text-greige font-body mt-0.5">Click to open original document ↗</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-greige group-hover:text-gold-deep transition-colors shrink-0" />
+                  </a>
+                )}
+
+                {fileType !== 'other' && (
+                  <div className="mt-3 flex justify-end">
+                    <a
+                      href={fileUrl.url}
+                      download={fileUrl.filename ?? undefined}
+                      className="inline-flex items-center gap-1.5 text-xs text-greige hover:text-charcoal-deep transition-colors font-body"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Empty markers banner — shown when file exists but no markers were extracted */}
+        {record.markers.length === 0 && record.fileSize && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200/60 rounded-2xl px-4 py-3">
+            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 font-body">
+              No structured marker data was extracted from this file. The original document is available below for reference.
+            </p>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs tabs={TABS}>
