@@ -1,24 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { Brain, TrendingUp, LinkIcon, AlertTriangle, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Brain, TrendingUp, LinkIcon, ChevronRight, Info } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { MOCK_PATIENTS } from '@/data/patients'
-import { getTrajectoryByPatient, getInsightsByPatient, CORRELATIONS } from '@/data/risk-models'
-import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
-import { MARKER_RANGES } from '@/data/markers'
-import { TrendLine } from '@/components/charts/TrendLine'
-import { RiskGauge } from '@/components/charts/RiskGauge'
-import { ExplainabilityPanel } from '@/components/intelligence/ExplainabilityPanel'
-import { ConfidenceScore } from '@/components/intelligence/ConfidenceScore'
+import { intelligenceApi, orgApi, getAccessToken } from '@/lib/api'
+import type { PatientOut } from '@/lib/api'
+import type { IntelligenceData } from '@/types/intelligence'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { AI_DISCLAIMER } from '@/lib/constants'
-import { Info } from 'lucide-react'
-
-const PATIENT_OPTIONS = MOCK_PATIENTS.map((p) => ({ value: p.id, label: `${p.name} (${p.age}y)` }))
 
 const TABS = [
   { id: 'trends', label: 'Longitudinal Trends', icon: <TrendingUp className="w-4 h-4" /> },
@@ -28,14 +20,40 @@ const TABS = [
 
 export default function IntelligencePage() {
   const { user } = useAuth()
-  const [selectedPatient, setSelectedPatient] = useState(user?.role === 'patient' ? 'pat_001' : MOCK_PATIENTS[0].id)
+  const isPatient = user?.role === 'patient'
+  const canViewAll = user?.role === 'doctor' || user?.role === 'admin' || user?.role === 'super_admin'
 
-  const trajectories = getTrajectoryByPatient(selectedPatient)
-  const insights = getInsightsByPatient(selectedPatient)
-  const patient = MOCK_PATIENTS.find((p) => p.id === selectedPatient)
-  const records = MOCK_HEALTH_RECORDS.filter((r) => r.patientId === selectedPatient)
-  const allMarkers = records.flatMap((r) => r.markers)
-  const abnormalCount = allMarkers.filter((m) => m.isAbnormal).length
+  const [patients, setPatients] = useState<PatientOut[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
+  const [data, setData] = useState<IntelligenceData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!canViewAll || !getAccessToken()) return
+    const fetcher = user?.role === 'doctor' ? orgApi.getDoctorPatients() : orgApi.listPatients()
+    fetcher.then((list) => {
+      setPatients(list)
+      if (list.length > 0 && !selectedPatientId) setSelectedPatientId(list[0].patient_id)
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canViewAll, user?.role])
+
+  useEffect(() => {
+    if (!isPatient && !selectedPatientId) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    const req = isPatient ? intelligenceApi.getMine() : intelligenceApi.get(selectedPatientId)
+    req.then((res) => { if (!cancelled) setData(res) })
+       .catch((e: unknown) => {
+         if (cancelled) return
+         setError(e instanceof Error ? e.message : 'Failed to load intelligence')
+         setData(null)
+       })
+       .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [isPatient, selectedPatientId])
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
@@ -45,170 +63,87 @@ export default function IntelligencePage() {
           <ChevronRight className="w-3 h-3" />
           <span className="text-gold-deep">Intelligence</span>
         </div>
-        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
-          Preventive Intelligence
-        </h1>
-        <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
-          Longitudinal trend modeling · Non-diagnostic insights · Confidence-scored risk analysis
-        </p>
+        <h1 className="font-display text-4xl text-charcoal-deep tracking-tight">Health Intelligence</h1>
+        <p className="text-sm text-stone font-body mt-2 max-w-lg">Longitudinal trends, insights, and correlations · Non-diagnostic</p>
       </div>
 
-      <div className="space-y-6">
-
-      {/* Disclaimer banner */}
-      <div className="flex items-start gap-2 bg-azure-whisper border border-sapphire-mist/20 rounded-xl px-4 py-3">
-        <Info className="w-4 h-4 text-sapphire-deep shrink-0 mt-0.5" />
-        <p className="text-xs text-sapphire-deep font-body">{AI_DISCLAIMER}</p>
-      </div>
-
-      {/* Patient selector (doctor/admin only) */}
-      {user?.role !== 'patient' && (
+      {canViewAll && (
         <Card>
           <CardContent>
-            <Select
-              label="Select Patient"
-              options={PATIENT_OPTIONS}
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-            />
+            {patients.length === 0 ? (
+              <p className="text-sm text-greige font-body">No patients assigned yet.</p>
+            ) : (
+              <Select
+                label="Select Patient"
+                options={patients.map((p) => ({
+                  value: p.patient_id,
+                  label: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id,
+                }))}
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+              />
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Patient summary */}
-      {patient && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Records', value: records.length },
-            { label: 'Markers Tracked', value: allMarkers.length },
-            { label: 'Abnormal', value: abnormalCount },
-            { label: 'Risk Insights', value: insights.length },
-          ].map((s) => (
-            <Card key={s.label} className="text-center py-4">
-              <p className="font-body text-2xl font-bold text-charcoal-deep">{s.value}</p>
-              <p className="text-xs text-greige font-body">{s.label}</p>
-            </Card>
-          ))}
+      {loading ? (
+        <Card><CardContent className="text-center py-12 text-greige font-body">Loading…</CardContent></Card>
+      ) : error ? (
+        <Card><CardContent className="text-center py-12 text-error-soft font-body">{error}</CardContent></Card>
+      ) : !data || data.empty ? (
+        <Card><CardContent className="text-center py-12 text-greige font-body">
+          Not enough data yet — upload more reports to unlock trends, insights, and correlations.
+        </CardContent></Card>
+      ) : (
+        <div className="mt-4">
+          <Tabs tabs={TABS}>
+            {(activeTab) => (
+              <div className="space-y-3">
+                {activeTab === 'trends' && (data.trends.length === 0 ? (
+                  <Card><CardContent className="text-center py-8 text-greige font-body">No trends yet.</CardContent></Card>
+                ) : data.trends.map((t) => (
+                  <Card key={t.markerId}>
+                    <CardHeader>
+                      <CardTitle className="text-base font-body font-semibold">{t.markerName}</CardTitle>
+                      <CardDescription>{t.direction} · slope {t.slope} · {t.sample_size} readings · confidence {Math.round(t.confidence * 100)}%</CardDescription>
+                    </CardHeader>
+                  </Card>
+                )))}
+                {activeTab === 'insights' && (data.insights.length === 0 ? (
+                  <Card><CardContent className="text-center py-8 text-greige font-body">No insights yet.</CardContent></Card>
+                ) : data.insights.map((insight, idx) => (
+                  <Card key={idx}>
+                    <CardHeader>
+                      <CardTitle className="text-base font-body font-semibold">{insight.title}</CardTitle>
+                      <CardDescription>{insight.detail}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge variant={insight.severity === 'warn' ? 'warning' : 'info'}>
+                        {insight.sample_size} readings · {Math.round(insight.confidence * 100)}% conf
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                )))}
+                {activeTab === 'correlations' && (data.correlations.length === 0 ? (
+                  <Card><CardContent className="text-center py-8 text-greige font-body">No correlations yet.</CardContent></Card>
+                ) : data.correlations.map((c, idx) => (
+                  <Card key={idx}>
+                    <CardHeader>
+                      <CardTitle className="text-base font-body font-semibold">{c.a} ↔ {c.b}</CardTitle>
+                      <CardDescription>r = {c.r} · {c.sample_size} shared dates · {Math.round(c.confidence * 100)}% conf</CardDescription>
+                    </CardHeader>
+                  </Card>
+                )))}
+              </div>
+            )}
+          </Tabs>
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs tabs={TABS}>
-        {(activeTab) => (
-          <>
-            {/* TRENDS */}
-            {activeTab === 'trends' && (
-              <div className="space-y-4">
-                {trajectories.length === 0 ? (
-                  <Card><CardContent className="text-center py-12 text-greige font-body text-sm">No trend data available for this patient.</CardContent></Card>
-                ) : (
-                  trajectories.map((traj) => {
-                    const range = Object.values(MARKER_RANGES).find((r) => r.label === traj.markerName)
-                    return (
-                      <Card key={traj.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <CardTitle className="text-base font-body font-semibold">{traj.markerName}</CardTitle>
-                              <CardDescription>Over {traj.timeRange} · {traj.dataPoints.length} data points</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-4 shrink-0">
-                              <ConfidenceScore score={traj.confidenceScore} size="sm" />
-                              <RiskGauge score={traj.confidenceScore} riskLevel={traj.riskLevel} size={130} />
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <TrendLine
-                            trajectory={traj}
-                            normalMin={range?.min}
-                            normalMax={range?.max}
-                          />
-                          <p className="text-xs text-greige font-body mt-3 italic">{traj.explanation}</p>
-                        </CardContent>
-                      </Card>
-                    )
-                  })
-                )}
-              </div>
-            )}
-
-            {/* INSIGHTS */}
-            {activeTab === 'insights' && (
-              <div className="space-y-3">
-                {insights.length === 0 ? (
-                  <Card><CardContent className="text-center py-12 text-greige font-body text-sm">No insights generated for this patient yet.</CardContent></Card>
-                ) : (
-                  insights.map((insight) => (
-                    <ExplainabilityPanel key={insight.id} insight={insight} />
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* CORRELATIONS */}
-            {activeTab === 'correlations' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-body font-semibold">Multi-Marker Correlation Analysis</CardTitle>
-                  <CardDescription>Statistical associations between health markers across the patient cohort</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {CORRELATIONS.map((c, i) => {
-                      const strength = Math.abs(c.correlationValue)
-                      const color = strength > 0.8 ? '#4A6347' : strength > 0.6 ? '#A68B3D' : '#9A8F82'
-                      const bgColor = strength > 0.8 ? 'bg-success-soft/10' : strength > 0.6 ? 'bg-warning-soft/15' : 'bg-parchment/40'
-                      return (
-                        <div key={i} className={`flex items-center gap-6 px-4 py-4 rounded-xl border border-sand-light/50 transition-colors hover:border-gold-soft/40 hover:bg-parchment/60 ${bgColor}`}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker1}</span>
-                              <span className="text-xs font-body text-gold-muted font-bold">↔</span>
-                              <span className="text-sm font-body font-semibold text-charcoal-deep">{c.marker2}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <Badge
-                                variant={c.direction === 'positive' ? 'success' : 'error'}
-                                className={c.direction === 'positive'
-                                  ? 'bg-success-soft text-ivory-cream border-success-DEFAULT font-semibold shadow-sm'
-                                  : 'bg-[#B07278] text-white border-[#9A6068] font-semibold shadow-sm'}
-                              >
-                                {c.direction}
-                              </Badge>
-                              <Badge
-                                variant="default"
-                                className={c.significance === 'strong'
-                                  ? 'bg-sapphire-deep text-ivory-cream border-sapphire-deep font-semibold shadow-sm'
-                                  : c.significance === 'moderate'
-                                  ? 'bg-gold-soft text-charcoal-deep border-gold-muted font-semibold shadow-sm'
-                                  : 'bg-parchment text-stone border-sand-light font-semibold shadow-sm'}
-                              >
-                                {c.significance}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div className="w-28 h-2 bg-sand-light rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{ width: `${strength * 100}%`, background: color }}
-                              />
-                            </div>
-                            <span className="text-sm font-body font-bold w-12 text-right" style={{ color }}>
-                              {c.correlationValue.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </Tabs>
+      <div className="flex items-start gap-2 mt-6 p-3 bg-azure-whisper/50 rounded-lg">
+        <Info className="w-3.5 h-3.5 text-sapphire-deep shrink-0 mt-0.5" />
+        <p className="text-[10px] text-sapphire-deep font-body">{AI_DISCLAIMER}</p>
       </div>
     </div>
   )

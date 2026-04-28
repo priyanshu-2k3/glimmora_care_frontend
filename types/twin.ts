@@ -92,3 +92,10 @@ export interface DigitalHealthTwin {
   snapshots: TwinSnapshot[]
   lastUpdated: string
 }
+
+export interface TwinNarrative {
+  narrative: string
+  generated_at: string
+  model: string | null
+  cached: boolean
+}

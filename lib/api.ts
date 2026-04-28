@@ -21,7 +21,8 @@ import type {
   MarkerIn,
   UploadResponse,
 } from '@/types/intake'
-import type { DigitalHealthTwin } from '@/types/twin'
+import type { DigitalHealthTwin, TwinNarrative } from '@/types/twin'
+import type { IntelligenceData } from '@/types/intelligence'
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000'
 export const API_BASE = `${API_HOST}/api/v1`
@@ -1005,6 +1006,23 @@ export const twinApi = {
     apiFetch<{ status: string; patientId: string }>(`/twin/${patientId}/recompute`, {
       method: 'POST',
     }),
+
+  /** Fetch AI narrative summary for the twin. */
+  getNarrative(patientId?: string, regenerate = false): Promise<TwinNarrative> {
+    const path = patientId ? `/twin/${patientId}/narrative` : `/twin/me/narrative`
+    const qs = regenerate ? '?regenerate=true' : ''
+    return apiFetch<TwinNarrative>(`${path}${qs}`)
+  },
+}
+
+// ─── Intelligence API ─────────────────────────────────────────────────────────
+export const intelligenceApi = {
+  getMine(): Promise<IntelligenceData> {
+    return apiFetch<IntelligenceData>('/intelligence/me')
+  },
+  get(patientId: string): Promise<IntelligenceData> {
+    return apiFetch<IntelligenceData>(`/intelligence/${patientId}`)
+  },
 }
 
 // ─── Notifications API ────────────────────────────────────────────────────────

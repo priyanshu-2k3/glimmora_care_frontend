@@ -9,7 +9,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { twinApi, orgApi, adminApi, getAccessToken } from '@/lib/api'
 import type { PatientOut } from '@/lib/api'
-import type { DigitalHealthTwin, TwinRiskPoint } from '@/types/twin'
+import type { DigitalHealthTwin, TwinRiskPoint, TwinNarrative } from '@/types/twin'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
@@ -165,6 +165,30 @@ export default function TwinPage() {
 
   const isPatient = user?.role === 'patient'
   const canViewAll = user?.role === 'doctor' || user?.role === 'admin' || user?.role === 'super_admin'
+
+  const [narrative, setNarrative] = useState<TwinNarrative | null>(null)
+  const [narrativeLoading, setNarrativeLoading] = useState(false)
+  const [narrativeError, setNarrativeError] = useState<string | null>(null)
+
+  const loadNarrative = async (regenerate = false) => {
+    setNarrativeLoading(true)
+    setNarrativeError(null)
+    try {
+      const target = isPatient ? undefined : selectedPatientId
+      const res = await twinApi.getNarrative(target, regenerate)
+      setNarrative(res)
+    } catch (e) {
+      setNarrativeError(e instanceof Error ? e.message : 'Failed to load AI review')
+    } finally {
+      setNarrativeLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!twin) return
+    loadNarrative(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [twin?.markerOverlays?.length, selectedPatientId, isPatient])
 
   // For doctor/admin: fetch their patient list to populate the selector
   useEffect(() => {
@@ -472,6 +496,48 @@ export default function TwinPage() {
                 <Info className="w-3.5 h-3.5 text-sapphire-deep shrink-0 mt-0.5" />
                 <p className="text-[10px] text-sapphire-deep font-body">{AI_DISCLAIMER}</p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Trend Review */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <CardTitle className="font-body font-semibold">AI Trend Review</CardTitle>
+                  <CardDescription>Plain-language summary of recent health trends · Non-diagnostic</CardDescription>
+                </div>
+                <button
+                  onClick={() => loadNarrative(true)}
+                  disabled={narrativeLoading}
+                  className="text-xs px-3 py-1.5 rounded-full border border-sand-DEFAULT text-charcoal-warm hover:bg-sand-light disabled:opacity-50"
+                >
+                  {narrativeLoading ? 'Generating…' : 'Regenerate'}
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {narrativeLoading && !narrative && (
+                <div className="space-y-2">
+                  <div className="h-3 bg-sand-light rounded animate-pulse w-full" />
+                  <div className="h-3 bg-sand-light rounded animate-pulse w-11/12" />
+                  <div className="h-3 bg-sand-light rounded animate-pulse w-10/12" />
+                </div>
+              )}
+              {narrativeError && (
+                <p className="text-sm text-error-soft font-body">{narrativeError}</p>
+              )}
+              {narrative && (
+                <>
+                  <div className="space-y-3 text-sm text-charcoal-deep font-body whitespace-pre-line">
+                    {narrative.narrative}
+                  </div>
+                  <div className="flex items-start gap-2 mt-3 p-3 bg-azure-whisper/50 rounded-lg">
+                    <Info className="w-3.5 h-3.5 text-sapphire-deep shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-sapphire-deep font-body">{AI_DISCLAIMER}</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
