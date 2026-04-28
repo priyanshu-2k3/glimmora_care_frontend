@@ -2,7 +2,8 @@
 
 import {
   Upload, Shield, Brain, Activity, Users,
-  AlertTriangle, CheckCircle, FileText, ArrowUpRight,
+  AlertTriangle, CheckCircle, FileText, ArrowUpRight, ShieldAlert,
+  Building2, ClipboardList,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -13,7 +14,7 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, orgApi, adminApi, getAccessToken } from '@/lib/api'
 import type { HealthRecord } from '@/types/intake'
-import type { PatientOut, AdminStatsOut } from '@/lib/api'
+import type { PatientOut, AdminStatsOut, AdminPatientOut, AdminDoctorOut, AdminOrgItem } from '@/lib/api'
 import { formatDate, cn } from '@/lib/utils'
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
@@ -191,6 +192,28 @@ function PatientView({ userName }: { userName: string }) {
         { label: 'Completeness', value: `${overallCompleteness}%`, color: C.gold.bg },
         { label: 'Flagged',      value: String(abnormal.length), color: C.coral.bg },
       ]} />
+
+      {/* Emergency Access CTA */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl border"
+        style={{ background: '#FEF2F2', borderColor: '#FCA5A5' }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: C.coral.bg }}>
+          <ShieldAlert className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-body font-semibold" style={{ color: C.coral.text }}>Emergency Access</p>
+          <p className="text-xs font-body mt-0.5" style={{ color: C.coral.text + 'CC' }}>
+            Grant temporary access to your records during a medical emergency. Tap to manage.
+          </p>
+        </div>
+        <Link href="/emergency" className="shrink-0">
+          <div className="flex items-center gap-1.5 text-xs font-body font-semibold px-3 py-2 rounded-xl transition-all duration-200 hover:opacity-80"
+            style={{ background: C.coral.bg, color: '#fff' }}>
+            Open Emergency Access
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 gap-4">
@@ -515,6 +538,212 @@ function AdminView({ userName }: { userName: string }) {
   )
 }
 
+// ─── Super Admin view ─────────────────────────────────────────────────────────
+
+const SUPER_ADMIN_QUICK_ACTIONS = [
+  { href: '/admin',              icon: Building2,  label: 'Admin Dashboard',   sub: 'Platform overview',          color: C.ocean  },
+  { href: '/admin/logs',         icon: ClipboardList, label: 'Platform Logs', sub: 'Audit trail & events',       color: C.amber  },
+  { href: '/manage-users',       icon: Shield,     label: 'Manage Admins',     sub: 'User roles & permissions',   color: C.violet },
+]
+
+function SuperAdminView({ userName }: { userName: string }) {
+  const [stats, setStats] = useState<AdminStatsOut | null>(null)
+  const [patients, setPatients] = useState<AdminPatientOut[]>([])
+  const [doctors, setDoctors] = useState<AdminDoctorOut[]>([])
+  const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'patients' | 'doctors' | 'orgs'>('patients')
+
+  // Create org form
+  const [orgName, setOrgName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createMsg, setCreateMsg] = useState<string | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!getAccessToken()) { setLoading(false); return }
+    Promise.all([
+      adminApi.getStats().catch(() => null),
+      adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
+      adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
+      adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
+    ]).then(([s, p, d, o]) => {
+      setStats(s)
+      setPatients(p)
+      setDoctors(d)
+      setOrgs(o)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  async function handleCreateOrg(e: React.FormEvent) {
+    e.preventDefault()
+    if (!orgName.trim()) return
+    setCreating(true)
+    setCreateError(null)
+    setCreateMsg(null)
+    try {
+      await adminApi.createOrg(orgName.trim())
+      setCreateMsg(`Organisation "${orgName.trim()}" created.`)
+      setOrgName('')
+      // Refresh orgs list
+      adminApi.listAllOrgs().then(setOrgs).catch(() => {})
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create organisation.')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <WelcomeBanner name={userName} role="Super Administrator" chips={[
+        { label: 'Patients',      value: String(stats?.total_patients ?? '—'),      color: C.ocean.bg },
+        { label: 'Doctors',       value: String(stats?.total_doctors ?? '—'),       color: C.violet.bg },
+        { label: 'Organisations', value: String(stats?.total_organizations ?? '—'), color: C.teal.bg },
+        { label: 'New (30d)',     value: String(stats?.new_users_last_30_days ?? '—'), color: C.amber.bg },
+      ]} />
+
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={Users}       label="Total Patients"  value={stats?.total_patients ?? '—'}           accent={C.ocean} />
+          <StatCard icon={Users}       label="Total Doctors"   value={stats?.total_doctors ?? '—'}            accent={C.violet} />
+          <StatCard icon={Building2}   label="Organisations"   value={stats?.total_organizations ?? '—'}      accent={C.teal} />
+          <StatCard icon={CheckCircle} label="New Users (30d)" value={stats?.new_users_last_30_days ?? '—'} accent={C.emerald} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Quick Actions — super_admin only */}
+        <Panel>
+          <PanelHeader title="Quick Actions" sub="Super admin navigation" />
+          <div className="px-5 pb-5 space-y-2">
+            {SUPER_ADMIN_QUICK_ACTIONS.map((action) => (
+              <Link key={action.href} href={action.href}>
+                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory-cream transition-colors group">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: action.color.bg }}>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-body font-semibold text-charcoal-deep">{action.label}</p>
+                    <p className="text-[10px] text-greige">{action.sub}</p>
+                  </div>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-greige opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </Link>
+            ))}
+          </div>
+          {/* Create Org inline form */}
+          <div className="px-5 pb-5 border-t border-sand-light pt-4">
+            <p className="text-xs font-body font-semibold text-charcoal-deep mb-2">Create Organisation</p>
+            <form onSubmit={handleCreateOrg} className="flex gap-2">
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="Org name…"
+                className="flex-1 text-xs font-body border border-sand-light rounded-lg px-3 py-2 bg-ivory-cream focus:outline-none focus:border-gold-soft"
+                required
+              />
+              <button
+                type="submit"
+                disabled={creating}
+                className="text-xs font-body font-semibold bg-gold-soft text-white px-3 py-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
+              >
+                {creating ? '…' : 'Create'}
+              </button>
+            </form>
+            {createMsg && <p className="text-[11px] text-success-DEFAULT mt-1">{createMsg}</p>}
+            {createError && <p className="text-[11px] text-error-DEFAULT mt-1">{createError}</p>}
+          </div>
+        </Panel>
+
+        {/* Patients / Doctors / Orgs tabs */}
+        <Panel className="lg:col-span-2">
+          <PanelHeader title="Platform Users" sub="Patients and doctors across all organisations" action={
+            <div className="flex gap-1">
+              {(['patients', 'doctors', 'orgs'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`text-[10px] font-body font-semibold px-2.5 py-1 rounded-full transition-colors capitalize ${
+                    tab === t ? 'bg-gold-soft text-white' : 'bg-parchment text-charcoal-warm hover:bg-sand-light'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          } />
+          <div className="px-5 pb-5 space-y-1 max-h-72 overflow-y-auto">
+            {loading && [1,2,3,4].map((i) => (
+              <div key={i} className="h-10 bg-sand-light rounded-xl animate-pulse mb-1" />
+            ))}
+            {!loading && tab === 'patients' && (
+              patients.length === 0
+                ? <p className="text-xs text-greige font-body py-4 text-center">No patients found.</p>
+                : patients.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-body font-bold text-white"
+                      style={{ background: C.ocean.bg }}>
+                      {(p.first_name?.[0] ?? p.email?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{p.first_name} {p.last_name}</p>
+                      <p className="text-[10px] text-greige truncate">{p.email}</p>
+                    </div>
+                  </div>
+                ))
+            )}
+            {!loading && tab === 'doctors' && (
+              doctors.length === 0
+                ? <p className="text-xs text-greige font-body py-4 text-center">No doctors found.</p>
+                : doctors.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-body font-bold text-white"
+                      style={{ background: C.violet.bg }}>
+                      {(d.first_name?.[0] ?? d.email?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{d.first_name} {d.last_name}</p>
+                      <p className="text-[10px] text-greige truncate">{d.email}</p>
+                    </div>
+                    <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: C.violet.soft, color: C.violet.text }}>
+                      {d.patient_count} pts
+                    </span>
+                  </div>
+                ))
+            )}
+            {!loading && tab === 'orgs' && (
+              orgs.length === 0
+                ? <p className="text-xs text-greige font-body py-4 text-center">No organisations yet.</p>
+                : orgs.map((o) => (
+                  <div key={o.id} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-body font-bold text-white"
+                      style={{ background: C.teal.bg }}>
+                      {(o.name?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{o.name}</p>
+                      <p className="text-[10px] text-greige truncate">{o.admin_email ?? 'No admin assigned'}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-greige">{o.doctor_count}d · {o.patient_count}p</p>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -525,7 +754,8 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in">
       {user.role === 'patient'     && <PatientView userName={user.name} />}
       {user.role === 'doctor'      && <DoctorView  userName={user.name} />}
-      {(user.role === 'admin' || user.role === 'super_admin') && <AdminView userName={user.name} />}
+      {user.role === 'admin'       && <AdminView userName={user.name} />}
+      {user.role === 'super_admin' && <SuperAdminView userName={user.name} />}
     </div>
   )
 }

@@ -70,24 +70,24 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
 
-  /* ── Organisation (admin + doctor) ─── */
+  /* ── Organisation (admin + doctor — org-scoped, NOT super_admin) ─── */
   {
     href: '/organization',
     label: 'Organisation',
     icon: 'Building2',
-    roles: ['admin', 'super_admin', 'doctor'] as Role[],
+    roles: ['admin', 'doctor'] as Role[],
   },
   {
     href: '/organization/doctors',
     label: 'Manage Doctors',
     icon: 'Stethoscope',
-    roles: ['admin', 'super_admin'] as Role[],
+    roles: ['admin'] as Role[],
   },
   {
     href: '/organization/patients',
     label: 'Manage Patients',
     icon: 'UserCheck',
-    roles: ['admin', 'super_admin'] as Role[],
+    roles: ['admin'] as Role[],
   },
 
   /* ── Consent & access (patient + doctor) ─── */
@@ -177,6 +177,18 @@ export const NAV_ITEMS = [
     href: '/manage-users',
     label: 'Manage Users',
     icon: 'Users',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/admin/doctor-management',
+    label: 'All Patients',
+    icon: 'UserCheck',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/admin/manage-team',
+    label: 'All Doctors',
+    icon: 'Stethoscope',
     roles: ['super_admin'] as Role[],
   },
 ]
