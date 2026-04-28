@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Users, LogOut, Loader2 } from 'lucide-react'
+import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { authApi, familyApi, ApiError, type BackendSession, type BackendFamily, type BackendMember } from '@/lib/api'
+import { authApi, ApiError, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -40,7 +40,6 @@ function DarkModeToggle() {
 
 const TABS = [
   { id: 'profile',       label: 'Profile',       icon: <User className="w-4 h-4" /> },
-  { id: 'family',        label: 'Family',        icon: <Users className="w-4 h-4" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
   { id: 'security',      label: 'Security',      icon: <Lock className="w-4 h-4" /> },
   { id: 'sessions',      label: 'Sessions',      icon: <Smartphone className="w-4 h-4" /> },
@@ -135,15 +134,6 @@ export default function SettingsPage() {
     setGoogleConnecting(false)
   }
 
-  // Family tab (patient only)
-  const [family, setFamily] = useState<BackendFamily | null>(null)
-  const [familyMembers, setFamilyMembers] = useState<BackendMember[]>([])
-  const [familyLoading, setFamilyLoading] = useState(false)
-  const [familyFetched, setFamilyFetched] = useState(false)
-  const [familyCreateName, setFamilyCreateName] = useState('')
-  const [familyAction, setFamilyAction] = useState<'idle' | 'creating' | 'leaving'>('idle')
-  const [familyMsg, setFamilyMsg] = useState<string | null>(null)
-
   // Sessions tab
   const [sessions, setSessions] = useState<BackendSession[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
@@ -176,66 +166,6 @@ export default function SettingsPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.phone_number, user?.name, user?.email, user?.organization, user?.location, user?.gender])
-
-  // Load family data when family tab becomes relevant (patient only, load once)
-  async function loadFamily() {
-    if (familyFetched || !user?.accessToken || user.role !== 'patient') return
-    setFamilyLoading(true)
-    try {
-      if (user.familyId) {
-        const [fam, members] = await Promise.all([
-          familyApi.get(user.familyId),
-          familyApi.getMembers(user.familyId),
-        ])
-        setFamily(fam)
-        setFamilyMembers(members)
-      }
-      setFamilyFetched(true)
-    } catch {
-      setFamilyFetched(true)
-    } finally {
-      setFamilyLoading(false)
-    }
-  }
-
-  async function handleCreateFamily() {
-    if (!familyCreateName.trim()) return
-    setFamilyAction('creating')
-    setFamilyMsg(null)
-    try {
-      const res = await familyApi.create(familyCreateName.trim())
-      await refreshUser()
-      // reload family data
-      const [fam, members] = await Promise.all([
-        familyApi.get(res.familyId),
-        familyApi.getMembers(res.familyId),
-      ])
-      setFamily(fam)
-      setFamilyMembers(members)
-      setFamilyMsg('Family created successfully!')
-    } catch (err) {
-      setFamilyMsg(err instanceof ApiError ? err.detail : 'Failed to create family.')
-    } finally {
-      setFamilyAction('idle')
-    }
-  }
-
-  async function handleLeaveFamily() {
-    setFamilyAction('leaving')
-    setFamilyMsg(null)
-    try {
-      await familyApi.leave()
-      await refreshUser()
-      setFamily(null)
-      setFamilyMembers([])
-      setFamilyFetched(false)
-      setFamilyMsg('You have left the family.')
-    } catch (err) {
-      setFamilyMsg(err instanceof ApiError ? err.detail : 'Failed to leave family.')
-    } finally {
-      setFamilyAction('idle')
-    }
-  }
 
   // Load sessions when sessions tab becomes relevant (load once)
   const [sessionsFetched, setSessionsFetched] = useState(false)
@@ -360,7 +290,6 @@ export default function SettingsPage() {
 
       <Tabs tabs={TABS} onChange={(tab) => {
         if (tab === 'sessions') loadSessions()
-        if (tab === 'family') loadFamily()
       }}>
         {(activeTab) => (
           <>
@@ -440,123 +369,6 @@ export default function SettingsPage() {
                     <Button onClick={handleProfileSave} isLoading={profileSaving} disabled={profileSaving}>
                       {profileSaved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
                     </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ─── Family ─── */}
-            {activeTab === 'family' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-body text-base flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gold-soft" />
-                    Family
-                  </CardTitle>
-                  <CardDescription>Manage your family group and members</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {familyMsg && (
-                    <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
-                      <Check className="w-4 h-4 text-success-DEFAULT shrink-0" />
-                      <p className="text-xs font-body text-success-DEFAULT">{familyMsg}</p>
-                    </div>
-                  )}
-
-                  {user.role !== 'patient' && (
-                    <p className="text-sm text-greige font-body">Family management is only available to patients.</p>
-                  )}
-
-                  {user.role === 'patient' && isDemo && (
-                    <p className="text-sm text-greige font-body">Sign in with a real account to manage your family.</p>
-                  )}
-
-                  {user.role === 'patient' && !isDemo && (
-                    <>
-                      {familyLoading && (
-                        <div className="flex items-center gap-2 py-4">
-                          <Loader2 className="w-4 h-4 animate-spin text-gold-soft" />
-                          <p className="text-sm text-greige font-body">Loading family data…</p>
-                        </div>
-                      )}
-
-                      {!familyLoading && (user.familyId ? (
-                        /* ── Has a family ── */
-                        <div className="space-y-4">
-                          <div className="p-4 rounded-xl border border-gold-soft/30 bg-gold-whisper/20">
-                            <p className="text-sm font-body font-semibold text-charcoal-deep flex items-center gap-2">
-                              <Users className="w-4 h-4 text-gold-deep" />
-                              {family?.name ?? 'Your Family'}
-                            </p>
-                            <p className="text-xs text-greige font-body mt-0.5">Family ID: {user.familyId}</p>
-                          </div>
-
-                          {familyMembers.length > 0 && (
-                            <div>
-                              <p className="text-xs font-body font-medium text-stone mb-2">Members ({familyMembers.length})</p>
-                              <div className="space-y-2">
-                                {familyMembers.map((m) => {
-                                  const name = `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.user_id
-                                  const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-                                  return (
-                                    <div key={m.user_id} className="flex items-center gap-3 p-3 rounded-xl border border-sand-light bg-white">
-                                      <div className="w-8 h-8 rounded-full bg-gold-whisper flex items-center justify-center text-xs font-body font-bold text-gold-deep shrink-0">
-                                        {initials}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-body font-medium text-charcoal-deep truncate">{name}</p>
-                                        {m.email && <p className="text-xs text-greige">{m.email}</p>}
-                                      </div>
-                                      {m.role && <Badge variant="gold" className="capitalize shrink-0">{m.role}</Badge>}
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          <Button
-                            variant="danger"
-                            onClick={handleLeaveFamily}
-                            isLoading={familyAction === 'leaving'}
-                            disabled={familyAction !== 'idle'}
-                            className="flex items-center gap-2"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Leave Family
-                          </Button>
-                        </div>
-                      ) : (
-                        /* ── No family ── */
-                        <div className="space-y-5">
-                          <div>
-                            <p className="text-sm font-body font-medium text-charcoal-deep mb-3">Create a new family</p>
-                            <div className="flex gap-2">
-                              <Input
-                                label=""
-                                placeholder="Family name (e.g. Sharma Family)"
-                                value={familyCreateName}
-                                onChange={(e) => setFamilyCreateName(e.target.value)}
-                                disabled={familyAction !== 'idle'}
-                              />
-                              <Button
-                                onClick={handleCreateFamily}
-                                isLoading={familyAction === 'creating'}
-                                disabled={familyAction !== 'idle' || !familyCreateName.trim()}
-                                className="shrink-0 self-end"
-                              >
-                                Create
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="border-t border-sand-light pt-4">
-                            <p className="text-sm text-greige font-body">
-                              To join an existing family, ask a family member to invite you via the <strong>Notifications</strong> page.
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </>
                   )}
                 </CardContent>
               </Card>
@@ -789,17 +601,27 @@ export default function SettingsPage() {
 
                   {sessions.map((session) => {
                     const { device, browser, os } = parseDevice(session.user_agent)
+                    const isDeleting = deletingSessionId === session.id
                     return (
                       <div
                         key={session.id}
                         data-testid="session-card"
                         className={cn(
-                          'flex items-start gap-3 p-4 rounded-xl border transition-colors',
+                          'relative flex items-start gap-3 p-4 rounded-xl border transition-all duration-200',
                           session.is_current
                             ? 'border-gold-soft bg-gold-whisper/30'
                             : 'border-sand-light bg-ivory-warm',
+                          isDeleting && 'opacity-60',
                         )}
                       >
+                        {/* Deleting overlay banner */}
+                        {isDeleting && (
+                          <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-xl bg-error-soft/80 border border-error-DEFAULT/30 z-10">
+                            <Loader2 className="w-5 h-5 text-error-DEFAULT animate-spin shrink-0" />
+                            <span className="text-sm font-body font-semibold text-error-DEFAULT">Deleting session…</span>
+                          </div>
+                        )}
+
                         <div className="w-10 h-10 rounded-full bg-white border border-sand-light flex items-center justify-center shrink-0">
                           <DeviceIcon ua={session.user_agent} />
                         </div>
@@ -819,14 +641,11 @@ export default function SettingsPage() {
                         {!session.is_current && (
                           <button
                             onClick={() => revokeSession(session.id)}
-                            disabled={deletingSessionId === session.id}
-                            className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={deletingSessionId === session.id ? 'Deleting…' : 'Revoke session'}
+                            disabled={isDeleting || deletingSessionId !== null}
+                            className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isDeleting ? 'Deleting…' : 'Revoke session'}
                           >
-                            {deletingSessionId === session.id
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : <Trash2 className="w-4 h-4" />
-                            }
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
