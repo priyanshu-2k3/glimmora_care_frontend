@@ -326,6 +326,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTokens()
     setUser(null)
     localStorage.removeItem(STORAGE_KEY)
+    // F2: hard-reload to /login so every React subtree, in-memory cache,
+    // pending fetch, and module-level state from the previous session is
+    // dropped.  A soft (router) navigation keeps hook state alive and
+    // risks bleeding session A's data into session B in the same tab.
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login')
+    }
   }, [])
 
   return (
