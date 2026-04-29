@@ -15,7 +15,10 @@ import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
-const ROLE_OPTIONS = (Object.keys(ROLES) as Role[]).map((r) => ({ value: r, label: ROLES[r].label }))
+// Self-registration is restricted to patient and doctor. Admin and super_admin
+// accounts are created exclusively through the super-admin flow / admin co-add.
+const SELF_REGISTERABLE_ROLES: Role[] = ['patient', 'doctor']
+const ROLE_OPTIONS = SELF_REGISTERABLE_ROLES.map((r) => ({ value: r, label: ROLES[r].label }))
 
 const GENDER_OPTIONS = [
   { value: '',       label: 'Select gender' },
@@ -224,7 +227,7 @@ export default function RegisterPage() {
                 onChange={(e) => setOwner((p) => ({ ...p, role: e.target.value as Role }))}
               />
             </div>
-            {(owner.role === 'doctor' || owner.role === 'admin' || owner.role === 'super_admin') && (
+            {(owner.role === 'doctor') && (
               <div className="col-span-2">
                 <Input
                   label="Organization"

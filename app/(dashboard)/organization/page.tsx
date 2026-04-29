@@ -31,6 +31,15 @@ function AdminOrgView() {
   const [doctorCount, setDoctorCount] = useState(0)
   const [patientCount, setPatientCount] = useState(0)
 
+  // Co-admins
+  const [admins, setAdmins] = useState<{ user_id: string; email: string; first_name: string | null; last_name: string | null }[]>([])
+  const [showAddAdmin, setShowAddAdmin] = useState(false)
+  const [newAdminEmail, setNewAdminEmail] = useState('')
+  const [newAdminFirst, setNewAdminFirst] = useState('')
+  const [newAdminLast, setNewAdminLast] = useState('')
+  const [addingAdmin, setAddingAdmin] = useState(false)
+  const [addAdminMsg, setAddAdminMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
   useEffect(() => {
     orgApi.getMine()
       .then((data) => {
@@ -49,7 +58,36 @@ function AdminOrgView() {
     if (!org) return
     orgApi.listDoctors().then((d) => setDoctorCount(d.length)).catch(() => {})
     orgApi.listPatients().then((p) => setPatientCount(p.length)).catch(() => {})
+    orgApi.listOrgAdmins().then(setAdmins).catch(() => {})
   }, [org?.id])
+
+  async function handleAddAdmin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newAdminEmail.trim()) return
+    setAddingAdmin(true)
+    setAddAdminMsg(null)
+    try {
+      const result = await orgApi.addOrgAdmin({
+        email: newAdminEmail.trim(),
+        first_name: newAdminFirst.trim() || undefined,
+        last_name: newAdminLast.trim() || undefined,
+      })
+      const refreshed = await orgApi.listOrgAdmins().catch(() => admins)
+      setAdmins(refreshed)
+      setAddAdminMsg({
+        ok: true,
+        text: result.account_created
+          ? 'Co-admin account created. They will receive a setup email with the default password.'
+          : 'Existing user promoted to admin and linked to your organisation.',
+      })
+      setNewAdminEmail(''); setNewAdminFirst(''); setNewAdminLast('')
+      setTimeout(() => { setShowAddAdmin(false); setAddAdminMsg(null) }, 2500)
+    } catch (err) {
+      setAddAdminMsg({ ok: false, text: err instanceof ApiError ? err.detail : 'Failed to add admin.' })
+    } finally {
+      setAddingAdmin(false)
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -220,6 +258,75 @@ function AdminOrgView() {
         </CardContent>
       </Card>
 
+      {/* Co-admins */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="font-body text-base">Organisation Admins</CardTitle>
+              <CardDescription>Other admins who can manage this organisation</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => { setShowAddAdmin(!showAddAdmin); setAddAdminMsg(null) }}>
+              <Plus className="w-3.5 h-3.5" />
+              {showAddAdmin ? 'Cancel' : 'Add Admin'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {showAddAdmin && (
+            <form onSubmit={handleAddAdmin} className="bg-gold-whisper/30 border border-gold-soft/30 rounded-xl p-4 space-y-3">
+              <Input
+                label="Email"
+                type="email"
+                placeholder="newadmin@yourorg.com"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                required
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="First name (optional)" value={newAdminFirst} onChange={(e) => setNewAdminFirst(e.target.value)} />
+                <Input label="Last name (optional)" value={newAdminLast} onChange={(e) => setNewAdminLast(e.target.value)} />
+              </div>
+              {addAdminMsg && (
+                <div className={cn('flex items-center gap-2 rounded-xl p-3 border',
+                  addAdminMsg.ok ? 'bg-success-soft border-success-DEFAULT/20' : 'bg-error-soft border-error-DEFAULT/20')}>
+                  {addAdminMsg.ok
+                    ? <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
+                    : <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />}
+                  <p className={cn('text-xs font-body', addAdminMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>{addAdminMsg.text}</p>
+                </div>
+              )}
+              <Button type="submit" size="sm" isLoading={addingAdmin} disabled={!newAdminEmail.trim()}>
+                <Plus className="w-3.5 h-3.5" />
+                Add Admin
+              </Button>
+            </form>
+          )}
+
+          {admins.length === 0 ? (
+            <p className="text-xs text-greige font-body py-4 text-center">No additional admins yet.</p>
+          ) : (
+            <div className="divide-y divide-sand-light">
+              {admins.map((a) => {
+                const name = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || a.email
+                return (
+                  <div key={a.user_id} className="flex items-center gap-3 py-2.5">
+                    <div className="w-8 h-8 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0">
+                      <UserCheck className="w-4 h-4 text-gold-deep" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{name}</p>
+                      {name !== a.email && <p className="text-xs text-greige truncate">{a.email}</p>}
+                    </div>
+                    <Badge variant="info">Admin</Badge>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
         <Button onClick={() => router.push('/organization/doctors')} className="w-full">
@@ -287,12 +394,10 @@ function AssignAdminModal({
             <div>
               <CardTitle className="font-body text-base flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-gold-soft" />
-                {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
+                Assign Admin
               </CardTitle>
               <CardDescription className="mt-0.5">
-                {org.admin_email
-                  ? <>Replacing <span className="font-medium text-charcoal-deep">{org.admin_email}</span> on <span className="font-medium text-charcoal-deep">{org.name}</span></>
-                  : <>Assigning to: <span className="font-medium text-charcoal-deep">{org.name}</span></>}
+                Assigning to: <span className="font-medium text-charcoal-deep">{org.name}</span>
               </CardDescription>
             </div>
             <button
@@ -574,15 +679,17 @@ function SuperAdminOrgView() {
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
                       <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAssignOrgTarget(org)}
-                        className="text-xs px-2 py-1 h-auto"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        {org.admin_email ? 'Switch Admin' : 'Assign Admin'}
-                      </Button>
+                      {!org.admin_email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAssignOrgTarget(org)}
+                          className="text-xs px-2 py-1 h-auto"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          Assign Admin
+                        </Button>
+                      )}
                       <button
                         onClick={() => setExpanded(expanded === org.id ? null : org.id)}
                         className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"

@@ -733,6 +733,19 @@ export const orgApi = {
       { method: 'POST', body: JSON.stringify(data) }
     ),
 
+  /** Admin: add another admin to the same organisation */
+  addOrgAdmin: (data: { email: string; first_name?: string; last_name?: string }) =>
+    apiFetch<{ user_id: string; email: string; org_id: string; account_created: boolean }>(
+      '/organizations/mine/admins',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+
+  /** List all admins in my organisation */
+  listOrgAdmins: () =>
+    apiFetch<{ user_id: string; email: string; first_name: string | null; last_name: string | null }[]>(
+      '/organizations/mine/admins'
+    ),
+
   /** Admin: list all doctor invites */
   listDoctorInvites: () =>
     apiFetch<DoctorInviteOut[]>('/organizations/mine/doctor-invites'),
