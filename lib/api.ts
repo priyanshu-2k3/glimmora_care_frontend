@@ -915,6 +915,24 @@ export const adminApi = {
       },
     ),
 
+  /** Super admin: detach the currently assigned admin from an organisation */
+  removeOrgAdmin: (orgId: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/organizations/${orgId}/remove-admin`, { method: 'POST' }),
+
+  /** Super admin: update org details */
+  updateOrg: (orgId: string, data: Partial<{ name: string; address: string; phone: string; website: string }>) =>
+    apiFetch<{ id: string; name: string; admin_id: string; address: string | null; phone: string | null; website: string | null }>(
+      `/admin/organizations/${orgId}`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+    ),
+
+  /** Super admin: delete an organisation (refuses if linked users exist; pass force=true to detach and delete) */
+  deleteOrg: (orgId: string, force = false) =>
+    apiFetch<{ ok: boolean; force: boolean; linked_users_detached: number }>(
+      `/admin/organizations/${orgId}${force ? '?force=true' : ''}`,
+      { method: 'DELETE' },
+    ),
+
   /** Admin: list all consent records platform-wide */
   listConsents: (params: { status?: string; patient_email?: string; requester_email?: string } = {}) => {
     const q = new URLSearchParams()

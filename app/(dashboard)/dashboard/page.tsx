@@ -6,6 +6,7 @@ import {
   Building2, ClipboardList,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -748,14 +749,21 @@ function SuperAdminView({ userName }: { userName: string }) {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const router = useRouter()
+  // Super admin manages the platform from /admin — there's no separate
+  // personal dashboard for them. Redirect once we know the role.
+  useEffect(() => {
+    if (user?.role === 'super_admin') router.replace('/admin')
+  }, [user?.role, router])
+
   if (!user) return null
+  if (user.role === 'super_admin') return null
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in">
       {user.role === 'patient'     && <PatientView userName={user.name} />}
       {user.role === 'doctor'      && <DoctorView  userName={user.name} />}
       {user.role === 'admin'       && <AdminView userName={user.name} />}
-      {user.role === 'super_admin' && <SuperAdminView userName={user.name} />}
     </div>
   )
 }

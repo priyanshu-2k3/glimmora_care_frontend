@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, ChevronUp, UserCheck, X } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, ChevronUp, UserCheck, UserMinus, Trash2, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -473,6 +473,11 @@ function SuperAdminOrgView() {
   // Assign admin state
   const [assignOrgTarget, setAssignOrgTarget] = useState<AdminOrgItem | null>(null)
 
+  // Edit / delete / remove-admin
+  const [editTarget, setEditTarget] = useState<AdminOrgItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminOrgItem | null>(null)
+  const [removeAdminTargetId, setRemoveAdminTargetId] = useState<string | null>(null)
+
   function loadOrgs() {
     return adminApi.listAllOrgs()
       .then((data) => setOrgs(data))
@@ -521,6 +526,17 @@ function SuperAdminOrgView() {
   function handleAssignSuccess(updatedOrg: AdminOrgItem) {
     setOrgs((prev) => prev.map((o) => o.id === updatedOrg.id ? updatedOrg : o))
     setAssignOrgTarget(null)
+    // Re-fetch from server so admin_email reflects the actual assigned admin
+    loadOrgs()
+  }
+
+  async function handleRemoveAdmin(orgId: string) {
+    setRemoveAdminTargetId(orgId)
+    try {
+      await adminApi.removeOrgAdmin(orgId)
+      await loadOrgs()
+    } catch { /* ignore */ }
+    setRemoveAdminTargetId(null)
   }
 
   if (loading) {
@@ -538,6 +554,28 @@ function SuperAdminOrgView() {
           org={assignOrgTarget}
           onClose={() => setAssignOrgTarget(null)}
           onSuccess={handleAssignSuccess}
+        />
+      )}
+
+      {editTarget && (
+        <EditOrgModal
+          org={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={(updated) => {
+            setOrgs((prev) => prev.map((o) => o.id === updated.id ? { ...o, ...updated } : o))
+            setEditTarget(null)
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteOrgModal
+          org={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setOrgs((prev) => prev.filter((o) => o.id !== deleteTarget.id))
+            setDeleteTarget(null)
+          }}
         />
       )}
 
@@ -583,14 +621,14 @@ function SuperAdminOrgView() {
         </button>
 
         {showCreateForm && (
-          <div className="border-t border-sand-light px-5 pb-5 pt-4">
+          <div className="border-t border-sand-light px-5 pb-5 pt-4 bg-white text-charcoal-deep">
             {createSuccess ? (
               <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
                 <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
                 <p className="text-xs font-body text-success-DEFAULT">Organisation created successfully.</p>
               </div>
             ) : (
-              <form onSubmit={handleCreateOrg} className="space-y-4">
+              <form onSubmit={handleCreateOrg} className="space-y-4 [&_label]:text-charcoal-deep [&_label]:font-semibold">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Organisation Name *"
@@ -676,10 +714,10 @@ function SuperAdminOrgView() {
                         {org.address && <p className="text-xs text-greige">{org.address}</p>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                       <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
                       <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
-                      {!org.admin_email && (
+                      {!org.admin_email ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -689,7 +727,33 @@ function SuperAdminOrgView() {
                           <UserCheck className="w-3.5 h-3.5" />
                           Assign Admin
                         </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          isLoading={removeAdminTargetId === org.id}
+                          onClick={() => handleRemoveAdmin(org.id)}
+                          className="text-xs px-2 py-1 h-auto text-error-DEFAULT border-error-DEFAULT/30 hover:bg-error-soft"
+                          title="Detach the current admin"
+                        >
+                          <UserMinus className="w-3.5 h-3.5" />
+                          Remove Admin
+                        </Button>
                       )}
+                      <button
+                        onClick={() => setEditTarget(org)}
+                        className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"
+                        title="Edit organisation"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(org)}
+                        className="p-1.5 rounded-lg text-greige hover:text-error-DEFAULT hover:bg-error-soft transition-colors"
+                        title="Delete organisation"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => setExpanded(expanded === org.id ? null : org.id)}
                         className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors"
@@ -796,6 +860,185 @@ function DoctorOrgView() {
               })}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Edit Org modal (super admin) ─────────────────────────────────────────────
+function EditOrgModal({
+  org,
+  onClose,
+  onSaved,
+}: {
+  org: AdminOrgItem
+  onClose: () => void
+  onSaved: (updated: AdminOrgItem) => void
+}) {
+  const [name, setName] = useState(org.name)
+  const [address, setAddress] = useState(org.address ?? '')
+  const [phone, setPhone] = useState(org.phone ?? '')
+  const [website, setWebsite] = useState(org.website ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true); setError(null)
+    try {
+      const updated = await adminApi.updateOrg(org.id, {
+        name: name.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
+        website: website.trim(),
+      })
+      onSaved({ ...org, ...updated })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to update organisation.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={onClose} />
+      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="font-body text-base flex items-center gap-2 text-charcoal-deep">
+                <Edit2 className="w-4 h-4 text-gold-soft" />
+                Edit Organisation
+              </CardTitle>
+              <CardDescription className="mt-0.5">
+                Updating <span className="font-medium text-charcoal-deep">{org.name}</span>
+              </CardDescription>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-3">
+            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <Input label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input label="Website" type="url" value={website} onChange={(e) => setWebsite(e.target.value)} />
+            {error && (
+              <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+                <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+              <Button type="submit" size="sm" isLoading={saving}>
+                <Save className="w-3.5 h-3.5" />
+                Save
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Delete Org modal (super admin) ───────────────────────────────────────────
+function DeleteOrgModal({
+  org,
+  onClose,
+  onDeleted,
+}: {
+  org: AdminOrgItem
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const hasLinked = (org.doctor_count + org.patient_count) > 0
+  const [confirmText, setConfirmText] = useState('')
+  const [force, setForce] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    setDeleting(true); setError(null)
+    try {
+      await adminApi.deleteOrg(org.id, force)
+      onDeleted()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'Failed to delete organisation.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const canDelete = confirmText.trim().toLowerCase() === org.name.toLowerCase() && (!hasLinked || force)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={onClose} />
+      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white border-error-DEFAULT/30">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="font-body text-base flex items-center gap-2 text-error-DEFAULT">
+                <Trash2 className="w-4 h-4" />
+                Delete Organisation
+              </CardTitle>
+              <CardDescription className="mt-0.5">
+                This permanently deletes <span className="font-medium text-charcoal-deep">{org.name}</span>.
+              </CardDescription>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="bg-error-soft/40 border border-error-DEFAULT/20 rounded-xl p-3 space-y-1">
+            <p className="text-xs font-body text-charcoal-deep">
+              <span className="font-semibold">{org.doctor_count}</span> doctor(s) ·{' '}
+              <span className="font-semibold">{org.patient_count}</span> patient assignment(s) linked.
+            </p>
+            {hasLinked && (
+              <p className="text-xs text-error-DEFAULT font-body">
+                Reassign them first, or check "Force detach" to clear their org links and downgrade admins to patients.
+              </p>
+            )}
+          </div>
+
+          {hasLinked && (
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} className="mt-0.5" />
+              <span className="text-xs font-body text-charcoal-deep">
+                Force detach all linked users and delete anyway.
+              </span>
+            </label>
+          )}
+
+          <Input
+            label={`Type "${org.name}" to confirm`}
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+          />
+
+          {error && (
+            <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
+              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="danger" size="sm" isLoading={deleting} disabled={!canDelete} onClick={handleDelete}>
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete{force ? ' (forced)' : ''}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
