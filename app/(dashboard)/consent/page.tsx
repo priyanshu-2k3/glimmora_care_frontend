@@ -6,7 +6,7 @@ import {
   Shield, Clock, History, AlertCircle, Check, Users, ArrowRight,
   Search, Filter, Plus, Trash2, UserPlus, ChevronDown,
 } from 'lucide-react'
-import { consentApi, adminApi, orgApi, type ConsentRequest, type DoctorOut, type PatientOut, type AdminDoctorOut, type AdminPatientOut } from '@/lib/api'
+import { consentApi, adminApi, orgApi, familyApi, type ConsentRequest, type DoctorOut, type PatientOut, type AdminDoctorOut, type AdminPatientOut, type ManageableMember } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -507,10 +507,16 @@ function DoctorConsentView() {
 
 // ─── Patient view ──────────────────────────────────────────────────────────────
 function PatientConsentView() {
+  const { user } = useAuth()
   const [pending, setPending] = useState<ConsentRequest[]>([])
   const [active, setActive] = useState<ConsentRequest[]>([])
   const [history, setHistory] = useState<ConsentRequest[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Acting-for selector (for family owners)
+  const [manageableMembers, setManageableMembers] = useState<ManageableMember[]>([])
+  const [actingFor, setActingFor] = useState<string>('') // '' = self, else subject_id
+  const isOwnerActing = !!actingFor
 
   // Grant direct panel
   const [doctors, setDoctors] = useState<DoctorOut[]>([])
@@ -524,24 +530,37 @@ function PatientConsentView() {
   const [revokeReason, setRevokeReason] = useState('')
   const [revoking, setRevoking] = useState(false)
 
+  // Load manageable members once (only relevant if user is a family owner)
+  useEffect(() => {
+    familyApi.listManageableMembers().then(setManageableMembers).catch(() => {})
+  }, [])
+
   useEffect(() => {
     let alive = true
     async function load() {
       try {
-        const [p, a, h, docs] = await Promise.all([
-          consentApi.getIncoming(),
-          consentApi.getActive(),
-          consentApi.getHistory(),
-          orgApi.listDoctorsForConsent(),
-        ])
-        if (alive) { setPending(p); setActive(a); setHistory(h); setDoctors(docs) }
+        const docs = await orgApi.listDoctorsForConsent()
+        if (isOwnerActing) {
+          const [p, a] = await Promise.all([
+            consentApi.getSubjectIncoming(actingFor),
+            consentApi.getSubjectActive(actingFor),
+          ])
+          if (alive) { setPending(p); setActive(a); setHistory([]); setDoctors(docs) }
+        } else {
+          const [p, a, h] = await Promise.all([
+            consentApi.getIncoming(),
+            consentApi.getActive(),
+            consentApi.getHistory(),
+          ])
+          if (alive) { setPending(p); setActive(a); setHistory(h); setDoctors(docs) }
+        }
       } finally {
         if (alive) setLoading(false)
       }
     }
     load()
     return () => { alive = false }
-  }, [])
+  }, [actingFor, isOwnerActing])
 
   function toggleScope(s: string) {
     setGrantScopes((prev) =>
@@ -554,7 +573,9 @@ function PatientConsentView() {
     setGrantLoading(true)
     setGrantMsg(null)
     try {
-      const result = await consentApi.grantDirect(grantDoctorEmail, grantScopes)
+      const result = isOwnerActing
+        ? await consentApi.ownerGrantDirect(actingFor, grantDoctorEmail, grantScopes)
+        : await consentApi.grantDirect(grantDoctorEmail, grantScopes)
       setActive((prev) => [result, ...prev])
       setGrantMsg({ ok: true, text: 'Access granted successfully.' })
       setGrantDoctorEmail('')
@@ -570,7 +591,11 @@ function PatientConsentView() {
     if (!revokeReason.trim()) return
     setRevoking(true)
     try {
-      await consentApi.revoke(id, revokeReason)
+      if (isOwnerActing) {
+        await consentApi.ownerRevoke(id, actingFor, revokeReason)
+      } else {
+        await consentApi.revoke(id, revokeReason)
+      }
       setActive((prev) => prev.filter((c) => c.id !== id))
       setRevokeId(null)
       setRevokeReason('')
@@ -579,12 +604,50 @@ function PatientConsentView() {
     }
   }
 
+  const eligibleMembers = manageableMembers.filter((m) => m.allow_owner_actions)
+  const isFamilyOwner = manageableMembers.length > 0
+  const subjectMember = eligibleMembers.find((m) => m.user_id === actingFor)
+  const subjectName = subjectMember
+    ? `${subjectMember.first_name ?? ''} ${subjectMember.last_name ?? ''}`.trim() || subjectMember.email || 'Member'
+    : 'Self'
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Consent Management</h1>
-        <p className="text-sm text-greige font-body mt-1">Control who can access your health records and for how long</p>
+        <p className="text-sm text-greige font-body mt-1">
+          {isOwnerActing
+            ? <>Acting on behalf of <span className="font-semibold text-charcoal-deep">{subjectName}</span> as family owner.</>
+            : 'Control who can access your health records and for how long'}
+        </p>
       </div>
+
+      {/* Acting-for selector — visible to family owners */}
+      {isFamilyOwner && (
+        <Card className="border-gold-soft/40">
+          <CardContent className="p-4">
+            <label className="text-[11px] text-greige font-body block mb-1">Acting for</label>
+            <select
+              value={actingFor}
+              onChange={(e) => setActingFor(e.target.value)}
+              className="w-full text-sm border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            >
+              <option value="">Self ({user?.email})</option>
+              {manageableMembers.map((m) => {
+                const name = `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.user_id
+                return (
+                  <option key={m.user_id} value={m.user_id} disabled={!m.allow_owner_actions}>
+                    {name}{m.email ? ` (${m.email})` : ''}{!m.allow_owner_actions ? ' — opted out' : ''}
+                  </option>
+                )
+              })}
+            </select>
+            {isOwnerActing && (
+              <p className="text-[11px] text-greige font-body mt-2">All actions below will be performed for this member and audited under your name.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -707,6 +770,9 @@ function PatientConsentView() {
                       Since {formatDate(consent.requested_at)} · {consent.scope.length} permission{consent.scope.length !== 1 ? 's' : ''}
                       {consent.expires_at && ` · Expires ${formatDate(consent.expires_at)}`}
                     </p>
+                    {consent.acted_by_owner_name && (
+                      <p className="text-[11px] text-gold-deep font-body mt-0.5">Approved by {consent.acted_by_owner_name} (family owner)</p>
+                    )}
                   </div>
                   <Badge variant="success">Active</Badge>
                 </div>
