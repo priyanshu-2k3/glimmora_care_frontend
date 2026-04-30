@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  Upload, Shield, Brain, Activity, Users,
+  Upload, Shield, Activity, Users,
   AlertTriangle, CheckCircle, FileText, ArrowUpRight, ShieldAlert,
   Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail,
 } from 'lucide-react'
@@ -519,10 +519,10 @@ function DoctorView({ userName }: { userName: string }) {
 // ─── Admin view ───────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { href: '/intake',       icon: Upload,   label: 'Upload Health Records', sub: 'Add new patient data',      color: C.ocean  },
-  { href: '/vault',        icon: Shield,   label: 'Health Vault',          sub: 'Browse all records',        color: C.teal   },
-  { href: '/intelligence', icon: Brain,    label: 'AGI Intelligence',      sub: 'Risk trends & insights',    color: C.violet },
-  { href: '/agents',       icon: Activity, label: 'Agent Dashboard',       sub: 'Monitor autonomous agents', color: C.amber  },
+  { href: '/vault',                 icon: Shield,    label: 'Health Vault',     sub: 'Browse organisation records', color: C.teal   },
+  { href: '/admin/manage-team',     icon: Users,     label: 'Manage Team',      sub: 'Doctors and team members',    color: C.ocean  },
+  { href: '/admin/doctor-management', icon: UserPlus, label: 'Doctor Management', sub: 'Assign, share, consents',  color: C.violet },
+  { href: '/admin/logs',            icon: FileText,  label: 'Audit Logs',       sub: 'Org activity history',        color: C.amber  },
 ]
 
 function AdminView({ userName }: { userName: string }) {

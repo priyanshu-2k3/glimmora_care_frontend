@@ -41,7 +41,7 @@ export const NAV_ITEMS = [
     href: '/vault',
     label: 'Health Vault',
     icon: 'Shield',
-    roles: ['patient', 'doctor'] as Role[],
+    roles: ['patient', 'doctor', 'admin'] as Role[],
   },
   {
     href: '/intake',

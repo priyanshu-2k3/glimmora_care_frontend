@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Stethoscope, Send, Building2, MapPin, Clock, CheckCircle, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -43,13 +43,12 @@ export default function AssignDoctorPage() {
   const [pending, setPending] = useState<MockDoctor[]>([])
   const [toast, setToast] = useState<string | null>(null)
 
-  // Admin role retains the legacy redirect behaviour
-  if (user?.role === 'admin' || user?.role === 'super_admin') {
-    if (typeof window !== 'undefined') {
+  // Admin role retains the legacy redirect behaviour — run in effect, not in render
+  useEffect(() => {
+    if (user?.role === 'admin' || user?.role === 'super_admin') {
       router.replace('/admin/doctor-management/assign')
     }
-    return null
-  }
+  }, [user?.role, router])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
