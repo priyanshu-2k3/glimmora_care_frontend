@@ -12,7 +12,7 @@ const variants: Record<BadgeVariant, string> = {
   gold: 'bg-champagne text-gold-deep border-gold-soft/50',
   success: 'bg-success-soft/50 text-success-DEFAULT border-success-DEFAULT/50',
   warning: 'bg-warning-soft/60 text-warning-DEFAULT border-warning-DEFAULT/50',
-  error: 'bg-error-soft/50 text-error-DEFAULT border-error-DEFAULT/50',
+  error: 'bg-error-soft/50 text-[#B91C1C] border-[#DC2626]/50',
   info: 'bg-azure-whisper text-sapphire-deep border-sapphire-mist/50',
   dark: 'bg-charcoal-deep text-ivory-cream border-charcoal-deep',
 }

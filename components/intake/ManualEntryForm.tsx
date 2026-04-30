@@ -325,7 +325,7 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
                   'mt-1.5 p-1.5 rounded-lg transition-colors',
                   rows.length === 1
                     ? 'text-greige cursor-not-allowed'
-                    : 'text-stone hover:text-error-DEFAULT hover:bg-error-soft'
+                    : 'text-stone hover:text-[#B91C1C] hover:bg-error-soft'
                 )}
               >
                 <Trash2 className="w-4 h-4" />
@@ -347,7 +347,7 @@ export function ManualEntryForm({ patientId, onSuccess }: ManualEntryFormProps) 
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-error-DEFAULT font-body">{error}</p>
+        <p className="text-xs text-[#B91C1C] font-body">{error}</p>
       )}
 
       {/* Save gate hint */}

@@ -107,7 +107,7 @@ export function SessionManagementTable() {
                 <p className="text-[11px] text-greige mt-1">{formatLastActive(session.last_active ?? session.created_at)}</p>
               </div>
               {!session.is_current && (
-                <button onClick={() => revokeSession(session.id)} className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors shrink-0" title="Revoke session">
+                <button onClick={() => revokeSession(session.id)} className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors shrink-0" title="Revoke session">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}

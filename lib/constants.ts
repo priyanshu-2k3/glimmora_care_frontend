@@ -174,21 +174,27 @@ export const NAV_ITEMS = [
 
   /* ── Super Admin only ─── */
   {
-    href: '/manage-users',
+    href: '/admin/organizations',
+    label: 'Organisations',
+    icon: 'Building2',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/admin/users',
     label: 'Manage Users',
     icon: 'Users',
     roles: ['super_admin'] as Role[],
   },
   {
-    href: '/admin/doctor-management',
-    label: 'All Patients',
-    icon: 'UserCheck',
+    href: '/admin/doctors',
+    label: 'Manage Doctors',
+    icon: 'Stethoscope',
     roles: ['super_admin'] as Role[],
   },
   {
-    href: '/admin/manage-team',
-    label: 'All Doctors',
-    icon: 'Stethoscope',
+    href: '/admin/patients',
+    label: 'Manage Patients',
+    icon: 'UserCheck',
     roles: ['super_admin'] as Role[],
   },
 ]

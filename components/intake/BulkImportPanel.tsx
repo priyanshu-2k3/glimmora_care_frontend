@@ -173,13 +173,7 @@ export function BulkImportPanel() {
           </div>
 
           {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 px-4 py-3 bg-error/70 border border-error-DEFAULT/40 rounded-xl"
-            >
-              <AlertCircle className="w-4 h-4 text-ivory-cream shrink-0 mt-0.5" />
-              <p className="text-xs font-body text-ivory-cream font-medium">{error}</p>
-            </div>
+            <p className="text-xs text-[#B91C1C] font-body">{error}</p>
           )}
 
           {isLoading && (
@@ -238,7 +232,7 @@ export function BulkImportPanel() {
                         </span>
                       ) : (
                         <span
-                          className="flex items-center gap-1 text-error-DEFAULT"
+                          className="flex items-center gap-1 text-[#B91C1C]"
                           title={row.error ?? 'Invalid row'}
                         >
                           <AlertCircle className="w-3.5 h-3.5" />
@@ -255,7 +249,7 @@ export function BulkImportPanel() {
           {preview.errors.length > 0 && (
             <ul className="space-y-1">
               {preview.errors.map((e, i) => (
-                <li key={i} className="text-xs text-error-DEFAULT font-body">
+                <li key={i} className="text-xs text-[#B91C1C] font-body">
                   {e}
                 </li>
               ))}
@@ -263,7 +257,7 @@ export function BulkImportPanel() {
           )}
 
           {error && (
-            <p className="text-xs text-error-DEFAULT font-body">{error}</p>
+            <p className="text-xs text-[#B91C1C] font-body">{error}</p>
           )}
 
           <div className="flex gap-3">
@@ -295,7 +289,7 @@ export function BulkImportPanel() {
             <p className="text-sm text-stone font-body mt-1">
               <span className="font-semibold text-charcoal-deep">{importedCount}</span> records imported
               {failedCount > 0 && (
-                <span className="text-error-DEFAULT">
+                <span className="text-[#B91C1C]">
                   {' '}· {failedCount} failed
                 </span>
               )}

@@ -346,7 +346,7 @@ export default function IntakePage() {
                   />
                   <div className="mt-6 pt-4 border-t border-sand-light flex gap-3 flex-col">
                     {saveError && (
-                      <p className="text-xs text-error-DEFAULT font-body">{saveError}</p>
+                      <p className="text-xs text-[#B91C1C] font-body">{saveError}</p>
                     )}
                     {isSaved ? (
                       <div className="flex items-center gap-2.5 text-sm font-body text-charcoal-deep">

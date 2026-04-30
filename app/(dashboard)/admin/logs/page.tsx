@@ -17,7 +17,7 @@ const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
 }
 
 const SEVERITY_DOT: Record<string, string> = {
-  critical: 'bg-error-DEFAULT',
+  critical: 'bg-[#DC2626]',
   warning: 'bg-warning-DEFAULT',
   info: 'bg-success-DEFAULT',
 }
@@ -88,9 +88,9 @@ export default function AdminLogsPage() {
         {loading ? (
           <p className="text-sm text-greige font-body">Loading logs...</p>
         ) : error ? (
-          <div className="flex items-center gap-3 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-4">
-            <AlertCircle className="w-5 h-5 text-error-DEFAULT shrink-0" />
-            <p className="text-sm font-body text-error-DEFAULT">{error}</p>
+          <div className="flex items-center gap-3 bg-error-soft border border-[#DC2626]/20 rounded-xl p-4">
+            <AlertCircle className="w-5 h-5 text-[#B91C1C] shrink-0" />
+            <p className="text-sm font-body text-[#B91C1C]">{error}</p>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={ClipboardList} title="No logs found" description="Actions will appear here once admins perform operations." />

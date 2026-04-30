@@ -130,9 +130,9 @@ function UserRow({ u, currentUserId, onUpdated, onDeleted }: UserRowProps) {
           {showActions && !isSelf && (
             <div className="pt-2 border-t border-sand-light space-y-3">
               {error && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-2.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-error-DEFAULT shrink-0" />
-                  <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+                <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-2.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-[#B91C1C] shrink-0" />
+                  <p className="text-xs font-body text-[#B91C1C]">{error}</p>
                 </div>
               )}
               {success && (
@@ -167,7 +167,7 @@ function UserRow({ u, currentUserId, onUpdated, onDeleted }: UserRowProps) {
                       size="sm"
                       onClick={handleDelete}
                       isLoading={deleting}
-                      className="bg-error-DEFAULT text-white border-0 hover:opacity-90"
+                      className="bg-[#DC2626] text-white border-0 hover:opacity-90"
                     >
                       Confirm Delete
                     </Button>
@@ -177,7 +177,7 @@ function UserRow({ u, currentUserId, onUpdated, onDeleted }: UserRowProps) {
                     size="sm"
                     variant="ghost"
                     onClick={handleDelete}
-                    className="text-error-DEFAULT hover:bg-error-soft"
+                    className="text-[#B91C1C] hover:bg-error-soft"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete
@@ -285,9 +285,9 @@ export default function ManageUsersPage() {
 
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-            <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-            <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+          <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+            <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+            <p className="text-xs font-body text-[#B91C1C]">{error}</p>
           </div>
         )}
 

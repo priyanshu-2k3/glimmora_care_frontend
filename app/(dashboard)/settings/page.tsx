@@ -330,9 +330,9 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {profileError && (
-                    <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                      <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                      <p className="text-xs font-body text-error-DEFAULT">{profileError}</p>
+                    <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                      <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                      <p className="text-xs font-body text-[#B91C1C]">{profileError}</p>
                     </div>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -473,9 +473,9 @@ export default function SettingsPage() {
                       Change Password
                     </p>
                     {pwError && (
-                      <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-3">
-                        <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                        <p className="text-xs font-body text-error-DEFAULT">{pwError}</p>
+                      <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3 mb-3">
+                        <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                        <p className="text-xs font-body text-[#B91C1C]">{pwError}</p>
                       </div>
                     )}
                     {pwSuccess && (
@@ -653,9 +653,9 @@ export default function SettingsPage() {
                       >
                         {/* Deleting overlay banner */}
                         {isDeleting && (
-                          <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-xl bg-error-soft/80 border border-error-DEFAULT/30 z-10">
-                            <Loader2 className="w-5 h-5 text-error-DEFAULT animate-spin shrink-0" />
-                            <span className="text-sm font-body font-semibold text-error-DEFAULT">Deleting session…</span>
+                          <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-xl bg-error-soft/80 border border-[#DC2626]/30 z-10">
+                            <Loader2 className="w-5 h-5 text-[#B91C1C] animate-spin shrink-0" />
+                            <span className="text-sm font-body font-semibold text-[#B91C1C]">Deleting session…</span>
                           </div>
                         )}
 
@@ -679,7 +679,7 @@ export default function SettingsPage() {
                           <button
                             onClick={() => revokeSession(session.id)}
                             disabled={isDeleting || deletingSessionId !== null}
-                            className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                             title={isDeleting ? 'Deleting…' : 'Revoke session'}
                           >
                             <Trash2 className="w-4 h-4" />

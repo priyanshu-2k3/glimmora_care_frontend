@@ -30,7 +30,7 @@ function JoinOrgContent() {
   if (!token) {
     return (
       <Card className="shadow-lg text-center">
-        <AlertCircle className="w-12 h-12 text-error-DEFAULT mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-[#B91C1C] mx-auto mb-4" />
         <h2 className="font-display text-xl text-charcoal-deep mb-2">Invalid Link</h2>
         <p className="text-sm text-greige font-body mb-6">No invite token was found in this link.</p>
         <Button onClick={() => router.push('/login')} className="w-full">Go to Login</Button>
@@ -99,9 +99,9 @@ function JoinOrgContent() {
       )}
 
       {error && (
-        <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
-          <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+        <div className="flex items-start gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3 mb-4">
+          <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-[#B91C1C]">{error}</p>
         </div>
       )}
 

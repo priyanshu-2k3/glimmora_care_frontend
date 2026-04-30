@@ -221,7 +221,7 @@ export default function PopulationPage() {
                             <Badge
                               variant={m.hemoglobinAvg < 10 ? 'error' : m.hemoglobinAvg < 11 ? 'warning' : 'success'}
                               className={m.hemoglobinAvg < 10
-                                ? 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm'
+                                ? 'bg-error-soft text-[#B91C1C] border-[#DC2626] font-semibold shadow-sm'
                                 : m.hemoglobinAvg < 11
                                 ? 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm'
                                 : 'bg-success-soft text-success-DEFAULT border-success-DEFAULT font-semibold shadow-sm'

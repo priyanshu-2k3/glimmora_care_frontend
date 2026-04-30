@@ -71,9 +71,9 @@ export function ConsentManager() {
 
       {actionMsg && (
         <div className={`flex items-center gap-2 rounded-xl p-3 border ${
-          actionMsg.type === 'success' ? 'bg-success-soft border-success-DEFAULT/20' : 'bg-error-soft border-error-DEFAULT/20'
+          actionMsg.type === 'success' ? 'bg-success-soft border-success-DEFAULT/20' : 'bg-error-soft border-[#DC2626]/20'
         }`}>
-          <p className={`text-xs font-body ${actionMsg.type === 'success' ? 'text-success-DEFAULT' : 'text-error-DEFAULT'}`}>
+          <p className={`text-xs font-body ${actionMsg.type === 'success' ? 'text-success-DEFAULT' : 'text-[#B91C1C]'}`}>
             {actionMsg.text}
           </p>
         </div>

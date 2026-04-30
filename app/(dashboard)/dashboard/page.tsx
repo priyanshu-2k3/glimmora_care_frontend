@@ -496,45 +496,25 @@ function AdminView({ userName }: { userName: string }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Panel>
-          <PanelHeader title="Quick Actions" sub="Navigate to key areas" />
-          <div className="px-5 pb-5 space-y-2">
-            {QUICK_ACTIONS.map((action) => (
-              <Link key={action.href} href={action.href}>
-                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory-cream transition-colors group">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: action.color.bg }}>
-                    <action.icon className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-body font-semibold text-charcoal-deep">{action.label}</p>
-                    <p className="text-[10px] text-greige">{action.sub}</p>
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-greige opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Panel>
+        <PanelHeader title="Quick Actions" sub="Navigate to key areas" />
+        <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {QUICK_ACTIONS.map((action) => (
+            <Link key={action.href} href={action.href}>
+              <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory-cream transition-colors group border border-sand-light">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: action.color.bg }}>
+                  <action.icon className="w-4 h-4 text-white" />
                 </div>
-              </Link>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel className="lg:col-span-2">
-          <PanelHeader title="Platform Summary" sub="Users & assignments across the system" />
-          <div className="px-5 pb-5 grid grid-cols-2 gap-4">
-            {[
-              { label: 'Total Users',       value: stats?.total_users ?? '—',        color: C.ocean.bg },
-              { label: 'Total Assignments', value: stats?.total_assignments ?? '—',  color: C.teal.bg },
-              { label: 'Total Admins',      value: stats?.total_admins ?? '—',       color: C.violet.bg },
-              { label: 'Organisations',     value: stats?.total_organizations ?? '—', color: C.emerald.bg },
-            ].map((item) => (
-              <div key={item.label} className="p-4 rounded-xl border border-sand-light">
-                <p className="text-2xl font-body font-bold text-charcoal-deep">{loading ? '—' : item.value}</p>
-                <p className="text-[11px] text-greige font-body mt-1">{item.label}</p>
-                <div className="mt-2 h-0.5 rounded-full w-8" style={{ background: item.color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-body font-semibold text-charcoal-deep">{action.label}</p>
+                  <p className="text-[10px] text-greige">{action.sub}</p>
+                </div>
+                <ArrowUpRight className="w-3.5 h-3.5 text-greige opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
+            </Link>
+          ))}
+        </div>
+      </Panel>
     </div>
   )
 }
@@ -658,7 +638,7 @@ function SuperAdminView({ userName }: { userName: string }) {
               </button>
             </form>
             {createMsg && <p className="text-[11px] text-success-DEFAULT mt-1">{createMsg}</p>}
-            {createError && <p className="text-[11px] text-error-DEFAULT mt-1">{createError}</p>}
+            {createError && <p className="text-[11px] text-[#B91C1C] mt-1">{createError}</p>}
           </div>
         </Panel>
 

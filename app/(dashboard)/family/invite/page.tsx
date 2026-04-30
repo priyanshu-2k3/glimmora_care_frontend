@@ -195,8 +195,8 @@ export default function FamilyInvitePage() {
           </Card>
 
           {inviteError && (
-            <div className="flex items-center gap-2 bg-error/70 border border-error-DEFAULT/40 rounded-xl p-3">
-              <p className="text-xs font-body text-ivory-cream font-medium">{inviteError}</p>
+            <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+              <p className="text-xs font-body text-[#B91C1C]">{inviteError}</p>
             </div>
           )}
 

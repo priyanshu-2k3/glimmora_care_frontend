@@ -125,7 +125,7 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
               {f.status === 'done'
                 ? <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
                 : (
-                  <button onClick={() => removeFile(f.id)} className="text-greige hover:text-error-DEFAULT transition-colors shrink-0">
+                  <button onClick={() => removeFile(f.id)} className="text-greige hover:text-[#B91C1C] transition-colors shrink-0">
                     <X className="w-4 h-4" />
                   </button>
                 )

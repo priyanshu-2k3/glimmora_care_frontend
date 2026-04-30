@@ -77,9 +77,9 @@ export default function ForgotPasswordPage() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
-              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            <div className="flex items-start gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3 mb-4">
+              <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
             </div>
           )}
 
@@ -117,9 +117,9 @@ export default function ForgotPasswordPage() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3 mb-4">
-              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            <div className="flex items-start gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3 mb-4">
+              <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
             </div>
           )}
 

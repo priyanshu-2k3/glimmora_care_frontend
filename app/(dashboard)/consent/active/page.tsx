@@ -155,7 +155,7 @@ export default function ActiveConsentsPage() {
                       <button
                         onClick={() => handleRevoke(consent.id)}
                         disabled={revoking || !revokeReason.trim()}
-                        className="text-xs px-3 py-2 rounded-lg bg-error/70 text-error-DEFAULT font-body disabled:opacity-50"
+                        className="text-xs px-3 py-2 rounded-lg bg-error-soft text-[#B91C1C] font-body disabled:opacity-50"
                       >
                         {revoking ? 'Revoking…' : 'Confirm'}
                       </button>

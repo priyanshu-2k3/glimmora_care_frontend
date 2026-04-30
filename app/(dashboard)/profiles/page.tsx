@@ -114,7 +114,7 @@ export default function ProfilesPage() {
                   {!isActive && profile.relation !== 'self' && (
                     <button
                       onClick={() => deleteProfile(profile.id)}
-                      className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                      className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

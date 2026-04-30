@@ -754,11 +754,18 @@ export const orgApi = {
   listDoctors: () =>
     apiFetch<DoctorOut[]>('/organizations/mine/doctors'),
 
-  /** Admin: assign a patient to a doctor */
+  /** Admin: assign a patient to a doctor (by id or email) */
   assignPatient: (patientId: string, doctorId: string) =>
     apiFetch<AssignmentOut>('/organizations/mine/assign-patient', {
       method: 'POST',
       body: JSON.stringify({ patient_id: patientId, doctor_id: doctorId }),
+    }),
+
+  /** Admin: assign a patient to a doctor using their email addresses */
+  assignPatientByEmail: (patientEmail: string, doctorEmail: string) =>
+    apiFetch<AssignmentOut>('/organizations/mine/assign-patient', {
+      method: 'POST',
+      body: JSON.stringify({ patient_email: patientEmail, doctor_email: doctorEmail }),
     }),
 
   /** Admin: list all patients in org */

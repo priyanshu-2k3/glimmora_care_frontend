@@ -3,35 +3,27 @@
 import { useState } from 'react'
 import { Share2, Check, AlertCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
-import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { DOCTOR_SELECT_OPTIONS } from '@/data/admin-mock'
+import { consentApi } from '@/lib/api'
 
 interface ShareConsentModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-const ACCESS_OPTIONS = [
-  { value: '', label: 'Select access type...' },
-  { value: 'view', label: 'View Only' },
-  { value: 'edit', label: 'Edit' },
-  { value: 'full', label: 'Full Access' },
-]
-
 export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
   const [patientEmail, setPatientEmail] = useState('')
-  const [doctorId, setDoctorId] = useState('')
-  const [accessType, setAccessType] = useState('')
+  const [doctorEmail, setDoctorEmail] = useState('')
+  const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
     setPatientEmail('')
-    setDoctorId('')
-    setAccessType('')
+    setDoctorEmail('')
+    setReason('')
     setSuccess(false)
     setError(null)
   }
@@ -43,31 +35,43 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!patientEmail || !doctorId || !accessType) {
-      setError('All fields are required.')
+    const pe = patientEmail.trim().toLowerCase()
+    const de = doctorEmail.trim().toLowerCase()
+    if (!pe || !de) {
+      setError('Patient and doctor email are required.')
       return
     }
     setError(null)
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setSaving(false)
-    setSuccess(true)
-    setTimeout(() => handleClose(), 1500)
+    try {
+      await consentApi.adminRequest(de, pe, reason.trim() || undefined)
+      setSaving(false)
+      setSuccess(true)
+      setTimeout(() => handleClose(), 1500)
+    } catch (err: unknown) {
+      setSaving(false)
+      setError(err instanceof Error ? err.message : 'Failed to share consent.')
+    }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Share Consent" description="Grant a doctor access to a patient's records.">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Share Consent"
+      description="Send a consent request to the patient on behalf of a doctor."
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-            <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-            <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+          <div className="flex items-start gap-2 bg-error-soft border border-[#DC2626]/30 rounded-xl p-3">
+            <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+            <p className="text-xs font-body text-charcoal-deep">{error}</p>
           </div>
         )}
         {success && (
-          <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/30 rounded-xl p-3">
             <Check className="w-4 h-4 text-success-DEFAULT shrink-0" />
-            <p className="text-xs font-body text-success-DEFAULT">Consent shared successfully.</p>
+            <p className="text-xs font-body text-charcoal-deep">Consent request sent.</p>
           </div>
         )}
 
@@ -80,25 +84,27 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
           required
         />
 
-        <Select
-          label="Doctor"
-          options={[{ value: '', label: 'Select doctor...' }, ...DOCTOR_SELECT_OPTIONS]}
-          value={doctorId}
-          onChange={(e) => { setDoctorId(e.target.value); setError(null) }}
+        <Input
+          label="Doctor Email"
+          type="email"
+          placeholder="doctor@example.com"
+          value={doctorEmail}
+          onChange={(e) => { setDoctorEmail(e.target.value); setError(null) }}
+          required
         />
 
-        <Select
-          label="Access Type"
-          options={ACCESS_OPTIONS}
-          value={accessType}
-          onChange={(e) => { setAccessType(e.target.value); setError(null) }}
+        <Input
+          label="Reason (optional)"
+          placeholder="Quarterly review"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
         />
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
           <Button type="submit" isLoading={saving} disabled={saving || success} className="flex-1">
             <Share2 className="w-4 h-4" />
-            {saving ? 'Sharing...' : success ? 'Shared!' : 'Share Consent'}
+            {saving ? 'Sending…' : success ? 'Sent!' : 'Send Request'}
           </Button>
         </div>
       </form>

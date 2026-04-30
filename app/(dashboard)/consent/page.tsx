@@ -167,7 +167,7 @@ function AdminConsentView() {
             className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
           />
           {reqMsg && (
-            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
               {reqMsg.text}
             </p>
           )}
@@ -186,8 +186,8 @@ function AdminConsentView() {
         {[
           { label: 'Pending',  status: 'pending',  color: 'text-warning-DEFAULT', bg: 'bg-warning-soft' },
           { label: 'Active',   status: 'approved', color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
-          { label: 'Revoked',  status: 'revoked',  color: 'text-error-DEFAULT',   bg: 'bg-error-soft'   },
-          { label: 'Rejected', status: 'rejected', color: 'text-error-DEFAULT',   bg: 'bg-error-soft'   },
+          { label: 'Revoked',  status: 'revoked',  color: 'text-[#B91C1C]',   bg: 'bg-error-soft'   },
+          { label: 'Rejected', status: 'rejected', color: 'text-[#B91C1C]',   bg: 'bg-error-soft'   },
           { label: 'Expired',  status: 'expired',  color: 'text-stone',           bg: 'bg-parchment'    },
         ].map((s) => (
           <button
@@ -296,7 +296,7 @@ function AdminConsentView() {
                   <div className="col-span-4 sm:col-span-2">
                     <p className="text-[11px] text-greige font-body">{formatDate(c.requested_at)}</p>
                     {c.revocation_reason && (
-                      <p className="text-[10px] text-error-DEFAULT mt-0.5 truncate" title={c.revocation_reason}>
+                      <p className="text-[10px] text-[#B91C1C] mt-0.5 truncate" title={c.revocation_reason}>
                         {c.revocation_reason}
                       </p>
                     )}
@@ -443,7 +443,7 @@ function DoctorConsentView() {
             className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
           />
           {reqMsg && (
-            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
               {reqMsg.text}
             </p>
           )}
@@ -731,7 +731,7 @@ function PatientConsentView() {
             </div>
           </div>
           {grantMsg && (
-            <p className={cn('text-xs font-body', grantMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>
+            <p className={cn('text-xs font-body', grantMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
               {grantMsg.text}
             </p>
           )}
@@ -798,7 +798,7 @@ function PatientConsentView() {
                       <button
                         onClick={() => handleRevoke(consent.id)}
                         disabled={revoking || !revokeReason.trim()}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-error/70 text-error-DEFAULT font-body disabled:opacity-50"
+                        className="text-xs px-3 py-1.5 rounded-lg bg-error-soft text-[#B91C1C] font-body disabled:opacity-50"
                       >
                         {revoking ? '…' : 'Confirm'}
                       </button>

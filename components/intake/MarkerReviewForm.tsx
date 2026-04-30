@@ -618,7 +618,7 @@ export function MarkerReviewForm({ markers, onChange }: MarkerReviewFormProps) {
                         type="button"
                         onClick={() => discardRow(i)}
                         title="Discard this marker"
-                        className="p-1.5 rounded-lg text-stone hover:text-error-DEFAULT hover:bg-error-soft transition-colors"
+                        className="p-1.5 rounded-lg text-stone hover:text-[#B91C1C] hover:bg-error-soft transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -678,7 +678,7 @@ export function MarkerReviewForm({ markers, onChange }: MarkerReviewFormProps) {
                           </div>
                         </div>
                         {draft.error && (
-                          <p className="text-[11px] text-error-DEFAULT font-body">{draft.error}</p>
+                          <p className="text-[11px] text-[#B91C1C] font-body">{draft.error}</p>
                         )}
                         <div className="flex gap-2 justify-end">
                           <Button

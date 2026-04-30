@@ -22,6 +22,15 @@ npm run build
 ```
 Every route listed below that — no red lines above it.
 
+## Frontend Pages Map (REQUIRED — Read Before, Update After)
+
+The file `doc/FRONTEND_PAGES.md` is the canonical map of every frontend route, the roles that can access it, and the features/operations on it.
+
+**Rules:**
+- **Before** editing or creating any page in `app/`, read `doc/FRONTEND_PAGES.md` to confirm the page's intended scope, role access, and feature list.
+- **After** adding, removing, renaming, or changing the role/feature surface of any page, update `doc/FRONTEND_PAGES.md` in the same change so it always matches the code.
+- Keep the role columns in sync with `NAV_ITEMS` in `lib/constants.ts` and the dashboard layout's auth guard.
+
 ## Feature Tracking (REQUIRED — Update as You Work)
 
 Two living documents must be kept up to date at all times:

@@ -166,9 +166,9 @@ export default function RegisterPage() {
 
       {/* Error banner (shown on step 2) */}
       {error && step === 2 && (
-        <div className="flex items-start gap-2.5 bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-3.5 mb-5">
-          <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
-          <p className="text-xs font-body text-error-DEFAULT leading-relaxed">{error}</p>
+        <div className="flex items-start gap-2.5 bg-error-soft border border-[#DC2626]/20 rounded-2xl p-3.5 mb-5">
+          <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-[#B91C1C] leading-relaxed">{error}</p>
         </div>
       )}
 

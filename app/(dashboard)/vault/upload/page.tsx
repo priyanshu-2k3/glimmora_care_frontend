@@ -122,7 +122,7 @@ export default function VaultUploadPage() {
                     <p className="text-sm font-body font-medium text-charcoal-deep truncate">{f.name}</p>
                     <p className="text-xs text-greige">{formatSize(f.size)}</p>
                   </div>
-                  <button onClick={() => removeFile(f.id)} className="p-1 text-greige hover:text-error-DEFAULT rounded transition-colors">
+                  <button onClick={() => removeFile(f.id)} className="p-1 text-greige hover:text-[#B91C1C] rounded transition-colors">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
