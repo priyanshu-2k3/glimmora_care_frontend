@@ -584,7 +584,7 @@ export function MarkerReviewForm({ markers, onChange }: MarkerReviewFormProps) {
                           : 'text-black',
                       )}
                     >
-                      {formatConfidence(Math.round((m.extractionConfidence ?? 1) * 100))}
+                      {formatConfidence(m.extractionConfidence ?? 1)}
                     </span>
                   </td>
                   <td className="px-3 py-2 align-top">

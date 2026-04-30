@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, FileText, X, CheckCircle } from 'lucide-react'
+import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 
@@ -16,21 +16,53 @@ interface FileUploaderProps {
   onFilesSelected: (files: File[]) => void
 }
 
+const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp']
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+const MAX_FILES = 50
+
 export function FileUploader({ onFilesSelected }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [files, setFiles] = useState<UploadFile[]>([])
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   function addFiles(newFiles: FileList | null) {
     if (!newFiles) return
-    const arr = Array.from(newFiles).map((f) => ({
+    const incoming = Array.from(newFiles)
+    const accepted: File[] = []
+    const rejections: string[] = []
+
+    for (const f of incoming) {
+      const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        rejections.push(`${f.name}: unsupported format`)
+        continue
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        rejections.push(`${f.name}: exceeds 10 MB (${(f.size / 1024 / 1024).toFixed(1)} MB)`)
+        continue
+      }
+      accepted.push(f)
+    }
+
+    if (files.length + accepted.length > MAX_FILES) {
+      const overflow = files.length + accepted.length - MAX_FILES
+      rejections.push(`Limit of ${MAX_FILES} files exceeded (${overflow} dropped)`)
+      accepted.splice(MAX_FILES - files.length)
+    }
+
+    setError(rejections.length ? rejections.join(' · ') : null)
+
+    if (!accepted.length) return
+
+    const arr = accepted.map((f) => ({
       id: Math.random().toString(36).slice(2),
       file: f,
       status: 'pending' as const,
       progress: 0,
     }))
     setFiles((prev) => [...prev, ...arr])
-    onFilesSelected(Array.from(newFiles))
+    onFilesSelected(accepted)
   }
 
   function removeFile(id: string) {
@@ -58,7 +90,7 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
           multiple
           accept=".pdf,.jpg,.jpeg,.png,.webp"
           className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
+          onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
         />
         <Upload className={cn('w-8 h-8 mx-auto mb-3 transition-colors', isDragging ? 'text-gold-deep' : 'text-greige')} />
         <p className="font-body font-medium text-charcoal-warm text-sm">
@@ -69,6 +101,16 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
           Browse Files
         </Button>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 px-4 py-3 bg-error/70 border border-error-DEFAULT/30 rounded-xl"
+        >
+          <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0 mt-0.5" />
+          <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+        </div>
+      )}
 
       {/* File list */}
       {files.length > 0 && (
