@@ -153,7 +153,7 @@ export function MarkerExtractionForm({ markers }: MarkerExtractionFormProps) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Info className="w-3 h-3 text-greige shrink-0" />
-                      <span className={cn('text-xs font-semibold', m.extractionConfidence < 80 ? 'text-warning-DEFAULT' : 'text-black')}>
+                      <span className={cn('text-xs font-semibold', m.extractionConfidence < 0.8 ? 'text-warning-DEFAULT' : 'text-black')}>
                         {formatConfidence(m.extractionConfidence)}
                       </span>
                     </div>

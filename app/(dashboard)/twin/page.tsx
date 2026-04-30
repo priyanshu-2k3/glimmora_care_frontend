@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Eye, EyeOff, ChevronRight, Info } from 'lucide-react'
+import Image from 'next/image'
+import { Eye, EyeOff, ChevronRight, Info, User as UserIcon, Mail, Stethoscope } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts'
 import { useAuth } from '@/context/AuthContext'
-import { twinApi, orgApi, adminApi, getAccessToken } from '@/lib/api'
+import { twinApi, orgApi, getAccessToken } from '@/lib/api'
 import type { PatientOut } from '@/lib/api'
 import type { DigitalHealthTwin, TwinRiskPoint, TwinNarrative } from '@/types/twin'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
@@ -258,6 +259,37 @@ export default function TwinPage() {
     ? `${selectedPatient.first_name ?? ''} ${selectedPatient.last_name ?? ''}`.trim() || selectedPatient.email || selectedPatientId
     : ''
 
+  // Profile shown above the twin — patient sees their own, doctor/admin
+  // sees the currently selected patient.
+  const profile = isPatient && user
+    ? {
+        name: user.name || user.email || 'Patient',
+        email: user.email ?? null,
+        subtitle: 'Your Digital Health Twin',
+        avatar: user.avatar ?? null,
+        meta: null as string | null,
+      }
+    : selectedPatient
+    ? {
+        name: selectedPatientName,
+        email: selectedPatient.email,
+        subtitle: `Patient ID · ${selectedPatient.patient_id}`,
+        avatar: null,
+        meta: selectedPatient.assigned_doctor_name
+          ? `Care: ${selectedPatient.assigned_doctor_name}`
+          : null,
+      }
+    : null
+
+  const initials = profile
+    ? profile.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((s) => s[0]?.toUpperCase())
+        .join('') || '?'
+    : ''
+
   const [visibleMarkers, setVisibleMarkers] = useState<Record<string, boolean>>({})
   useEffect(() => {
     setVisibleMarkers(
@@ -360,6 +392,56 @@ export default function TwinPage() {
 
       <div className="space-y-6">
 
+      {/* Patient profile header — self for patients, selected patient for clinicians */}
+      {profile && (
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-champagne flex items-center justify-center shrink-0 border border-gold-soft">
+                {profile.avatar ? (
+                  <Image
+                    src={profile.avatar}
+                    alt={profile.name}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
+                ) : initials ? (
+                  <span className="font-display text-xl text-gold-deep tracking-tight">{initials}</span>
+                ) : (
+                  <UserIcon className="w-6 h-6 text-gold-deep" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-2xl text-charcoal-deep tracking-tight leading-tight truncate">
+                  {profile.name}
+                </p>
+                <p className="text-xs text-greige font-body mt-0.5">{profile.subtitle}</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs font-body text-stone">
+                  {profile.email && (
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-greige" />
+                      <span className="truncate">{profile.email}</span>
+                    </span>
+                  )}
+                  {profile.meta && (
+                    <span className="flex items-center gap-1.5">
+                      <Stethoscope className="w-3.5 h-3.5 text-greige" />
+                      {profile.meta}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {user?.role && (
+                <Badge variant="gold" className="capitalize shrink-0">
+                  {user.role.replace('_', ' ')}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Patient selector — doctor / admin only */}
       {canViewAll && (
         <Card>
@@ -415,12 +497,9 @@ export default function TwinPage() {
           {/* Multi-marker overlay chart */}
           <Card>
             <CardHeader>
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <CardTitle className="font-body font-semibold">Longitudinal Marker Timeline</CardTitle>
-                  <CardDescription>Toggle markers to overlay on timeline · {allDates.length} data points</CardDescription>
-                </div>
-                {selectedPatientName && <Badge variant="gold">{selectedPatientName}</Badge>}
+              <div>
+                <CardTitle className="font-body font-semibold">Longitudinal Marker Timeline</CardTitle>
+                <CardDescription>Toggle markers to overlay on timeline · {allDates.length} data points</CardDescription>
               </div>
               {/* Marker toggles */}
               <div className="flex flex-wrap gap-2 mt-3">

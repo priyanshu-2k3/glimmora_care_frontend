@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { API_BASE, getAccessToken } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import type { ChatMessage, Persona } from '@/types/chat'
 
 interface HistoryMessage {
@@ -10,9 +11,22 @@ interface HistoryMessage {
 }
 
 export function useGeminiChat(persona: Persona, patientId?: string | null) {
+  const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const historyRef = useRef<HistoryMessage[]>([])
+
+  // F1: when the authenticated user identity changes underneath the hook,
+  // drop every byte of conversation state so a stale ``historyRef`` from
+  // session A can never be sent under session B's JWT.  In the normal
+  // logout flow the page unmounts (and a hard reload runs from
+  // AuthContext); this is defence-in-depth for soft user switches,
+  // dev-time hot reloads, and any future "impersonate" feature.
+  const userId = user?.id ?? null
+  useEffect(() => {
+    setMessages([])
+    historyRef.current = []
+  }, [userId])
 
   const sendMessage = useCallback(
     async (content: string) => {

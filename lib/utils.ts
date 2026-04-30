@@ -35,8 +35,14 @@ export function getInitials(name: string): string {
     .toUpperCase()
 }
 
+/**
+ * Format a confidence score as a percentage string.
+ * Expects ``score`` in 0–1 range (the shape produced by the chat backend
+ * and OCR — both emit floats like 0.87).  Internally multiplies by 100 so
+ * call sites don't have to remember the conversion.
+ */
 export function formatConfidence(score: number): string {
-  return `${Math.round(score)}%`
+  return `${Math.round(score * 100)}%`
 }
 
 export function getRiskColor(level: string): string {
