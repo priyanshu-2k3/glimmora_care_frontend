@@ -69,23 +69,41 @@ export const NAV_ITEMS = [
     icon: 'Stethoscope',
     roles: ['patient'] as Role[],
   },
+  {
+    href: '/assign-doctor',
+    label: 'Find a Doctor',
+    icon: 'Stethoscope',
+    roles: ['patient'] as Role[],
+  },
+  {
+    href: '/profiles',
+    label: 'Dependent Profiles',
+    icon: 'UserPlus',
+    roles: ['patient'] as Role[],
+  },
+  {
+    href: '/offline',
+    label: 'Offline Sync',
+    icon: 'WifiOff',
+    roles: ['patient'] as Role[],
+  },
 
   /* ── Organisations (admin/doctor: their own org · super_admin: all orgs) ─── */
   {
     href: '/organization',
-    label: 'Organisations',
+    label: 'My Organisation',
     icon: 'Building2',
-    roles: ['admin', 'doctor', 'super_admin'] as Role[],
+    roles: ['admin', 'doctor'] as Role[],
   },
   {
     href: '/organization/doctors',
-    label: 'Manage Doctors',
+    label: 'Org Doctors Directory',
     icon: 'Stethoscope',
     roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/organization/patients',
-    label: 'Manage Patients',
+    label: 'Org Patients Directory',
     icon: 'UserCheck',
     roles: ['admin', 'super_admin'] as Role[],
   },
@@ -166,37 +184,81 @@ export const NAV_ITEMS = [
     roles: ['admin', 'super_admin'] as Role[],
   },
   {
+    href: '/admin/logs',
+    label: 'Org Audit Logs',
+    icon: 'ClipboardList',
+    roles: ['admin', 'super_admin'] as Role[],
+  },
+  {
     href: '/admin/settings',
     label: 'Admin Settings',
     icon: 'Settings',
     roles: ['admin'] as Role[],
   },
 
+  /* ── Agents (super_admin / demo) ─── */
+  {
+    href: '/agents',
+    label: 'Agents',
+    icon: 'Bot',
+    roles: ['super_admin'] as Role[],
+  },
+
+  /* ── Population (super_admin / demo) ─── */
+  {
+    href: '/population',
+    label: 'Population',
+    icon: 'Map',
+    roles: ['super_admin'] as Role[],
+  },
+
   /* ── Super Admin only ─── */
   {
     href: '/admin/organizations',
-    label: 'Organisations',
+    label: 'All Organisations',
     icon: 'Building2',
     roles: ['super_admin'] as Role[],
   },
   {
     href: '/admin/users',
-    label: 'Manage Users',
+    label: 'All Users',
     icon: 'Users',
     roles: ['super_admin'] as Role[],
   },
   {
     href: '/admin/doctors',
-    label: 'Manage Doctors',
+    label: 'All Doctors',
     icon: 'Stethoscope',
     roles: ['super_admin'] as Role[],
   },
   {
     href: '/admin/patients',
-    label: 'Manage Patients',
+    label: 'All Patients',
     icon: 'UserCheck',
     roles: ['super_admin'] as Role[],
   },
+]
+
+/* ── Searchable sub-pages — not in sidebar but discoverable via topbar search ── */
+export const SEARCHABLE_SUBPAGES = [
+  { href: '/vault/search',    label: 'Vault Search',          roles: ['patient', 'doctor'] as Role[] },
+  { href: '/vault/timeline',  label: 'Vault Timeline',        roles: ['patient', 'doctor'] as Role[] },
+  { href: '/vault/insights',  label: 'Vault Insights',        roles: ['patient', 'doctor'] as Role[] },
+  { href: '/vault/upload',    label: 'Vault Upload',          roles: ['patient', 'doctor'] as Role[] },
+  { href: '/family/members',  label: 'Family Members',        roles: ['patient'] as Role[] },
+  { href: '/family/invite',   label: 'Invite Family Member',  roles: ['patient'] as Role[] },
+  { href: '/family/roles',    label: 'Family Roles & Permissions', roles: ['patient'] as Role[] },
+  { href: '/consent/active',  label: 'Active Consents',       roles: ['patient', 'doctor'] as Role[] },
+  { href: '/consent/requests',label: 'Consent Requests',      roles: ['patient', 'doctor'] as Role[] },
+  { href: '/consent/history', label: 'Consent History',       roles: ['patient', 'doctor'] as Role[] },
+  { href: '/admin/doctor-management/assign',   label: 'Assign Patient to Doctor',   roles: ['admin', 'super_admin'] as Role[] },
+  { href: '/admin/doctor-management/reassign', label: 'Reassign Patient',           roles: ['admin', 'super_admin'] as Role[] },
+  { href: '/admin/doctor-management/share',    label: 'Share Patient Access',       roles: ['admin', 'super_admin'] as Role[] },
+  { href: '/admin/doctor-management/consent',  label: 'Doctor-Management Consent',  roles: ['admin', 'super_admin'] as Role[] },
+  { href: '/admin/settings/profile',              label: 'Admin Profile Settings',     roles: ['admin'] as Role[] },
+  { href: '/admin/settings/security',             label: 'Admin Security Settings',    roles: ['admin'] as Role[] },
+  { href: '/admin/settings/notification-settings',label: 'Admin Notification Settings',roles: ['admin'] as Role[] },
+  { href: '/admin/settings/sessions',              label: 'Admin Active Sessions',     roles: ['admin'] as Role[] },
 ]
 
 export const AI_DISCLAIMER =

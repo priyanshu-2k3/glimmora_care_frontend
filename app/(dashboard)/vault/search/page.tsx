@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Search, Filter, Shield, X, Calendar, SlidersHorizontal } from 'lucide-react'
 import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
@@ -17,15 +18,27 @@ function formatDate(iso: string) {
 }
 
 export default function VaultSearchPage() {
-  const [query, setQuery] = useState('')
+  return (
+    <Suspense fallback={<div className="max-w-2xl mx-auto" />}>
+      <VaultSearchContent />
+    </Suspense>
+  )
+}
+
+function VaultSearchContent() {
+  const searchParams = useSearchParams()
+  const initialQuery = searchParams.get('q') ?? ''
+  const [query, setQuery] = useState(initialQuery)
   const [typeFilter, setTypeFilter] = useState('All')
   const [markerFilter, setMarkerFilter] = useState('All')
   const [showFilters, setShowFilters] = useState(false)
 
+  const trimmedQuery = query.trim()
+  const q = trimmedQuery.toLowerCase()
   const filtered = MOCK_HEALTH_RECORDS.filter((r) => {
-    const matchQuery = !query || r.title.toLowerCase().includes(query.toLowerCase()) ||
-      r.source.toLowerCase().includes(query.toLowerCase()) ||
-      r.markers.some((m) => m.name.toLowerCase().includes(query.toLowerCase()))
+    const matchQuery = !q || r.title.toLowerCase().includes(q) ||
+      r.source.toLowerCase().includes(q) ||
+      r.markers.some((m) => m.name.toLowerCase().includes(q))
     const matchType = typeFilter === 'All' || r.type.replace(/_/g, ' ').toLowerCase() === typeFilter.toLowerCase()
     const hasAbnormal = r.markers.some((m) => m.isAbnormal)
     const matchMarker = markerFilter === 'All' ||
@@ -35,6 +48,7 @@ export default function VaultSearchPage() {
   })
 
   const hasFilters = typeFilter !== 'All' || markerFilter !== 'All'
+  const hasQuery = trimmedQuery.length > 0
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-fade-in">
@@ -57,6 +71,14 @@ export default function VaultSearchPage() {
             placeholder="Search by record name, marker, or lab…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                ;(e.target as HTMLInputElement).blur()
+              } else if (e.key === 'Escape') {
+                setQuery('')
+              }
+            }}
             className="flex-1 bg-transparent text-sm font-body text-charcoal-deep placeholder:text-greige outline-none"
             autoFocus
           />
@@ -131,7 +153,7 @@ export default function VaultSearchPage() {
       <div className="flex items-center justify-between">
         <p className="text-xs text-greige font-body">
           {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-          {query && <span> for "<span className="text-charcoal-deep font-medium">{query}</span>"</span>}
+          {hasQuery && <span> for "<span className="text-charcoal-deep font-medium">{trimmedQuery}</span>"</span>}
         </p>
         {hasFilters && (
           <div className="flex items-center gap-1">
@@ -164,10 +186,10 @@ export default function VaultSearchPage() {
                 </div>
 
                 {/* Matching markers */}
-                {query && (
+                {hasQuery && (
                   <div className="flex flex-wrap gap-1.5">
                     {record.markers
-                      .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
+                      .filter((m) => m.name.toLowerCase().includes(q))
                       .slice(0, 4)
                       .map((m) => (
                         <span key={m.name} className={cn(
@@ -187,8 +209,12 @@ export default function VaultSearchPage() {
         {filtered.length === 0 && (
           <Card className="py-12 text-center">
             <Search className="w-10 h-10 text-greige mx-auto mb-3" />
-            <p className="font-body font-medium text-charcoal-deep">No records found</p>
-            <p className="text-sm text-greige mt-1">Try a different search term or clear filters</p>
+            <p className="font-body font-medium text-charcoal-deep">
+              {hasQuery ? `No matches for "${trimmedQuery}"` : 'No records found'}
+            </p>
+            <p className="text-sm text-greige mt-1">
+              {hasQuery ? 'Try a different search term or clear filters' : 'Type to search by record name, marker, or lab'}
+            </p>
           </Card>
         )}
       </div>

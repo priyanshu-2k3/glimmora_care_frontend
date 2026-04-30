@@ -154,6 +154,22 @@ export default function VaultInsightsPage() {
                   ))}
                 </div>
 
+                {/* Reasoning trace */}
+                <details className="group bg-ivory-warm border border-sand-light rounded-xl">
+                  <summary className="cursor-pointer list-none px-3 py-2 flex items-center justify-between text-[11px] font-body font-semibold text-charcoal-deep">
+                    <span className="flex items-center gap-1.5">
+                      <Brain className="w-3 h-3 text-gold-soft" />
+                      Reasoning trace
+                    </span>
+                    <span className="text-greige group-open:rotate-180 transition-transform">▾</span>
+                  </summary>
+                  <ul className="px-3 pb-3 pt-1 space-y-1.5 text-[11px] text-stone font-body list-disc list-inside">
+                    <li>Aggregated values across {insight.sources.length} record{insight.sources.length !== 1 ? 's' : ''} for {insight.markers.join(', ')}.</li>
+                    <li>Compared against population reference ranges and the patient&apos;s own baseline.</li>
+                    <li>Severity classified using rule-based thresholds; confidence weighted by sample size and recency.</li>
+                  </ul>
+                </details>
+
                 {/* Recommendation */}
                 <div className="bg-ivory-cream border border-sand-light rounded-xl p-3">
                   <p className="text-[10px] font-body font-semibold text-charcoal-deep uppercase tracking-wide mb-1 flex items-center gap-1">

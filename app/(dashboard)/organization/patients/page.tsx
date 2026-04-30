@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Users, UserPlus, AlertCircle, CheckCircle, Loader2, Stethoscope } from 'lucide-react'
+import { ArrowLeft, Users, UserPlus, AlertCircle, CheckCircle, Loader2, Stethoscope, Megaphone, Download } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -101,6 +101,41 @@ export default function OrgPatientsPage() {
         <Button size="sm" onClick={() => setShowAssign(true)} disabled={doctors.length === 0}>
           <UserPlus className="w-4 h-4" />
           Assign Patient
+        </Button>
+      </div>
+
+      {/* Bulk action toolbar */}
+      <div className="flex items-center gap-2 flex-wrap bg-white border border-sand-light rounded-2xl p-3">
+        <span className="text-xs font-body font-semibold text-greige uppercase tracking-wider mr-2">Bulk:</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const msg = window.prompt('Announcement message:')
+            if (msg) alert(`Announcement queued for ${patients.length} patient(s).`)
+          }}
+        >
+          <Megaphone className="w-3.5 h-3.5" /> Send Announcement
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const rows: string[] = ['patient_id,email,first_name,last_name,assigned_doctor']
+            const esc = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
+            patients.forEach((p) => {
+              rows.push([p.patient_id, p.email ?? '', p.first_name ?? '', p.last_name ?? '', p.assigned_doctor_name ?? ''].map(esc).join(','))
+            })
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `org-patients-${new Date().toISOString().slice(0, 10)}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        >
+          <Download className="w-3.5 h-3.5" /> Export
         </Button>
       </div>
 

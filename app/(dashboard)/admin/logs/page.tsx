@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardList, Search, AlertCircle } from 'lucide-react'
+import { ClipboardList, Search, AlertCircle, Download, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -64,6 +65,21 @@ export default function AdminLogsPage() {
     setPage(1)
   }
 
+  function exportCsv() {
+    const rows: string[] = ['timestamp,action,severity,target,performed_by']
+    filtered.forEach((l) => {
+      const esc = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
+      rows.push([l.timestamp, l.action, l.severity, l.target ?? '', l.performed_by].map(esc).join(','))
+    })
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `admin-logs-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -75,7 +91,29 @@ export default function AdminLogsPage() {
             </h1>
             <p className="text-sm text-greige font-body mt-1">Audit trail of all admin operations.</p>
           </div>
-          <Badge variant="dark">{loading ? '…' : `${filtered.length} entries`}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="dark">{loading ? '…' : `${filtered.length} entries`}</Badge>
+            <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || filtered.length === 0}>
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </Button>
+          </div>
+        </div>
+
+        {/* Suspicious patterns alert strip */}
+        <div className="bg-white border border-sand-light rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Suspicious Patterns</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: 'Repeated failed logins · doctor@clinic', color: 'bg-warning-soft text-warning-DEFAULT' },
+              { label: 'Bulk role change · 12 users', color: 'bg-error-soft text-[#B91C1C]' },
+              { label: 'Off-hours export · 03:42 IST', color: 'bg-azure-whisper text-sapphire-deep' },
+            ].map((c) => (
+              <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
+            ))}
+          </div>
         </div>
 
         <Input

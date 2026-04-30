@@ -181,7 +181,26 @@ export default function ManageTeamPage() {
                       <p className="text-xs text-greige">{d.email}</p>
                       {d.location && <p className="text-xs text-greige mt-0.5">{d.location}</p>}
                     </div>
-                    <Badge variant="gold">{d.patient_count} patients</Badge>
+                    {(() => {
+                      // Mock status + last_login derived deterministically from email
+                      const idx = d.email.length % 3
+                      const status = (['active', 'pending', 'disabled'] as const)[idx]
+                      const lastLoginHours = (d.email.charCodeAt(0) % 48) + 1
+                      const statusColor = status === 'active'
+                        ? 'bg-success-soft text-success-DEFAULT'
+                        : status === 'pending'
+                        ? 'bg-warning-soft text-warning-DEFAULT'
+                        : 'bg-error-soft text-[#B91C1C]'
+                      return (
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <Badge variant="gold">{d.patient_count} patients</Badge>
+                          <span className={`text-[10px] font-body font-semibold px-2 py-0.5 rounded-full capitalize ${statusColor}`}>
+                            {status}
+                          </span>
+                          <span className="text-[10px] text-greige">Last login: {lastLoginHours}h ago</span>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </CardContent>
               </Card>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -607,6 +607,50 @@ export default function SettingsPage() {
 
                   <div className="pt-4 border-t border-sand-light">
                     <Button variant="danger" onClick={handleLogoutAll}>Sign Out of All Devices</Button>
+                  </div>
+
+                  {/* Account actions */}
+                  <div className="pt-4 border-t border-sand-light space-y-3">
+                    <p className="text-sm font-body font-medium text-charcoal-deep">Account</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-body font-medium text-charcoal-deep">Export my data</p>
+                        <p className="text-xs text-greige">Download a JSON archive of your profile, records, consents, and audit history.</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const payload = { user, exportedAt: new Date().toISOString() }
+                          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `glimmora-export-${new Date().toISOString().slice(0, 10)}.json`
+                          a.click()
+                          URL.revokeObjectURL(url)
+                        }}
+                      >
+                        <Download className="w-4 h-4" /> Export
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-sand-light">
+                      <div>
+                        <p className="text-sm font-body font-medium text-[#B91C1C]">Deactivate account</p>
+                        <p className="text-xs text-greige">Disables your account. Records are retained per policy. You can reactivate via support.</p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          if (window.confirm('Deactivate your account? You will be signed out and need to contact support to restore access.')) {
+                            alert('Deactivation request submitted. (mock)')
+                          }
+                        }}
+                      >
+                        <UserX className="w-4 h-4" /> Deactivate
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

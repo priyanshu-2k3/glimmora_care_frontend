@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react'
+import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink, Download, Share2, Archive } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -79,6 +79,21 @@ export default function VaultPage() {
   const [isDemo, setIsDemo] = useState(false)
   const [page, setPage] = useState(1)
   const [realPatientList, setRealPatientList] = useState<PatientOut[]>([])
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set())
+  const [bulkToast, setBulkToast] = useState<string | null>(null)
+
+  function toggleRecordSelect(id: string) {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function showBulkToast(action: string) {
+    setBulkToast(`${action} ${selectedRecordIds.size} record${selectedRecordIds.size !== 1 ? 's' : ''} (mock)`)
+    setTimeout(() => setBulkToast(null), 2200)
+    setSelectedRecordIds(new Set())
+  }
 
   if (!user) return null
 
@@ -158,6 +173,7 @@ export default function VaultPage() {
   if (isDoctor && selectedPatientId) {
     const patient = patientMap.get(selectedPatientId)
     const patientRecords = filteredRecords.filter((r) => r.patientId === selectedPatientId)
+    const consentedPatientEntries = [...patientMap.entries()].filter(([, p]) => p.consented > 0 || isDemo)
 
     return (
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -170,9 +186,27 @@ export default function VaultPage() {
             <ChevronRight className="w-3 h-3" />
             <span className="text-gold-deep">{patient?.name ?? selectedPatientId}</span>
           </div>
+
+          {/* Prominent patient picker for doctor */}
+          {consentedPatientEntries.length > 0 && (
+            <div className="bg-white border border-sand-light rounded-2xl p-3 shadow-sm mb-4 flex items-center gap-3">
+              <User className="w-4 h-4 text-gold-deep shrink-0" />
+              <label className="text-xs font-body font-semibold text-charcoal-deep shrink-0">Patient:</label>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => { window.location.href = `/vault?patient=${e.target.value}` }}
+                className="flex-1 bg-ivory-warm border border-sand-light rounded-lg px-3 py-2 text-sm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+              >
+                {consentedPatientEntries.map(([pid, p]) => (
+                  <option key={pid} value={pid}>{p.name} ({p.total} record{p.total !== 1 ? 's' : ''})</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">{patient?.name ?? selectedPatientId}</h1>
+              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Vault — {patient?.name ?? selectedPatientId}</h1>
               <p className="text-sm text-stone font-body mt-1.5">
                 {patient?.age ? `${patient.age}y` : ''}{patient?.age && patient?.district ? ' · ' : ''}{patient?.district ?? ''}
               </p>
@@ -440,12 +474,48 @@ export default function VaultPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            {/* Bulk action toolbar — patient role */}
+            {selectedRecordIds.size > 0 && (
+              <div className="sticky top-0 z-10 bg-white border border-gold-soft/40 rounded-2xl p-3 shadow-md flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-body font-semibold text-charcoal-deep">
+                  {selectedRecordIds.size} selected
+                </span>
+                <div className="flex items-center gap-2 ml-auto flex-wrap">
+                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Downloaded')}>
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Shared')}>
+                    <Share2 className="w-3.5 h-3.5" /> Share
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Archived')}>
+                    <Archive className="w-3.5 h-3.5" /> Archive
+                  </Button>
+                  <button onClick={() => setSelectedRecordIds(new Set())} className="text-xs text-greige hover:text-charcoal-deep font-body px-2">
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+            {bulkToast && (
+              <div className="bg-success-soft border border-success-DEFAULT/30 rounded-2xl p-3 text-xs text-success-DEFAULT font-body">
+                {bulkToast}
+              </div>
+            )}
             {pageSlice.map((rec) => {
               const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
+              const isSelected = selectedRecordIds.has(rec.id)
               return (
-                <div key={rec.id} className="block group">
+                <div key={rec.id} className="block group relative">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => { e.stopPropagation(); toggleRecordSelect(rec.id) }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-4 left-4 z-10 w-4 h-4 cursor-pointer accent-gold-deep"
+                    aria-label="Select record"
+                  />
                   <Link href={`/vault/${rec.id}`}>
-                  <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-md transition-all duration-200 flex gap-0 overflow-hidden">
+                  <div className="bg-white border border-sand-light rounded-2xl p-4 pl-10 hover:border-gold-soft/60 hover:shadow-md transition-all duration-200 flex gap-0 overflow-hidden">
                     <div className="w-0.5 bg-gradient-to-b from-gold-deep to-gold-soft rounded-full shrink-0 mr-4" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-4">

@@ -38,8 +38,8 @@ const RELATION_ICONS: Record<ProfileRelation, React.ElementType> = {
 const DEFAULT_NAV_SECTIONS = [
   { label: null, hrefs: ['/dashboard'] },
   { label: 'HEALTH', hrefs: ['/vault', '/intake', '/twin'] },
-  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/my-doctor'] },
-  { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access'] },
+  { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor', '/assign-doctor'] },
+  { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access', '/offline'] },
   { label: 'ORGANISATION', hrefs: ['/organization', '/organization/doctors', '/organization/patients'] },
   { label: 'MANAGEMENT', hrefs: ['/manage-users'] },
   { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },

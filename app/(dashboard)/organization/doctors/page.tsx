@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Stethoscope, Mail, Plus, Users, AlertCircle, CheckCircle, Loader2, Clock, X } from 'lucide-react'
+import { ArrowLeft, Stethoscope, Mail, Plus, Users, AlertCircle, CheckCircle, Loader2, Clock, X, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +24,14 @@ export default function OrgDoctorsPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteDone, setInviteDone] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [specialtyFilter, setSpecialtyFilter] = useState<string>('all')
+  const [toast, setToast] = useState<string | null>(null)
+
+  // Mock specialty assigned per doctor (deterministic by email)
+  const SPECIALTIES = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Dermatology']
+  function specialtyFor(email: string) {
+    return SPECIALTIES[email.length % SPECIALTIES.length]
+  }
 
   useEffect(() => {
     Promise.all([
@@ -138,6 +146,25 @@ export default function OrgDoctorsPage() {
         </Card>
       )}
 
+      {/* Specialty filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider">Specialty:</span>
+        <select
+          value={specialtyFilter}
+          onChange={(e) => setSpecialtyFilter(e.target.value)}
+          className="text-xs font-body border border-sand-light rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-gold-soft"
+        >
+          <option value="all">All</option>
+          {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 bg-charcoal-deep text-ivory-cream text-xs font-body px-4 py-2 rounded-xl shadow-lg animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       {/* Active doctors */}
       <Card>
         <CardHeader>
@@ -148,19 +175,31 @@ export default function OrgDoctorsPage() {
             <p className="text-sm text-greige font-body text-center py-6">No doctors have joined yet. Invite doctors using the button above.</p>
           ) : (
             <div className="divide-y divide-sand-light">
-              {doctors.map((doc) => {
+              {doctors
+                .filter((doc) => specialtyFilter === 'all' || specialtyFor(doc.email || doc.user_id) === specialtyFilter)
+                .map((doc) => {
                 const name = [doc.first_name, doc.last_name].filter(Boolean).join(' ')
                 const primaryLabel = doc.email || name || doc.user_id
                 const secondaryLabel = doc.email && name ? name : undefined
+                const spec = specialtyFor(doc.email || doc.user_id)
                 return (
                   <div key={doc.user_id} className="flex items-center gap-3 py-3">
                     <Avatar name={primaryLabel} size="md" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{primaryLabel}</p>
                       {secondaryLabel && <p className="text-xs text-greige truncate">{secondaryLabel}</p>}
-                      {doc.location && <p className="text-xs text-greige">{doc.location}</p>}
+                      <p className="text-xs text-greige">{spec}{doc.location ? ` · ${doc.location}` : ''}</p>
                     </div>
-                    <div className="text-right">
+                    <button
+                      onClick={() => {
+                        setToast(`Message sent to ${primaryLabel}`)
+                        setTimeout(() => setToast(null), 2000)
+                      }}
+                      className="text-xs font-body font-medium text-gold-deep hover:underline flex items-center gap-1 shrink-0"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> Message
+                    </button>
+                    <div className="text-right shrink-0">
                       <p className="text-sm font-body font-semibold text-charcoal-deep">{doc.patient_count}</p>
                       <p className="text-xs text-greige">patient{doc.patient_count !== 1 ? 's' : ''}</p>
                     </div>

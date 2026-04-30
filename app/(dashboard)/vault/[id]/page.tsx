@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { intakeApi, consentApi, getAccessToken, type ConsentRequest } from '@/lib/api'
 import type { HealthRecord, MarkerOut } from '@/types/intake'
@@ -86,6 +86,12 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [consents, setConsents] = useState<ConsentEntry[]>([])
   const [activeConsents, setActiveConsents] = useState<ConsentRequest[]>([])
   const [fileUrl, setFileUrl] = useState<{ url: string; filename?: string | null } | null>(null)
+  const [actionToast, setActionToast] = useState<string | null>(null)
+
+  function fireToast(text: string) {
+    setActionToast(text)
+    setTimeout(() => setActionToast(null), 2200)
+  }
 
   useEffect(() => {
     // Demo users have no JWT — show mock data only
@@ -221,11 +227,26 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
               {patient && ` · ${patient.name}`}
             </p>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex mt-6" onClick={handleExport}>
-            <Download className="w-4 h-4" />
-            Export CSV
-          </Button>
+          <div className="shrink-0 hidden sm:flex flex-col gap-2 mt-6">
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fireToast('Edit metadata — coming soon (mock)')}>
+              <Edit2 className="w-4 h-4" />
+              Edit metadata
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fireToast('Re-OCR requested (mock)')}>
+              <RefreshCw className="w-4 h-4" />
+              Request re-OCR
+            </Button>
+          </div>
         </div>
+        {actionToast && (
+          <div className="mt-4 bg-success-soft border border-success-DEFAULT/30 rounded-2xl p-3 text-xs text-success-DEFAULT font-body">
+            {actionToast}
+          </div>
+        )}
       </div>
 
       <div className="space-y-5">
