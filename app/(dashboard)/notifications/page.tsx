@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext'
 import { familyApi, notificationApi, getAccessToken, ApiError, type IncomingInvite, type NotificationOut } from '@/lib/api'
 
 const TYPE_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  alert:   { icon: AlertTriangle, color: 'text-error-DEFAULT',      bg: 'bg-error-soft' },
+  alert:   { icon: AlertTriangle, color: 'text-[#B91C1C]',      bg: 'bg-error-soft' },
   info:    { icon: Info,          color: 'text-stone',               bg: 'bg-ivory-warm' },
   consent: { icon: Shield,        color: 'text-gold-deep',           bg: 'bg-gold-whisper' },
   sync:    { icon: RefreshCw,     color: 'text-success-DEFAULT',     bg: 'bg-success-soft' },

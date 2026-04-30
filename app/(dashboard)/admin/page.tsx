@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   Users, UserCheck, FileCheck, ClipboardList, TrendingUp,
-  AlertTriangle, Building2, Shield, PlusCircle, CheckCircle,
+  AlertTriangle, Building2, Shield, Stethoscope, Settings,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -13,7 +13,6 @@ import {
   adminApi,
   type AdminStatsOut, type AuditLogOut,
   type AdminPatientOut, type AdminDoctorOut, type AdminOrgItem,
-  type AdminUserOut,
 } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
@@ -44,7 +43,7 @@ function StatCard({ icon: Icon, label, value, href, color }: StatCardProps) {
 }
 
 const SEVERITY_DOT: Record<string, string> = {
-  critical: 'bg-error-DEFAULT',
+  critical: 'bg-[#DC2626]',
   warning: 'bg-warning-DEFAULT',
   info: 'bg-success-DEFAULT',
 }
@@ -151,66 +150,18 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [listLoading, setListLoading] = useState(true)
 
-  // Create org
-  const [orgName, setOrgName] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [createMsg, setCreateMsg] = useState<string | null>(null)
-  const [createError, setCreateError] = useState<string | null>(null)
-
-  // Assign admin
-  const [assignOrgId, setAssignOrgId] = useState('')
-  const [allUsers, setAllUsers] = useState<AdminUserOut[]>([])
-  const [assignUserId, setAssignUserId] = useState('')
-  const [assigning, setAssigning] = useState(false)
-  const [assignMsg, setAssignMsg] = useState<string | null>(null)
-  const [assignError, setAssignError] = useState<string | null>(null)
-
   useEffect(() => {
     Promise.all([
       adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
       adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
       adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
-      adminApi.listUsers().catch(() => [] as AdminUserOut[]),
-    ]).then(([p, d, o, u]) => {
+    ]).then(([p, d, o]) => {
       setPatients(p)
       setDoctors(d)
       setOrgs(o)
-      setAllUsers(u)
       setListLoading(false)
     })
   }, [])
-
-  async function handleCreateOrg(e: React.FormEvent) {
-    e.preventDefault()
-    if (!orgName.trim()) return
-    setCreating(true); setCreateError(null); setCreateMsg(null)
-    try {
-      await adminApi.createOrg(orgName.trim())
-      setCreateMsg(`Organisation "${orgName.trim()}" created.`)
-      setOrgName('')
-      adminApi.listAllOrgs().then(setOrgs).catch(() => {})
-    } catch (err: unknown) {
-      setCreateError(err instanceof Error ? err.message : 'Failed.')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  async function handleAssignAdmin(e: React.FormEvent) {
-    e.preventDefault()
-    if (!assignOrgId || !assignUserId) return
-    setAssigning(true); setAssignError(null); setAssignMsg(null)
-    try {
-      await adminApi.assignAdmin(assignOrgId, { userId: assignUserId })
-      setAssignMsg('Admin assigned successfully.')
-      setAssignOrgId(''); setAssignUserId('')
-      adminApi.listAllOrgs().then(setOrgs).catch(() => {})
-    } catch (err: unknown) {
-      setAssignError(err instanceof Error ? err.message : 'Failed.')
-    } finally {
-      setAssigning(false)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -310,79 +261,44 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
         </CardContent>
       </Card>
 
-      {/* Create org + Assign admin forms */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
-          <CardContent>
-            <p className="text-sm font-body font-semibold text-charcoal-deep flex items-center gap-2 mb-3">
-              <PlusCircle className="w-4 h-4 text-gold-soft" />
-              Create Organisation
-            </p>
-            <form onSubmit={handleCreateOrg} className="space-y-3">
-              <input
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="Organisation name…"
-                required
-                className="w-full text-sm font-body border border-sand-light rounded-xl px-3 py-2 bg-ivory-cream focus:outline-none focus:border-gold-soft"
-              />
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full text-sm font-body font-semibold bg-gold-soft text-white px-4 py-2.5 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
-              >
-                {creating ? 'Creating…' : 'Create Organisation'}
-              </button>
-              {createMsg && <p className="text-xs text-green-700">{createMsg}</p>}
-              {createError && <p className="text-xs text-red-600">{createError}</p>}
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <p className="text-sm font-body font-semibold text-charcoal-deep flex items-center gap-2 mb-3">
-              <CheckCircle className="w-4 h-4 text-gold-soft" />
-              Assign Admin to Org
-            </p>
-            <form onSubmit={handleAssignAdmin} className="space-y-3">
-              <select
-                value={assignOrgId}
-                onChange={(e) => setAssignOrgId(e.target.value)}
-                required
-                className="w-full text-sm font-body border border-sand-light rounded-xl px-3 py-2 bg-ivory-cream focus:outline-none focus:border-gold-soft"
-              >
-                <option value="">Select organisation…</option>
-                {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-              <select
-                value={assignUserId}
-                onChange={(e) => setAssignUserId(e.target.value)}
-                required
-                className="w-full text-sm font-body border border-sand-light rounded-xl px-3 py-2 bg-ivory-cream focus:outline-none focus:border-gold-soft"
-              >
-                <option value="">Select user to promote…</option>
-                {allUsers.filter((u) => u.role !== 'super_admin').map((u) => (
-                  <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.email})</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={assigning}
-                className="w-full text-sm font-body font-semibold bg-gold-soft text-white px-4 py-2.5 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
-              >
-                {assigning ? 'Assigning…' : 'Assign Admin'}
-              </button>
-              {assignMsg && <p className="text-xs text-green-700">{assignMsg}</p>}
-              {assignError && <p className="text-xs text-red-600">{assignError}</p>}
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick actions — super admin only */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Management quick links — super admin only */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/admin/organizations">
+          <Card hover className="text-center py-6">
+            <CardContent>
+              <Building2 className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <p className="text-sm font-body font-medium text-charcoal-deep">Organisations</p>
+              <p className="text-xs text-greige mt-0.5">Create & assign admins</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/users">
+          <Card hover className="text-center py-6">
+            <CardContent>
+              <Shield className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Users</p>
+              <p className="text-xs text-greige mt-0.5">All accounts</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/doctors">
+          <Card hover className="text-center py-6">
+            <CardContent>
+              <Stethoscope className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Doctors</p>
+              <p className="text-xs text-greige mt-0.5">All organisations</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/patients">
+          <Card hover className="text-center py-6">
+            <CardContent>
+              <Users className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Patients</p>
+              <p className="text-xs text-greige mt-0.5">All organisations</p>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/admin/logs">
           <Card hover className="text-center py-6">
             <CardContent>
@@ -395,7 +311,7 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
         <Link href="/manage-users">
           <Card hover className="text-center py-6">
             <CardContent>
-              <Shield className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <UserCheck className="w-6 h-6 text-gold-soft mx-auto mb-2" />
               <p className="text-sm font-body font-medium text-charcoal-deep">Manage Admins</p>
               <p className="text-xs text-greige mt-0.5">Roles & permissions</p>
             </CardContent>
@@ -404,7 +320,7 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
         <Link href="/admin/settings">
           <Card hover className="text-center py-6">
             <CardContent>
-              <Building2 className="w-6 h-6 text-gold-soft mx-auto mb-2" />
+              <Settings className="w-6 h-6 text-gold-soft mx-auto mb-2" />
               <p className="text-sm font-body font-medium text-charcoal-deep">Platform Settings</p>
               <p className="text-xs text-greige mt-0.5">Global configuration</p>
             </CardContent>

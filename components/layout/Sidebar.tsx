@@ -166,7 +166,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-greige hover:text-error-DEFAULT hover:bg-error-soft/10 rounded-md transition-all duration-200"
+                className="p-1.5 text-greige hover:text-[#B91C1C] hover:bg-error-soft/10 rounded-md transition-all duration-200"
                 title="Sign out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -318,7 +318,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 text-greige hover:text-error-DEFAULT hover:bg-error-soft/10 rounded-md transition-all duration-200"
+              className="p-1.5 text-greige hover:text-[#B91C1C] hover:bg-error-soft/10 rounded-md transition-all duration-200"
               title="Sign out"
             >
               <LogOut className="w-3.5 h-3.5" />

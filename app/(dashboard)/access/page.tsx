@@ -84,7 +84,7 @@ export default function AccessControlPage() {
         {[
           { label: 'Active Rules',       value: activeCount,  icon: Shield, color: 'text-success-DEFAULT', bg: 'bg-success-soft' },
           { label: 'People with Access', value: activeCount,  icon: Users,  color: 'text-gold-deep',       bg: 'bg-gold-whisper' },
-          { label: 'Blocked',            value: blockedCount, icon: Lock,   color: 'text-error-DEFAULT',   bg: 'bg-error-soft' },
+          { label: 'Blocked',            value: blockedCount, icon: Lock,   color: 'text-[#B91C1C]',   bg: 'bg-error-soft' },
         ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
             <div className={cn('w-9 h-9 rounded-full flex items-center justify-center mx-auto mb-2', s.bg)}>
@@ -130,7 +130,7 @@ export default function AccessControlPage() {
                 value={newResource}
                 onChange={(e) => setNewResource(e.target.value)}
               />
-              {error && <p className="text-xs text-error-DEFAULT font-body">{error}</p>}
+              {error && <p className="text-xs text-[#B91C1C] font-body">{error}</p>}
               <div className="flex gap-2">
                 <Button className="flex-1" size="sm" isLoading={isAdding} onClick={addRule} disabled={!newEmail.trim()}>
                   Add Rule
@@ -169,7 +169,7 @@ export default function AccessControlPage() {
                 <button onClick={() => toggleRule(rule.id)} className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}>
                   {rule.is_active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </button>
-                <button onClick={() => removeRule(rule.id)} className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors">
+                <button onClick={() => removeRule(rule.id)} className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

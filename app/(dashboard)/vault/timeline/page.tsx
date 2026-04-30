@@ -17,7 +17,7 @@ function formatDate(iso: string) {
 }
 
 function TrendIcon({ trend }: { trend?: string }) {
-  if (trend === 'rising') return <TrendingUp className="w-3.5 h-3.5 text-error-DEFAULT" />
+  if (trend === 'rising') return <TrendingUp className="w-3.5 h-3.5 text-[#B91C1C]" />
   if (trend === 'falling') return <TrendingDown className="w-3.5 h-3.5 text-success-DEFAULT" />
   return <Minus className="w-3.5 h-3.5 text-greige" />
 }
@@ -94,10 +94,10 @@ export default function VaultTimelinePage() {
                     {/* Markers preview */}
                     <div className="grid grid-cols-3 gap-2">
                       {record.markers.slice(0, 3).map((marker) => (
-                        <div key={marker.name} className={cn('rounded-xl p-2.5 border', marker.isAbnormal ? 'bg-error-soft/30 border-error-DEFAULT/20' : 'bg-ivory-warm border-sand-light')}>
+                        <div key={marker.name} className={cn('rounded-xl p-2.5 border', marker.isAbnormal ? 'bg-error-soft/30 border-[#DC2626]/20' : 'bg-ivory-warm border-sand-light')}>
                           <p className="text-[10px] text-greige truncate">{marker.name}</p>
                           <div className="flex items-center gap-1 mt-0.5">
-                            <p className={cn('text-xs font-body font-semibold', marker.isAbnormal ? 'text-error-DEFAULT' : 'text-charcoal-deep')}>
+                            <p className={cn('text-xs font-body font-semibold', marker.isAbnormal ? 'text-[#B91C1C]' : 'text-charcoal-deep')}>
                               {marker.value} {marker.unit}
                             </p>
                             <TrendIcon trend={marker.trend} />

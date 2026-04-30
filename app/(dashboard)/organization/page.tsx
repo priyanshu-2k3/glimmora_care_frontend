@@ -160,9 +160,9 @@ function AdminOrgView() {
                 required
               />
               {error && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                  <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                  <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+                <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                  <p className="text-xs font-body text-[#B91C1C]">{error}</p>
                 </div>
               )}
               <Button type="submit" isLoading={creating} className="w-full">
@@ -212,9 +212,9 @@ function AdminOrgView() {
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
             </div>
           )}
           {saved && (
@@ -289,11 +289,11 @@ function AdminOrgView() {
               </div>
               {addAdminMsg && (
                 <div className={cn('flex items-center gap-2 rounded-xl p-3 border',
-                  addAdminMsg.ok ? 'bg-success-soft border-success-DEFAULT/20' : 'bg-error-soft border-error-DEFAULT/20')}>
+                  addAdminMsg.ok ? 'bg-success-soft border-success-DEFAULT/20' : 'bg-error-soft border-[#DC2626]/20')}>
                   {addAdminMsg.ok
                     ? <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
-                    : <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />}
-                  <p className={cn('text-xs font-body', addAdminMsg.ok ? 'text-success-DEFAULT' : 'text-error-DEFAULT')}>{addAdminMsg.text}</p>
+                    : <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />}
+                  <p className={cn('text-xs font-body', addAdminMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>{addAdminMsg.text}</p>
                 </div>
               )}
               <Button type="submit" size="sm" isLoading={addingAdmin} disabled={!newAdminEmail.trim()}>
@@ -431,9 +431,9 @@ function AssignAdminModal({
                 The user&apos;s role will be promoted to <span className="font-medium text-charcoal-deep">Admin</span> and linked to this organisation.
               </p>
               {error && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                  <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                  <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+                <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                  <p className="text-xs font-body text-[#B91C1C]">{error}</p>
                 </div>
               )}
               <div className="flex gap-2">
@@ -661,9 +661,9 @@ function SuperAdminOrgView() {
                   />
                 </div>
                 {createError && (
-                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                    <p className="text-xs font-body text-error-DEFAULT">{createError}</p>
+                  <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                    <p className="text-xs font-body text-[#B91C1C]">{createError}</p>
                   </div>
                 )}
                 <div className="flex gap-2 justify-end">
@@ -733,7 +733,7 @@ function SuperAdminOrgView() {
                           size="sm"
                           isLoading={removeAdminTargetId === org.id}
                           onClick={() => handleRemoveAdmin(org.id)}
-                          className="text-xs px-2 py-1 h-auto text-error-DEFAULT border-error-DEFAULT/30 hover:bg-error-soft"
+                          className="text-xs px-2 py-1 h-auto !text-[#B91C1C] !border-[#DC2626]/40 hover:!text-[#7F1D1D] hover:!bg-[#FEE2E2]"
                           title="Detach the current admin"
                         >
                           <UserMinus className="w-3.5 h-3.5" />
@@ -749,7 +749,7 @@ function SuperAdminOrgView() {
                       </button>
                       <button
                         onClick={() => setDeleteTarget(org)}
-                        className="p-1.5 rounded-lg text-greige hover:text-error-DEFAULT hover:bg-error-soft transition-colors"
+                        className="p-1.5 rounded-lg text-greige hover:text-[#B91C1C] hover:bg-error-soft transition-colors"
                         title="Delete organisation"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -928,9 +928,9 @@ function EditOrgModal({
             <Input label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <Input label="Website" type="url" value={website} onChange={(e) => setWebsite(e.target.value)} />
             {error && (
-              <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+              <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                <p className="text-xs font-body text-[#B91C1C]">{error}</p>
               </div>
             )}
             <div className="flex gap-2 justify-end pt-1">
@@ -980,11 +980,11 @@ function DeleteOrgModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={onClose} />
-      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white border-error-DEFAULT/30">
+      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white border-[#DC2626]/30">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="font-body text-base flex items-center gap-2 text-error-DEFAULT">
+              <CardTitle className="font-body text-base flex items-center gap-2 text-[#B91C1C]">
                 <Trash2 className="w-4 h-4" />
                 Delete Organisation
               </CardTitle>
@@ -998,13 +998,13 @@ function DeleteOrgModal({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="bg-error-soft/40 border border-error-DEFAULT/20 rounded-xl p-3 space-y-1">
+          <div className="bg-error-soft/40 border border-[#DC2626]/20 rounded-xl p-3 space-y-1">
             <p className="text-xs font-body text-charcoal-deep">
               <span className="font-semibold">{org.doctor_count}</span> doctor(s) ·{' '}
               <span className="font-semibold">{org.patient_count}</span> patient assignment(s) linked.
             </p>
             {hasLinked && (
-              <p className="text-xs text-error-DEFAULT font-body">
+              <p className="text-xs text-[#B91C1C] font-body">
                 Reassign them first, or check "Force detach" to clear their org links and downgrade admins to patients.
               </p>
             )}
@@ -1026,9 +1026,9 @@ function DeleteOrgModal({
           />
 
           {error && (
-            <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-              <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-              <p className="text-xs font-body text-error-DEFAULT">{error}</p>
+            <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
             </div>
           )}
 

@@ -216,9 +216,9 @@ export default function ManageTeamPage() {
               <form onSubmit={handleInvite} className="space-y-3">
                 <p className="text-xs text-greige font-body">Send an email invite. The doctor joins via the link.</p>
                 {inviteError && (
-                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                    <p className="text-xs font-body text-error-DEFAULT">{inviteError}</p>
+                  <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                    <p className="text-xs font-body text-[#B91C1C]">{inviteError}</p>
                   </div>
                 )}
                 {inviteSuccess && (
@@ -244,9 +244,9 @@ export default function ManageTeamPage() {
               <form onSubmit={handleDirectAdd} className="space-y-3">
                 <p className="text-xs text-greige font-body">Create a doctor account directly. A temporary password will be emailed.</p>
                 {addError && (
-                  <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                    <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                    <p className="text-xs font-body text-error-DEFAULT">{addError}</p>
+                  <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                    <p className="text-xs font-body text-[#B91C1C]">{addError}</p>
                   </div>
                 )}
                 {addSuccess && (

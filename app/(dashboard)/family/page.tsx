@@ -191,7 +191,7 @@ export default function FamilyPage() {
                     <button
                       onClick={() => handleRespondInvite(inv.id, 'decline')}
                       disabled={respondingId === inv.id}
-                      className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                      className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                       title="Decline"
                     >
                       <XCircle className="w-4 h-4" />
@@ -305,7 +305,7 @@ export default function FamilyPage() {
                   <button
                     onClick={() => handleRespondInvite(inv.id, 'decline')}
                     disabled={respondingId === inv.id}
-                    className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                    className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                     title="Decline"
                   >
                     <XCircle className="w-4 h-4" />
@@ -351,7 +351,7 @@ export default function FamilyPage() {
                   <button
                     onClick={() => handleCancel(invite.id)}
                     disabled={cancellingId === invite.id}
-                    className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                    className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                     title="Cancel"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -387,9 +387,9 @@ export default function FamilyPage() {
                 onChange={(e) => setInviteForm((p) => ({ ...p, role: e.target.value as FamilyRole }))}
               />
               {inviteError && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                  <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                  <p className="text-xs text-error-DEFAULT font-body">{inviteError}</p>
+                <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                  <p className="text-xs text-[#B91C1C] font-body">{inviteError}</p>
                 </div>
               )}
               {inviteSent && (
@@ -412,7 +412,7 @@ export default function FamilyPage() {
 
       {/* Danger zone */}
       {isRealPatient && (
-        <Card className="border-error-DEFAULT/20">
+        <Card className="border-[#DC2626]/20">
           <CardHeader>
             <CardTitle className="font-body text-base text-charcoal-deep">Family Actions</CardTitle>
           </CardHeader>
@@ -421,7 +421,7 @@ export default function FamilyPage() {
               <>
                 {confirmLeave ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-error-DEFAULT font-body">Are you sure you want to leave {familyName}?</p>
+                    <p className="text-xs text-[#B91C1C] font-body">Are you sure you want to leave {familyName}?</p>
                     <div className="flex gap-2">
                       <Button variant="danger" isLoading={leaving} onClick={handleLeave} className="flex-1">
                         Yes, leave family
@@ -430,7 +430,7 @@ export default function FamilyPage() {
                     </div>
                   </div>
                 ) : (
-                  <Button variant="outline" className="w-full text-error-DEFAULT border-error-DEFAULT/30 hover:bg-error-soft" onClick={() => setConfirmLeave(true)}>
+                  <Button variant="outline" className="w-full text-[#B91C1C] border-[#DC2626]/30 hover:bg-error-soft" onClick={() => setConfirmLeave(true)}>
                     <LogOut className="w-4 h-4" />
                     Leave Family
                   </Button>
@@ -441,7 +441,7 @@ export default function FamilyPage() {
               <>
                 {confirmDelete ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-error-DEFAULT font-body">This will permanently delete {familyName} and remove all members. This cannot be undone.</p>
+                    <p className="text-xs text-[#B91C1C] font-body">This will permanently delete {familyName} and remove all members. This cannot be undone.</p>
                     <div className="flex gap-2">
                       <Button variant="danger" isLoading={deleting} onClick={handleDelete} className="flex-1">
                         Yes, delete family

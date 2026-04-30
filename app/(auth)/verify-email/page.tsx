@@ -126,11 +126,11 @@ function VerifyEmailContent() {
   if (verifyError) {
     return (
       <Card className="shadow-lg">
-        <div className="flex items-start gap-3 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-4 mb-5">
-          <AlertCircle className="w-5 h-5 text-error-DEFAULT shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 bg-error-soft border border-[#DC2626]/20 rounded-xl p-4 mb-5">
+          <AlertCircle className="w-5 h-5 text-[#B91C1C] shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-body font-medium text-error-DEFAULT">Verification failed</p>
-            <p className="text-xs text-error-DEFAULT mt-0.5">{verifyError}</p>
+            <p className="text-sm font-body font-medium text-[#B91C1C]">Verification failed</p>
+            <p className="text-xs text-[#B91C1C] mt-0.5">{verifyError}</p>
           </div>
         </div>
         <p className="text-sm text-greige font-body mb-4">Request a new verification code below.</p>
@@ -171,7 +171,7 @@ function VerifyEmailContent() {
           hint="6-digit code from your email"
         />
         {otpError && (
-          <p className="text-xs text-error-DEFAULT font-body">{otpError}</p>
+          <p className="text-xs text-[#B91C1C] font-body">{otpError}</p>
         )}
         <Button
           type="submit"
@@ -189,7 +189,7 @@ function VerifyEmailContent() {
         <p>Check spam / junk if you don't see the email.</p>
       </div>
 
-      {resendError && <p className="text-xs text-error-DEFAULT font-body text-center mb-2">{resendError}</p>}
+      {resendError && <p className="text-xs text-[#B91C1C] font-body text-center mb-2">{resendError}</p>}
 
       <Button variant="outline" className="w-full" onClick={handleResend} disabled={resendLoading || cooldown > 0} isLoading={resendLoading}>
         <RefreshCw className="w-4 h-4" />

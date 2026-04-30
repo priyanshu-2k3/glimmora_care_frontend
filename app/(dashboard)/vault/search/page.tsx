@@ -118,7 +118,7 @@ export default function VaultSearchPage() {
             {hasFilters && (
               <button
                 onClick={() => { setTypeFilter('All'); setMarkerFilter('All') }}
-                className="text-xs text-error-DEFAULT font-body hover:underline"
+                className="text-xs text-[#B91C1C] font-body hover:underline"
               >
                 Clear filters
               </button>
@@ -172,7 +172,7 @@ export default function VaultSearchPage() {
                       .map((m) => (
                         <span key={m.name} className={cn(
                           'text-[11px] font-body rounded-full px-2.5 py-1',
-                          m.isAbnormal ? 'bg-error-soft/40 text-error-DEFAULT' : 'bg-success-soft/40 text-success-DEFAULT'
+                          m.isAbnormal ? 'bg-error-soft/40 text-[#B91C1C]' : 'bg-success-soft/40 text-success-DEFAULT'
                         )}>
                           {m.name}: {m.value} {m.unit}
                         </span>

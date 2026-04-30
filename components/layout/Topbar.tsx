@@ -21,7 +21,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  alert: 'text-error-DEFAULT',
+  alert: 'text-[#B91C1C]',
   info: 'text-stone',
   consent: 'text-gold-deep',
   sync: 'text-success-DEFAULT',

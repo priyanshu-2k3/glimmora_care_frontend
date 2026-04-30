@@ -115,9 +115,9 @@ export default function OrgDoctorsPage() {
                 required
               />
               {inviteError && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
-                  <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
-                  <p className="text-xs font-body text-error-DEFAULT">{inviteError}</p>
+                <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                  <p className="text-xs font-body text-[#B91C1C]">{inviteError}</p>
                 </div>
               )}
               {inviteDone && (

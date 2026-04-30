@@ -187,7 +187,7 @@ export default function FamilyMembersPage() {
                       <button
                         onClick={() => removeMember(member.user_id)}
                         disabled={removingId === member.user_id}
-                        className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                        className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                       >
                         {removingId === member.user_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
@@ -234,7 +234,7 @@ export default function FamilyMembersPage() {
                   <button
                     onClick={() => handleCancelInvite(invite.id)}
                     disabled={cancellingId === invite.id}
-                    className="p-1.5 text-greige hover:text-error-DEFAULT rounded-lg transition-colors"
+                    className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
                     title="Cancel invite"
                   >
                     {cancellingId === invite.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}

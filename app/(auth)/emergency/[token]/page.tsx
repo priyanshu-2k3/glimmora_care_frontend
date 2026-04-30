@@ -36,7 +36,7 @@ export default function EmergencyDataPage({ params }: { params: Promise<{ token:
     return (
       <div className="min-h-screen flex items-center justify-center bg-ivory-warm">
         <div className="max-w-sm text-center p-6">
-          <AlertTriangle className="w-10 h-10 text-error-DEFAULT mx-auto mb-3" />
+          <AlertTriangle className="w-10 h-10 text-[#B91C1C] mx-auto mb-3" />
           <h1 className="font-body text-lg font-bold text-charcoal-deep mb-2">Link Expired or Invalid</h1>
           <p className="text-sm text-greige font-body">{error ?? 'This emergency access link is no longer valid.'}</p>
         </div>
@@ -49,8 +49,8 @@ export default function EmergencyDataPage({ params }: { params: Promise<{ token:
       <div className="max-w-lg mx-auto space-y-5">
         {/* Header */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 bg-error-soft border border-error-DEFAULT/30 text-error-DEFAULT text-xs font-body font-semibold px-3 py-1.5 rounded-full mb-3">
-            <div className="w-2 h-2 rounded-full bg-error-DEFAULT animate-pulse" />
+          <div className="inline-flex items-center gap-2 bg-error-soft border border-[#DC2626]/30 text-[#B91C1C] text-xs font-body font-semibold px-3 py-1.5 rounded-full mb-3">
+            <div className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse" />
             Emergency Access Active
           </div>
           <h1 className="font-body text-xl font-bold text-charcoal-deep">{data.patient_name}</h1>
@@ -59,7 +59,7 @@ export default function EmergencyDataPage({ params }: { params: Promise<{ token:
 
         {/* Blood group */}
         <Card>
-          <CardHeader><CardTitle className="font-body text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-error-DEFAULT" />Blood Group</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-body text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-[#B91C1C]" />Blood Group</CardTitle></CardHeader>
           <CardContent>
             {data.blood_group ? (
               <p className="font-display text-3xl text-charcoal-deep">{data.blood_group}</p>

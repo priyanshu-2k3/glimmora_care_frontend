@@ -146,10 +146,10 @@ export default function EmergencyPage() {
 
       {/* Active banner */}
       {step === 'active' && (
-        <div className="bg-error-soft border border-error-DEFAULT/30 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-error-DEFAULT animate-pulse shrink-0" />
+        <div className="bg-error-soft border border-[#DC2626]/30 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-3 h-3 rounded-full bg-[#DC2626] animate-pulse shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-body font-semibold text-error-DEFAULT">Emergency Mode Active</p>
+            <p className="text-sm font-body font-semibold text-[#B91C1C]">Emergency Mode Active</p>
             <p className="text-xs text-greige">{expiryLabel} · Any doctor can view your critical records</p>
           </div>
           <Button variant="danger" size="sm" onClick={handleDeactivate}>Deactivate</Button>
@@ -229,7 +229,7 @@ export default function EmergencyPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               />
-              {otpError && <p className="text-xs text-error-DEFAULT font-body">{otpError}</p>}
+              {otpError && <p className="text-xs text-[#B91C1C] font-body">{otpError}</p>}
               <Button type="submit" variant="danger" className="w-full" isLoading={isLoading} disabled={otp.length < 6}>
                 {isLoading ? 'Verifying...' : 'Confirm Emergency Access'}
               </Button>

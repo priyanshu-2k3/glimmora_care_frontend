@@ -54,7 +54,7 @@ const AI_INSIGHTS = [
 ]
 
 const SEVERITY_META = {
-  high: { label: 'High Risk', variant: 'error' as const, icon: AlertTriangle, bg: 'bg-error-soft/30 border-error-DEFAULT/20' },
+  high: { label: 'High Risk', variant: 'error' as const, icon: AlertTriangle, bg: 'bg-error-soft/30 border-[#DC2626]/20' },
   medium: { label: 'Medium', variant: 'warning' as const, icon: AlertTriangle, bg: 'bg-warning-soft/30 border-warning-DEFAULT/20' },
   low: { label: 'Low', variant: 'default' as const, icon: Lightbulb, bg: 'bg-parchment border-sand-light' },
   positive: { label: 'Positive', variant: 'success' as const, icon: CheckCircle, bg: 'bg-success-soft/30 border-success-DEFAULT/20' },
@@ -111,7 +111,7 @@ export default function VaultInsightsPage() {
                     insight.severity === 'positive' ? 'bg-success-soft' : 'bg-parchment'
                   )}>
                     <Icon className={cn('w-4.5 h-4.5',
-                      insight.severity === 'high' ? 'text-error-DEFAULT' :
+                      insight.severity === 'high' ? 'text-[#B91C1C]' :
                       insight.severity === 'medium' ? 'text-warning-DEFAULT' :
                       insight.severity === 'positive' ? 'text-success-DEFAULT' : 'text-gold-soft'
                     )} />

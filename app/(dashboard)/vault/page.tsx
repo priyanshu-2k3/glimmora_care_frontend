@@ -246,7 +246,7 @@ export default function VaultPage() {
                     {record.markers.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {record.markers.slice(0, 4).map((m) => (
-                          <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-error-DEFAULT' : 'bg-parchment text-stone')}>
+                          <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-[#B91C1C]' : 'bg-parchment text-stone')}>
                             {m.name}: {m.value} {m.unit}
                           </span>
                         ))}
@@ -321,7 +321,7 @@ export default function VaultPage() {
         )}
 
         {fetchError && (
-          <div className="bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-4 text-sm text-error-DEFAULT font-body">
+          <div className="bg-error-soft border border-[#DC2626]/20 rounded-2xl p-4 text-sm text-[#B91C1C] font-body">
             {fetchError}
           </div>
         )}
@@ -418,7 +418,7 @@ export default function VaultPage() {
       )}
 
       {fetchError && (
-        <div className="bg-error-soft border border-error-DEFAULT/20 rounded-2xl p-4 text-sm text-error-DEFAULT font-body">
+        <div className="bg-error-soft border border-[#DC2626]/20 rounded-2xl p-4 text-sm text-[#B91C1C] font-body">
           {fetchError}
         </div>
       )}
@@ -473,7 +473,7 @@ export default function VaultPage() {
                                   rec.consentStatus === 'granted'
                                     ? 'bg-gold-soft text-charcoal-deep border-gold-muted font-semibold shadow-sm'
                                     : rec.consentStatus === 'revoked'
-                                    ? 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm'
+                                    ? 'bg-error-soft text-[#B91C1C] border-[#DC2626] font-semibold shadow-sm'
                                     : 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm'
                                 }
                               >

@@ -19,12 +19,12 @@ const ACTION_META: Record<string, { icon: React.ElementType; label: string; colo
   read_list:      { icon: Eye,      label: 'Records Listed',   color: 'text-stone',           bg: 'bg-parchment'      },
   download_url:   { icon: Download, label: 'Download Issued',  color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
   share:          { icon: Shield,   label: 'Record Shared',    color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
-  revoke_share:   { icon: Shield,   label: 'Access Revoked',   color: 'text-error-DEFAULT',   bg: 'bg-error-soft'     },
+  revoke_share:   { icon: Shield,   label: 'Access Revoked',   color: 'text-[#B91C1C]',   bg: 'bg-error-soft'     },
   bulk_import:    { icon: Upload,   label: 'Bulk Import',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
   assign_patient: { icon: User,     label: 'Patient Assigned', color: 'text-stone',           bg: 'bg-parchment'      },
   invite_doctor:  { icon: User,     label: 'Doctor Invited',   color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
   update_role:    { icon: Shield,   label: 'Role Updated',     color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
-  delete_user:    { icon: User,     label: 'User Deleted',     color: 'text-error-DEFAULT',   bg: 'bg-error-soft'     },
+  delete_user:    { icon: User,     label: 'User Deleted',     color: 'text-[#B91C1C]',   bg: 'bg-error-soft'     },
   ai_analysis:    { icon: Bot,      label: 'AI Analysis',      color: 'text-charcoal-deep',   bg: 'bg-ivory-warm'     },
 }
 
@@ -163,8 +163,18 @@ export default function LogsPage() {
     if (isAdmin) {
       reloadAdmin(severity, actionFilter, search)
     } else {
-      intakeApi.getAuditTrail(500).then((entries) => setRows(entries.map(fromTrail)))
-        .catch(() => setRows([]))
+      // Non-admin roles: combine the per-record intake audit trail with the
+      // role-scoped admin audit log (which the backend now scopes to the
+      // user's own actor/target rows for doctor/patient).
+      Promise.all([
+        intakeApi.getAuditTrail(500).catch(() => [] as AuditTrailEntry[]),
+        adminApi.getAuditLogs({ limit: 500 }).catch(() => [] as AuditLogOut[]),
+      ])
+        .then(([trail, sysLogs]) => {
+          const merged: LogRow[] = [...trail.map(fromTrail), ...sysLogs.map(fromAdminLog)]
+          merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+          setRows(merged)
+        })
         .finally(() => setLoading(false))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

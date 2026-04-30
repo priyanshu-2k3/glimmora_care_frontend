@@ -17,14 +17,14 @@ const STATUS_META: Record<AgentStatus, { label: string; icon: React.ElementType;
   idle: { label: 'Idle', icon: Pause, color: 'text-greige' },
   processing: { label: 'Processing', icon: Loader2, color: 'text-gold-deep' },
   paused: { label: 'Paused', icon: Pause, color: 'text-stone' },
-  error: { label: 'Error', icon: AlertCircle, color: 'text-error-DEFAULT' },
+  error: { label: 'Error', icon: AlertCircle, color: 'text-[#B91C1C]' },
 }
 
 const SEVERITY_META: Record<ActivitySeverity, { variant: 'default' | 'gold' | 'success' | 'warning' | 'error' | 'info' | 'dark'; className: string }> = {
   info:    { variant: 'info',    className: 'bg-azure-whisper text-sapphire-deep border-sapphire-mist font-semibold shadow-sm' },
   warning: { variant: 'warning', className: 'bg-warning-soft text-warning-DEFAULT border-warning-DEFAULT font-semibold shadow-sm' },
   success: { variant: 'success', className: 'bg-success-soft text-success-DEFAULT border-success-DEFAULT font-semibold shadow-sm' },
-  error:   { variant: 'error',   className: 'bg-error-soft text-error-DEFAULT border-error-DEFAULT font-semibold shadow-sm' },
+  error:   { variant: 'error',   className: 'bg-error-soft text-[#B91C1C] border-[#DC2626] font-semibold shadow-sm' },
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
@@ -77,7 +77,7 @@ function AgentCard({ agent }: { agent: Agent }) {
               <span className={cn('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', {
                 'bg-success-DEFAULT': act.severity === 'success',
                 'bg-warning-DEFAULT': act.severity === 'warning',
-                'bg-error-DEFAULT': act.severity === 'error',
+                'bg-[#DC2626]': act.severity === 'error',
                 'bg-sapphire-mist': act.severity === 'info',
               })} />
               <p className="text-xs text-stone font-body line-clamp-1">{act.description}</p>
@@ -159,7 +159,7 @@ export default function AgentsPage() {
                     <span className={cn('w-2 h-2 rounded-full mt-1.5 shrink-0', {
                       'bg-success-DEFAULT': act.severity === 'success',
                       'bg-warning-DEFAULT': act.severity === 'warning',
-                      'bg-error-DEFAULT': act.severity === 'error',
+                      'bg-[#DC2626]': act.severity === 'error',
                       'bg-sapphire-mist': act.severity === 'info',
                     })} />
                     <div className="flex-1 min-w-0">
