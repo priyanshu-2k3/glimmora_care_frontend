@@ -161,9 +161,8 @@ export default function TwoFASetupPage() {
           </div>
           <div className="space-y-3 mb-5">
             {[
-              { id: 'app' as Method,   icon: Key,        label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
-              { id: 'sms' as Method,   icon: Smartphone, label: 'SMS / Phone',       desc: 'Get a one-time code on your phone number' },
-              { id: 'email' as Method, icon: Mail,       label: 'Email OTP',         desc: 'Receive a one-time code to your registered email' },
+              { id: 'app' as Method,   icon: Key,  label: 'Authenticator App', desc: 'Google Authenticator, Authy, or any TOTP app' },
+              { id: 'email' as Method, icon: Mail, label: 'Email OTP',         desc: 'Receive a one-time code to your registered email' },
             ].map((opt) => (
               <button
                 key={opt.id}

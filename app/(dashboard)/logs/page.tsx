@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X } from 'lucide-react'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut } from '@/lib/api'
@@ -246,6 +246,24 @@ export default function LogsPage() {
             <p className="text-[11px] text-greige font-body">{s.label}</p>
           </Card>
         ))}
+      </div>
+
+      {/* Anomaly highlights */}
+      <div className="bg-white border border-sand-light rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Anomaly Highlights</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Off-hours login · 02:14 IST', color: 'bg-warning-soft text-warning-DEFAULT' },
+            { label: 'Foreign IP · 185.220.x.x', color: 'bg-error-soft text-[#B91C1C]' },
+            { label: '3× failed 2FA · pat_001', color: 'bg-warning-soft text-warning-DEFAULT' },
+            { label: 'Bulk export · 240 records', color: 'bg-azure-whisper text-sapphire-deep' },
+          ].map((c) => (
+            <span key={c.label} className={cn('text-[11px] font-body font-medium px-2.5 py-1 rounded-full', c.color)}>{c.label}</span>
+          ))}
+        </div>
       </div>
 
       {/* Search */}

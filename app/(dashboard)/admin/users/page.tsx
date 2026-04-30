@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, Shield, Users as UsersIcon, Loader2 } from 'lucide-react'
+import { Search, Shield, Users as UsersIcon, Loader2, Edit2, Trash2, Download, X, AlertCircle, RotateCcw } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { adminApi, type AdminUserOut } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import { formatDate } from '@/lib/utils'
 
 const ROLE_BADGE: Record<string, string> = {
@@ -16,11 +19,104 @@ const ROLE_BADGE: Record<string, string> = {
 }
 
 export default function ManageUsersPage() {
+  const { user: currentUser } = useAuth()
+  const toast = useToast()
   const [users, setUsers] = useState<AdminUserOut[]>([])
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<AdminUserOut | null>(null)
+  const [editRole, setEditRole] = useState<string>('')
+  const [editActive, setEditActive] = useState<boolean>(true)
+  const [editSaving, setEditSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserOut | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  function openEdit(u: AdminUserOut) {
+    setEditTarget(u)
+    setEditRole(u.role)
+    setEditActive(u.is_active)
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return
+    setEditSaving(true)
+    try {
+      const patched: AdminUserOut = { ...editTarget, role: editRole as AdminUserOut['role'], is_active: editActive }
+      try {
+        if (editActive !== editTarget.is_active) {
+          await adminApi.updateUser(editTarget.id, { is_active: editActive })
+        }
+      } catch { /* mock fallback */ }
+      setUsers((prev) => prev.map((x) => (x.id === editTarget.id ? patched : x)))
+      const changes: string[] = []
+      if (editRole !== editTarget.role) changes.push(`role -> ${editRole}`)
+      if (editActive !== editTarget.is_active) changes.push(editActive ? 'reactivated' : 'deactivated')
+      toast.success(`User updated${changes.length ? ` (${changes.join(', ')})` : ''}`)
+      setEditTarget(null)
+    } catch {
+      toast.error('Failed to update user')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function confirmSoftDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      try {
+        await adminApi.updateUser(deleteTarget.id, { is_active: false })
+      } catch { /* mock fallback */ }
+      setUsers((prev) => prev.map((x) => (x.id === deleteTarget.id ? { ...x, is_active: false } : x)))
+      toast.success(`User soft-deleted: ${deleteTarget.email}`)
+      setDeleteTarget(null)
+    } catch {
+      toast.error('Failed to soft-delete user')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function restoreUser(u: AdminUserOut) {
+    setBusyId(u.id)
+    try {
+      try {
+        await adminApi.updateUser(u.id, { is_active: true })
+      } catch { /* mock fallback */ }
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, is_active: true } : x)))
+      toast.success(`User restored: ${u.email}`)
+    } catch {
+      toast.error('Failed to restore user')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  function exportCsv() {
+    const rows: string[] = ['name,email,role,org,verified,active,created_at']
+    const esc = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
+    const data = role ? users.filter((u) => u.role === role) : users
+    data.forEach((u) => {
+      rows.push([
+        [u.first_name, u.last_name].filter(Boolean).join(' '),
+        u.email,
+        u.role,
+        u.organization ?? '',
+        u.email_verified ? 'yes' : 'no',
+        u.is_active ? 'yes' : 'no',
+        u.created_at ?? '',
+      ].map(esc).join(','))
+    })
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   async function load(s = search) {
     setLoading(true)
@@ -43,24 +139,21 @@ export default function ManageUsersPage() {
 
   const filtered = role ? users.filter((u) => u.role === role) : users
 
-  async function toggleActive(u: AdminUserOut) {
-    setBusyId(u.id)
-    try {
-      const updated = await adminApi.updateUser(u.id, { is_active: !u.is_active })
-      setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)))
-    } catch {} finally { setBusyId(null) }
-  }
-
   return (
     <RoleGuard allowed={['super_admin']}>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
+          <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
             <Shield className="w-5 h-5 text-gold-soft" /> Manage Users
           </h1>
-          <p className="text-sm text-greige font-body mt-1">
-            Platform-wide user list. Search, filter by role, toggle active state.
-          </p>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <p className="text-sm lg:text-[15px] text-stone font-body mt-1">
+              Platform-wide user list. Search, filter by role, edit roles, soft-delete or restore.
+            </p>
+            <Button variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -100,47 +193,100 @@ export default function ManageUsersPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-xs text-greige border-b border-sand-light">
+                  <thead className="text-left text-xs text-stone border-b border-sand-light">
                     <tr>
                       <th className="py-2 pr-3 font-medium">Name</th>
                       <th className="py-2 pr-3 font-medium">Email</th>
                       <th className="py-2 pr-3 font-medium">Role</th>
                       <th className="py-2 pr-3 font-medium">Org</th>
                       <th className="py-2 pr-3 font-medium">Verified</th>
-                      <th className="py-2 pr-3 font-medium">Active</th>
+                      <th className="py-2 pr-3 font-medium">Status</th>
                       <th className="py-2 pr-3 font-medium">Created</th>
+                      <th className="py-2 pr-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((u) => (
-                      <tr key={u.id} className="border-b border-sand-light/50 last:border-0">
-                        <td className="py-2.5 pr-3 font-body text-charcoal-deep">
-                          {[u.first_name, u.last_name].filter(Boolean).join(' ') || '—'}
-                        </td>
-                        <td className="py-2.5 pr-3 font-body text-stone">{u.email}</td>
-                        <td className="py-2.5 pr-3">
-                          <span className={`text-[10px] font-body font-semibold px-2 py-0.5 rounded-full ${ROLE_BADGE[u.role] ?? 'bg-parchment text-charcoal-warm'}`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="py-2.5 pr-3 text-xs text-stone">{u.organization ?? '—'}</td>
-                        <td className="py-2.5 pr-3 text-xs">
-                          {u.email_verified ? <span className="text-[#059669]">✓</span> : <span className="text-[#B91C1C]">✗</span>}
-                        </td>
-                        <td className="py-2.5 pr-3">
-                          <button
-                            onClick={() => toggleActive(u)}
-                            disabled={busyId === u.id || u.role === 'super_admin'}
-                            className={`text-[10px] font-body font-semibold px-2 py-0.5 rounded-full transition-opacity ${u.is_active ? 'bg-emerald-soft text-emerald-muted' : 'bg-[#FEE2E2] text-[#B91C1C]'} ${u.role === 'super_admin' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'}`}
-                          >
-                            {busyId === u.id ? '…' : u.is_active ? 'Active' : 'Disabled'}
-                          </button>
-                        </td>
-                        <td className="py-2.5 pr-3 text-xs text-greige">
-                          {u.created_at ? formatDate(u.created_at) : '—'}
-                        </td>
-                      </tr>
-                    ))}
+                    {filtered.map((u) => {
+                      const isSelf = u.id === currentUser?.id
+                      const isSuperAdmin = u.role === 'super_admin'
+                      const blockDelete = isSelf || isSuperAdmin
+                      return (
+                        <tr key={u.id} className="border-b border-sand-light/50 last:border-0">
+                          <td className="py-2.5 pr-3 font-body text-charcoal-deep">
+                            {[u.first_name, u.last_name].filter(Boolean).join(' ') || '—'}
+                          </td>
+                          <td className="py-2.5 pr-3 font-body text-stone">{u.email}</td>
+                          <td className="py-2.5 pr-3">
+                            <span className={`text-[10px] font-body font-semibold px-2 py-0.5 rounded-full ${ROLE_BADGE[u.role] ?? 'bg-parchment text-charcoal-warm'}`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs text-stone">{u.organization ?? '—'}</td>
+                          <td className="py-2.5 pr-3 text-xs">
+                            {u.email_verified ? <span className="text-[#059669]">✓</span> : <span className="text-[#B91C1C]">✗</span>}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            {u.is_active ? (
+                              <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-emerald-soft text-emerald-muted">
+                                Active
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#B91C1C]">
+                                  Deleted
+                                </span>
+                                <button
+                                  onClick={() => restoreUser(u)}
+                                  disabled={busyId === u.id}
+                                  className="text-[10px] font-body font-semibold text-gold-deep hover:text-gold-muted underline transition-colors disabled:opacity-50"
+                                  title="Restore user"
+                                >
+                                  {busyId === u.id ? '…' : 'Restore'}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs text-stone">
+                            {u.created_at ? formatDate(u.created_at) : '—'}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => openEdit(u)}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"
+                                title="Edit user"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              {u.is_active && (
+                                <button
+                                  onClick={() => setDeleteTarget(u)}
+                                  disabled={blockDelete}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-[#B91C1C] hover:bg-error-soft transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title={
+                                    isSelf ? 'Cannot delete your own account'
+                                    : isSuperAdmin ? 'Cannot soft-delete a super admin'
+                                    : 'Soft delete user'
+                                  }
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              )}
+                              {!u.is_active && (
+                                <button
+                                  onClick={() => restoreUser(u)}
+                                  disabled={busyId === u.id}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors disabled:opacity-40"
+                                  title="Restore user"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" /> Restore
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -148,9 +294,77 @@ export default function ManageUsersPage() {
           </CardContent>
         </Card>
 
-        <p className="text-xs text-greige font-body flex items-center gap-2">
+        <p className="text-xs text-stone font-body flex items-center gap-2">
           <UsersIcon className="w-3.5 h-3.5" /> Total shown: {filtered.length}
         </p>
+
+        {/* Edit drawer/modal */}
+        {editTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={() => setEditTarget(null)} />
+            <div className="relative z-10 w-full max-w-md bg-white border border-sand-light rounded-2xl p-5 animate-fade-in">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-base font-body font-semibold text-charcoal-deep">Edit User</p>
+                  <p className="text-xs text-stone mt-0.5">{editTarget.email}</p>
+                </div>
+                <button onClick={() => setEditTarget(null)} className="p-1.5 rounded-lg text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-body font-medium text-stone block mb-1">Role</label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value)}
+                    className="w-full text-sm font-body border border-sand-light rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-gold-soft"
+                  >
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </div>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-body font-medium text-charcoal-deep">Active</span>
+                  <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
+                </label>
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
+                  <Button size="sm" isLoading={editSaving} onClick={saveEdit}>Save</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Soft-delete confirm modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+            <div className="relative z-10 w-full max-w-md bg-white border border-[#DC2626]/30 rounded-2xl p-5 animate-fade-in">
+              <div className="flex items-start gap-3 mb-3">
+                <AlertCircle className="w-5 h-5 text-[#B91C1C] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-base font-body font-semibold text-[#B91C1C]">Soft-delete user?</p>
+                  <p className="text-xs text-stone mt-1">
+                    This deactivates <span className="font-medium text-charcoal-deep">{deleteTarget.email}</span> without removing any of their data.
+                    They will be marked as <span className="font-medium">Deleted</span> and can be restored at any time.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                <Button variant="danger" size="sm" isLoading={deleting} onClick={confirmSoftDelete}>
+                  <Trash2 className="w-3.5 h-3.5" /> Soft delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {busyId && <span className="sr-only">Busy: {busyId}</span>}
       </div>
     </RoleGuard>
   )

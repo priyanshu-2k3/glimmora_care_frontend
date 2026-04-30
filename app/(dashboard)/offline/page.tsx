@@ -34,7 +34,7 @@ export default function OfflinePage() {
   const [syncProgress, setSyncProgress] = useState(0)
   const [synced, setSynced] = useState(0)
   const [offlineEnabled, setOfflineEnabled] = useState(true)
-  const [conflictResolved, setConflictResolved] = useState(false)
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, 'mine' | 'server'>>({})
 
   async function startSync() {
     setSyncState('syncing')
@@ -197,7 +197,7 @@ export default function OfflinePage() {
       )}
 
       {/* Conflicts */}
-      {!conflictResolved && CONFLICTS.length > 0 && syncState !== 'online' && (
+      {CONFLICTS.length > 0 && syncState !== 'online' && (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -206,34 +206,58 @@ export default function OfflinePage() {
             </div>
             <CardDescription>Resolve data discrepancies before sync completes</CardDescription>
           </CardHeader>
-          <CardContent>
-            {CONFLICTS.map((c) => (
-              <div key={c.id} className="border border-warning-soft/40 rounded-xl overflow-hidden">
-                <div className="bg-warning-soft/10 px-4 py-2">
-                  <p className="text-xs font-body font-medium text-warning-DEFAULT">{c.patient} — {c.field}</p>
-                </div>
-                <div className="grid grid-cols-2 divide-x divide-sand-light">
-                  <div className="p-3">
-                    <p className="text-[10px] text-greige font-body uppercase tracking-wider mb-1">Local (Tablet)</p>
-                    <p className="text-sm font-body font-medium text-charcoal-deep">{c.localValue}</p>
-                    <p className="text-[10px] text-greige">{c.localTime}</p>
+          <CardContent className="space-y-3">
+            {CONFLICTS.map((c) => {
+              const resolution = conflictResolutions[c.id]
+              return (
+                <div key={c.id} className="border border-warning-soft/40 rounded-xl overflow-hidden">
+                  <div className="bg-warning-soft/10 px-4 py-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-body font-medium text-warning-DEFAULT">{c.patient} — {c.field}</p>
+                    {resolution && (
+                      <Badge variant="success">Resolved · {resolution === 'mine' ? 'Your version' : 'Server version'}</Badge>
+                    )}
                   </div>
-                  <div className="p-3">
-                    <p className="text-[10px] text-greige font-body uppercase tracking-wider mb-1">Server</p>
-                    <p className="text-sm font-body font-medium text-charcoal-deep">{c.serverValue}</p>
-                    <p className="text-[10px] text-greige">{c.serverTime}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
+                    <div className={cn(
+                      'rounded-xl border p-3 transition-all',
+                      resolution === 'mine'
+                        ? 'bg-success-soft/30 border-success-DEFAULT/40 ring-2 ring-success-DEFAULT/20'
+                        : 'bg-ivory-warm border-sand-light',
+                    )}>
+                      <p className="text-[10px] text-greige font-body uppercase tracking-wider mb-1">Your version (Tablet)</p>
+                      <p className="text-base font-body font-bold text-charcoal-deep">{c.localValue}</p>
+                      <p className="text-[10px] text-greige mb-3">{c.localTime}</p>
+                      <Button
+                        size="sm"
+                        variant={resolution === 'mine' ? 'primary' : 'outline'}
+                        onClick={() => setConflictResolutions((p) => ({ ...p, [c.id]: 'mine' }))}
+                        className="w-full"
+                      >
+                        Use mine
+                      </Button>
+                    </div>
+                    <div className={cn(
+                      'rounded-xl border p-3 transition-all',
+                      resolution === 'server'
+                        ? 'bg-success-soft/30 border-success-DEFAULT/40 ring-2 ring-success-DEFAULT/20'
+                        : 'bg-ivory-warm border-sand-light',
+                    )}>
+                      <p className="text-[10px] text-greige font-body uppercase tracking-wider mb-1">Server version</p>
+                      <p className="text-base font-body font-bold text-charcoal-deep">{c.serverValue}</p>
+                      <p className="text-[10px] text-greige mb-3">{c.serverTime}</p>
+                      <Button
+                        size="sm"
+                        variant={resolution === 'server' ? 'primary' : 'outline'}
+                        onClick={() => setConflictResolutions((p) => ({ ...p, [c.id]: 'server' }))}
+                        className="w-full"
+                      >
+                        Use server
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex border-t border-sand-light">
-                  <button className="flex-1 py-2.5 text-xs font-body text-stone hover:bg-parchment transition-colors" onClick={() => setConflictResolved(true)}>
-                    Keep Local
-                  </button>
-                  <button className="flex-1 py-2.5 text-xs font-body text-charcoal-deep font-medium hover:bg-parchment transition-colors border-l border-sand-light" onClick={() => setConflictResolved(true)}>
-                    Use Server (Recommended)
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </CardContent>
         </Card>
       )}

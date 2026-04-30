@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { Globe, Users, TrendingUp, AlertTriangle, Baby, Heart, ChevronRight } from 'lucide-react'
+import { Globe, Users, TrendingUp, AlertTriangle, Baby, Heart, ChevronRight, Download } from 'lucide-react'
 import { POPULATION_DATA } from '@/data/population'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -35,6 +35,20 @@ export default function PopulationPage() {
 
   const overviewRef = useRef<HTMLDivElement>(null)
   const elderlyRef = useRef<HTMLDivElement>(null)
+
+  function exportCsv() {
+    const rows: string[] = ['region,level,risk_intensity,screening_coverage,active_patients']
+    regions.forEach((r) => {
+      rows.push(`${r.name},${r.level},${r.riskIntensity},${r.screeningCoverage},${r.activePatients}`)
+    })
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `population-aggregates-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   useEffect(() => {
     setDistrictAnim(districts.map(() => 0))
@@ -95,6 +109,12 @@ export default function PopulationPage() {
         <p className="text-sm text-stone font-body mt-2 max-w-lg leading-relaxed">
           Aggregated anonymized data only · No individual identifiers · Maharashtra Division
         </p>
+        <button
+          onClick={exportCsv}
+          className="mt-3 inline-flex items-center gap-2 text-xs font-body font-semibold text-charcoal-deep bg-white border border-sand-light hover:border-gold-soft rounded-lg px-3 py-2 transition-all duration-200"
+        >
+          <Download className="w-3.5 h-3.5" /> Export CSV
+        </button>
       </div>
 
       <div className="space-y-6">

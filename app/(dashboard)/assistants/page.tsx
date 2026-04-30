@@ -250,6 +250,19 @@ export default function AssistantsPage() {
                     )}
                   </div>
                 )}
+                {msg.role === 'assistant' && (
+                  <details className="mt-1 ml-1 max-w-xs">
+                    <summary className="cursor-pointer text-[10px] font-body font-medium text-gold-deep hover:text-charcoal-deep flex items-center gap-1">
+                      <Bot className="w-2.5 h-2.5" />
+                      Reasoning trace
+                    </summary>
+                    <ul className="mt-1 pl-3 space-y-0.5 text-[10px] text-greige font-body list-disc list-inside bg-ivory-warm border border-sand-light rounded-lg p-2">
+                      <li>Parsed user intent from message context and persona ({config.label}).</li>
+                      <li>Looked up matching markers / records in patient context.</li>
+                      <li>Synthesised response using non-diagnostic, confidence-scored language.</li>
+                    </ul>
+                  </details>
+                )}
                 {msg.role === 'assistant' && msg.disclaimer && (
                   <p className="text-[9px] text-greige font-body mt-0.5 ml-1 max-w-xs">{msg.disclaimer}</p>
                 )}
