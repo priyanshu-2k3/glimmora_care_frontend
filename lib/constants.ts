@@ -88,12 +88,12 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
 
-  /* ── Organisation (admin/doctor: their own org) ─── */
+  /* ── Organisation (admin/doctor: their own org · super_admin: global org mgmt) ─── */
   {
     href: '/organization',
     label: 'Organisation',
     icon: 'Building2',
-    roles: ['admin', 'doctor'] as Role[],
+    roles: ['admin', 'doctor', 'super_admin'] as Role[],
   },
 
   /* ── Consent & access (patient + doctor) ─── */
@@ -201,12 +201,6 @@ export const NAV_ITEMS = [
   },
 
   /* ── Super Admin only ─── */
-  {
-    href: '/admin/organizations',
-    label: 'Organisations',
-    icon: 'Building2',
-    roles: ['super_admin'] as Role[],
-  },
   {
     href: '/admin/users',
     label: 'Manage Users',

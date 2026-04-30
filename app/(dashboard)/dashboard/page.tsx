@@ -611,7 +611,7 @@ function AdminView({ userName }: { userName: string }) {
 
 const SUPER_ADMIN_QUICK_ACTIONS = [
   { href: '/admin/users',         icon: Shield,        label: 'Manage Users',    sub: 'Roles & permissions',     color: C.violet },
-  { href: '/admin/organizations', icon: Building2,     label: 'Organisations',   sub: 'Platform-wide list',      color: C.ocean  },
+  { href: '/organization',        icon: Building2,     label: 'Organisations',   sub: 'Platform-wide list',      color: C.ocean  },
   { href: '/agents',              icon: Activity,      label: 'Agents',          sub: 'Autonomous agent fleet',  color: C.emerald },
   { href: '/population',          icon: Globe,         label: 'Population',      sub: 'Aggregate intelligence',  color: C.teal   },
 ]

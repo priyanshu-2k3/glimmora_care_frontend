@@ -283,7 +283,7 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
 
       {/* Management quick links — super admin only */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Link href="/admin/organizations">
+        <Link href="/organization">
           <Card hover className="text-center py-6">
             <CardContent>
               <Building2 className="w-6 h-6 text-gold-soft mx-auto mb-2" />
