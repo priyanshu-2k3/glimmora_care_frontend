@@ -3,7 +3,7 @@
 import {
   Upload, Shield, Brain, Activity, Users,
   AlertTriangle, CheckCircle, FileText, ArrowUpRight, ShieldAlert,
-  Building2, ClipboardList,
+  Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -59,7 +59,7 @@ function StatCard({ icon: Icon, label, value, trend, trendUp = true, accent, sub
             </div>
           )}
         </div>
-        <p className="text-3xl font-body font-bold text-charcoal-deep leading-none tracking-tight">{value}</p>
+        <p className="text-3xl lg:text-4xl font-body font-bold text-charcoal-deep leading-none tracking-tight">{value}</p>
         <p className="text-xs font-body text-greige mt-1.5 leading-snug">{label}</p>
         {sub && (
           <div className="mt-3 pt-3 border-t border-sand-light">
@@ -285,6 +285,76 @@ function PatientView({ userName }: { userName: string }) {
         </Panel>
       </div>
 
+      {/* Family snapshot + Upcoming reminders */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Panel>
+          <PanelHeader title="Family snapshot" sub="Members and recent activity" action={
+            <Link href="/family" className="text-xs font-body font-medium flex items-center gap-1 hover:opacity-70" style={{ color: C.violet.bg }}>
+              Open <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          } />
+          <div className="px-5 pb-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: C.violet.bg }}>
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-body font-bold text-charcoal-deep leading-none">4</p>
+                <p className="text-[11px] text-greige">members</p>
+              </div>
+            </div>
+            <p className="text-xs text-stone font-body leading-relaxed">
+              <span className="font-semibold text-charcoal-deep">Last activity:</span> Sneha uploaded a lab report 2 days ago.
+            </p>
+          </div>
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="Upcoming reminders" sub="Screenings & medications" action={
+            <Bell className="w-3.5 h-3.5 text-greige" />
+          } />
+          <div className="px-5 pb-5 space-y-2">
+            {[
+              { label: 'Annual lipid panel screening',  when: 'In 2 weeks',  color: C.amber  },
+              { label: 'Vitamin D supplement refill',   when: 'In 5 days',   color: C.ocean  },
+              { label: 'HbA1c re-test',                 when: 'In 3 months', color: C.violet },
+            ].map((r) => (
+              <div key={r.label} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-ivory-cream transition-colors">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color.bg }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-body font-medium text-charcoal-deep truncate">{r.label}</p>
+                </div>
+                <span className="text-[10px] font-body text-greige shrink-0">{r.when}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      {/* Next actions */}
+      <Panel>
+        <PanelHeader title="Next actions" sub="Quick prompts to keep your record up to date" action={
+          <ListChecks className="w-3.5 h-3.5 text-greige" />
+        } />
+        <div className="px-5 pb-5 space-y-2">
+          {[
+            { label: 'Upload latest report',     href: '/intake',           color: C.ocean   },
+            { label: 'Approve doctor request',   href: '/consent/requests', color: C.amber   },
+            { label: 'Confirm marker values',    href: '/vault',            color: C.emerald },
+          ].map((p) => (
+            <Link key={p.label} href={p.href}>
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-sand-light hover:border-gold-soft/50 hover:bg-ivory-cream transition-all group">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: p.color.soft }}>
+                  <CheckCircle className="w-4 h-4" style={{ color: p.color.text }} />
+                </div>
+                <p className="flex-1 text-xs font-body font-medium text-charcoal-deep">{p.label}</p>
+                <ArrowUpRight className="w-3.5 h-3.5 text-greige group-hover:text-gold-deep transition-colors" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Panel>
+
       {/* Completeness */}
       {!loading && completenessItems.length > 0 && (
         <Panel>
@@ -488,13 +558,31 @@ function AdminView({ userName }: { userName: string }) {
           {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard icon={Users}       label="Total Patients"      value={totalPatients}               accent={C.ocean} />
           <StatCard icon={FileText}    label="Health Records"      value={totalRecords}                accent={C.teal} />
           <StatCard icon={Users}       label="Total Doctors"       value={stats?.total_doctors ?? '—'} accent={C.violet} />
           <StatCard icon={CheckCircle} label="New Users (30d)"     value={stats?.new_users_last_30_days ?? '—'} accent={C.emerald} />
+          <StatCard icon={Upload}      label="Monthly Uploads"     value={318}                          accent={C.amber} />
         </div>
       )}
+
+      {/* Flagged Audit Events strip */}
+      <div className="bg-white border border-sand-light rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Off-hours export · 03:42', color: 'bg-warning-soft text-warning-DEFAULT' },
+            { label: 'Bulk consent override', color: 'bg-error-soft text-[#B91C1C]' },
+            { label: 'New role escalation', color: 'bg-azure-whisper text-sapphire-deep' },
+          ].map((c) => (
+            <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
+          ))}
+        </div>
+      </div>
 
       <Panel>
         <PanelHeader title="Quick Actions" sub="Navigate to key areas" />
@@ -522,9 +610,10 @@ function AdminView({ userName }: { userName: string }) {
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 
 const SUPER_ADMIN_QUICK_ACTIONS = [
-  { href: '/admin',              icon: Building2,  label: 'Admin Dashboard',   sub: 'Platform overview',          color: C.ocean  },
-  { href: '/admin/logs',         icon: ClipboardList, label: 'Platform Logs', sub: 'Audit trail & events',       color: C.amber  },
-  { href: '/manage-users',       icon: Shield,     label: 'Manage Admins',     sub: 'User roles & permissions',   color: C.violet },
+  { href: '/admin/users',         icon: Shield,        label: 'Manage Users',    sub: 'Roles & permissions',     color: C.violet },
+  { href: '/admin/organizations', icon: Building2,     label: 'Organisations',   sub: 'Platform-wide list',      color: C.ocean  },
+  { href: '/agents',              icon: Activity,      label: 'Agents',          sub: 'Autonomous agent fleet',  color: C.emerald },
+  { href: '/population',          icon: Globe,         label: 'Population',      sub: 'Aggregate intelligence',  color: C.teal   },
 ]
 
 function SuperAdminView({ userName }: { userName: string }) {
@@ -589,13 +678,56 @@ function SuperAdminView({ userName }: { userName: string }) {
           {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users}       label="Total Patients"  value={stats?.total_patients ?? '—'}           accent={C.ocean} />
-          <StatCard icon={Users}       label="Total Doctors"   value={stats?.total_doctors ?? '—'}            accent={C.violet} />
-          <StatCard icon={Building2}   label="Organisations"   value={stats?.total_organizations ?? '—'}      accent={C.teal} />
-          <StatCard icon={CheckCircle} label="New Users (30d)" value={stats?.new_users_last_30_days ?? '—'} accent={C.emerald} />
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard icon={Users}       label="Total Patients"     value={stats?.total_patients ?? '—'}           accent={C.ocean} />
+          <StatCard icon={Users}       label="Total Doctors"      value={stats?.total_doctors ?? '—'}            accent={C.violet} />
+          <StatCard icon={Building2}   label="Organisations"      value={stats?.total_organizations ?? '—'}      accent={C.teal} />
+          <StatCard icon={UserPlus}    label="Total Assignments"  value={142}                                     accent={C.amber} />
+          <StatCard icon={CheckCircle} label="New Users (30d)"    value={stats?.new_users_last_30_days ?? '—'}   accent={C.emerald} />
         </div>
       )}
+
+      {/* Platform Alerts + Recent Provisioning feeds */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Panel>
+          <PanelHeader title="Platform Alerts" sub="Recent critical audit events" />
+          <div className="px-5 pb-5 space-y-2">
+            {[
+              { icon: AlertTriangle, color: C.coral, label: 'Failed bulk delete · 14 records', time: '2m ago' },
+              { icon: ShieldAlert,   color: C.amber, label: 'Suspicious foreign IP · super_admin', time: '34m ago' },
+              { icon: Mail,          color: C.violet, label: 'Bounced invite emails · 3', time: '2h ago' },
+              { icon: AlertTriangle, color: C.coral, label: 'Off-hours OTP retries · 5×', time: '6h ago' },
+            ].map((a) => (
+              <div key={a.label} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: a.color.soft }}>
+                  <a.icon className="w-3.5 h-3.5" style={{ color: a.color.bg }} />
+                </div>
+                <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{a.label}</p>
+                <span className="text-[10px] text-greige shrink-0">{a.time}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="Recent Provisioning" sub="Org / admin assignment activity" />
+          <div className="px-5 pb-5 space-y-2">
+            {[
+              { icon: Building2, color: C.teal,   label: 'New org "Sunrise Health" created', time: '12m ago' },
+              { icon: UserPlus,  color: C.ocean,  label: 'Admin assigned to "Lotus Clinic"', time: '1h ago' },
+              { icon: UserPlus,  color: C.violet, label: '6 doctors invited to "Aster Med"', time: '4h ago' },
+            ].map((a) => (
+              <div key={a.label} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: a.color.soft }}>
+                  <a.icon className="w-3.5 h-3.5" style={{ color: a.color.bg }} />
+                </div>
+                <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{a.label}</p>
+                <span className="text-[10px] text-greige shrink-0">{a.time}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Quick Actions — super_admin only */}

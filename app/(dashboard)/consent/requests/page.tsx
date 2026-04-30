@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, X, Clock, Shield, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Check, X, Clock, Shield, AlertCircle, Edit2 } from 'lucide-react'
 import { consentApi, type ConsentRequest } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -30,6 +30,19 @@ export default function ConsentRequestsPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [editingScope, setEditingScope] = useState<string | null>(null)
+  const [scopeEdits, setScopeEdits] = useState<Record<string, Set<string>>>({})
+
+  function getEditedScope(req: ConsentRequest): Set<string> {
+    return scopeEdits[req.id] ?? new Set(req.scope)
+  }
+  function toggleScopeItem(req: ConsentRequest, key: string) {
+    setScopeEdits((prev) => {
+      const current = new Set(prev[req.id] ?? req.scope)
+      if (current.has(key)) current.delete(key); else current.add(key)
+      return { ...prev, [req.id]: current }
+    })
+  }
 
   useEffect(() => {
     let alive = true
@@ -113,18 +126,50 @@ export default function ConsentRequestsPage() {
                     )}
 
                     <div>
-                      <p className="text-xs font-body font-semibold text-charcoal-deep mb-2 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-gold-soft" />
-                        Requesting access to:
-                      </p>
-                      <div className="space-y-1.5">
-                        {req.scope.map((s) => (
-                          <div key={s} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-gold-soft shrink-0" />
-                            <span className="text-xs text-stone font-body">{SCOPE_LABELS[s] || s}</span>
-                          </div>
-                        ))}
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-body font-semibold text-charcoal-deep flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-gold-soft" />
+                          Requesting access to:
+                        </p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingScope(editingScope === req.id ? null : req.id) }}
+                          className="text-[11px] font-body font-medium text-gold-deep hover:text-charcoal-deep flex items-center gap-1 transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          {editingScope === req.id ? 'Done' : 'Edit scope'}
+                        </button>
                       </div>
+                      {editingScope === req.id ? (
+                        <div className="bg-gold-whisper/30 border border-gold-soft/30 rounded-xl p-3 space-y-2">
+                          <p className="text-[11px] text-stone font-body">
+                            Toggle which records / markers are in scope before approving.
+                          </p>
+                          {Object.keys(SCOPE_LABELS).map((key) => {
+                            const checked = getEditedScope(req).has(key)
+                            return (
+                              <label key={key} className="flex items-center gap-2 cursor-pointer text-xs font-body text-stone">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => { e.stopPropagation(); toggleScopeItem(req, key) }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="accent-gold-deep"
+                                />
+                                {SCOPE_LABELS[key]}
+                              </label>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {[...getEditedScope(req)].map((s) => (
+                            <div key={s} className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-gold-soft shrink-0" />
+                              <span className="text-xs text-stone font-body">{SCOPE_LABELS[s] || s}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="bg-ivory-warm border border-sand-light rounded-xl p-3">

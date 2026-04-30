@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { NAV_ITEMS, ROLES } from '@/lib/constants'
+import { NAV_ITEMS, SEARCHABLE_SUBPAGES, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
 import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -49,7 +49,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
   const [darkMode, setDarkMode] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchWrapRef = useRef<HTMLDivElement>(null)
 
   const currentNav = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
@@ -57,8 +61,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const pageTitle = currentNav?.label || 'Dashboard'
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
-  // Load real notifications and poll every 60s
+  // Load real notifications and poll every 60s.
+  // Reset notifications immediately on user change so a new login never sees
+  // the previous user's stale items before the first fetch resolves.
   useEffect(() => {
+    setNotifications([])
     if (!getAccessToken()) return
     let alive = true
     const load = () => {
@@ -71,6 +78,47 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     return () => { alive = false; clearInterval(id) }
   }, [user?.id])
 
+  // Filter nav items by current user's role + search query — used for the
+  // search dropdown so the user can jump to any page they have access to.
+  const searchTrimmed = searchQuery.trim().toLowerCase()
+  const searchMatches = searchTrimmed && user
+    ? (() => {
+        const all = [...NAV_ITEMS, ...SEARCHABLE_SUBPAGES]
+          .filter((item) => item.roles.includes(user.role as Role))
+          .filter((item) => item.label.toLowerCase().includes(searchTrimmed) || item.href.toLowerCase().includes(searchTrimmed))
+        const seen = new Set<string>()
+        const unique: typeof all = []
+        for (const item of all) {
+          if (seen.has(item.href)) continue
+          seen.add(item.href)
+          unique.push(item)
+          if (unique.length >= 8) break
+        }
+        return unique
+      })()
+    : []
+
+  function goToMatch(href: string) {
+    setSearchQuery('')
+    setShowSearchDropdown(false)
+    searchInputRef.current?.blur()
+    router.push(href)
+  }
+
+  function submitSearch() {
+    if (searchMatches.length > 0) {
+      goToMatch(searchMatches[0].href)
+      return
+    }
+    const q = searchQuery.trim()
+    setShowSearchDropdown(false)
+    if (!q) {
+      router.push('/vault/search')
+      return
+    }
+    router.push(`/vault/search?q=${encodeURIComponent(q)}`)
+  }
+
   // Refresh on dropdown open
   useEffect(() => {
     if (!showNotifications || !getAccessToken()) return
@@ -81,6 +129,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     function handleClickOutside(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setShowNotifications(false)
+      }
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setShowSearchDropdown(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -125,15 +176,67 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-1.5">
-        {/* Search bar */}
-        <div className="hidden md:flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-lg px-3 py-1.5 w-52 hover:border-gold-soft/40 transition-colors focus-within:border-gold-soft/60 focus-within:bg-white">
-          <Search className="w-3.5 h-3.5 text-greige shrink-0" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="bg-transparent text-xs font-body text-charcoal-deep placeholder:text-greige outline-none w-full"
-          />
-          <kbd className="hidden lg:block text-[10px] text-greige bg-sand-light px-1 py-0.5 rounded font-body shrink-0">⌘K</kbd>
+        {/* Search bar with page suggestions dropdown */}
+        <div ref={searchWrapRef} className="relative hidden md:block">
+          <div className="flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-lg px-3 py-1.5 w-52 hover:border-gold-soft/40 transition-colors focus-within:border-gold-soft/60 focus-within:bg-white">
+            <Search className="w-3.5 h-3.5 text-greige shrink-0" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search pages..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setShowSearchDropdown(true)
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  submitSearch()
+                } else if (e.key === 'Escape') {
+                  setSearchQuery('')
+                  setShowSearchDropdown(false)
+                  ;(e.target as HTMLInputElement).blur()
+                }
+              }}
+              className="bg-transparent text-xs font-body text-charcoal-deep placeholder:text-greige outline-none w-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setShowSearchDropdown(false); searchInputRef.current?.focus() }}
+                className="text-greige hover:text-charcoal-deep transition-colors shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {showSearchDropdown && searchTrimmed.length > 0 && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-sand-light overflow-hidden z-50">
+              {searchMatches.length === 0 ? (
+                <div className="px-4 py-3 text-xs font-body text-greige">
+                  No pages match &quot;{searchQuery.trim()}&quot;
+                </div>
+              ) : (
+                <ul className="max-h-72 overflow-y-auto py-1">
+                  {searchMatches.map((item) => (
+                    <li key={item.href}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); goToMatch(item.href) }}
+                        className="w-full text-left px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <span className="font-medium truncate">{item.label}</span>
+                        <span className="text-[10px] text-greige truncate">{item.href}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Light/Dark toggle */}

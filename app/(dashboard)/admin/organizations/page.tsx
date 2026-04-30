@@ -7,8 +7,10 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { adminApi, ApiError, type AdminOrgItem } from '@/lib/api'
+import { useToast } from '@/components/ui/Toast'
 
 export default function ManageOrganizationsPage() {
+  const toast = useToast()
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -47,6 +49,7 @@ export default function ManageOrganizationsPage() {
     try {
       const created = await adminApi.createOrg(orgName.trim())
       setCreateMsg(`Organisation "${created.name}" created.`)
+      toast.success(`Organisation created: ${created.name}`)
       setOrgName('')
       await reload()
       setTimeout(() => setCreateMsg(null), 3000)
@@ -67,12 +70,14 @@ export default function ManageOrganizationsPage() {
         first_name: assignFirst.trim() || undefined,
         last_name: assignLast.trim() || undefined,
       } as never)
+      const orgName = orgs.find((o) => o.id === assignOrgId)?.name ?? 'organisation'
       setAssignMsg(
         // assignAdmin response includes account_created when admin was auto-created
         (result as { account_created?: boolean }).account_created
           ? 'Admin assigned (account auto-created with temp password Glimmora@2025).'
           : 'Admin assigned.'
       )
+      toast.success(`Admin assigned to ${orgName}`)
       setAssignOrgId(''); setAssignEmail(''); setAssignFirst(''); setAssignLast('')
       await reload()
       setTimeout(() => setAssignMsg(null), 4000)
@@ -87,10 +92,10 @@ export default function ManageOrganizationsPage() {
     <RoleGuard allowed={['super_admin']}>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
+          <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
             <Building2 className="w-5 h-5 text-gold-soft" /> Manage Organisations
           </h1>
-          <p className="text-sm text-greige font-body mt-1">Create organisations and assign their administrators.</p>
+          <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Create organisations and assign their administrators.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

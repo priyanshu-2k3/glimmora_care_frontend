@@ -118,10 +118,29 @@ export default function IntelligencePage() {
                       <CardTitle className="text-base font-body font-semibold">{insight.title}</CardTitle>
                       <CardDescription>{insight.detail}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant={insight.severity === 'warn' ? 'warning' : 'info'}>
-                        {insight.sample_size} readings · {Math.round(insight.confidence * 100)}% conf
-                      </Badge>
+                    <CardContent className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={insight.severity === 'warn' ? 'warning' : 'info'}>
+                          {Math.round(insight.confidence * 100)}% confidence
+                        </Badge>
+                        <span className="text-[11px] font-body bg-parchment border border-sand-light rounded-full px-2 py-0.5 text-stone">
+                          Sources: {insight.sample_size} readings
+                        </span>
+                      </div>
+                      <details className="group bg-ivory-warm border border-sand-light rounded-xl">
+                        <summary className="cursor-pointer list-none px-3 py-2 flex items-center justify-between text-[11px] font-body font-semibold text-charcoal-deep">
+                          <span className="flex items-center gap-1.5">
+                            <Brain className="w-3 h-3 text-gold-soft" />
+                            Reasoning trace
+                          </span>
+                          <span className="text-greige group-open:rotate-180 transition-transform">▾</span>
+                        </summary>
+                        <ul className="px-3 pb-3 pt-1 space-y-1.5 text-[11px] text-stone font-body list-disc list-inside">
+                          <li>Pulled {insight.sample_size} readings from this patient&apos;s longitudinal record.</li>
+                          <li>Detected pattern matching &quot;{insight.severity}&quot; severity rule.</li>
+                          <li>Confidence ({Math.round(insight.confidence * 100)}%) reflects sample size and signal stability.</li>
+                        </ul>
+                      </details>
                     </CardContent>
                   </Card>
                 )))}

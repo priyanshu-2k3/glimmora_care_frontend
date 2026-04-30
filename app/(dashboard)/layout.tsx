@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
+import { ToastProvider } from '@/components/ui/Toast'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -17,7 +18,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isAuthenticated, isLoading, router])
 
-  if (isLoading) {
+  // Render loading shell while auth state is resolving OR while we redirect
+  // an unauthenticated user. Never render dashboard children until
+  // isAuthenticated === true — this prevents any flash of protected UI
+  // when the user hits a /(dashboard) URL directly.
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-dawn-luxury flex items-center justify-center">
         <div className="text-center">
@@ -30,9 +35,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!isAuthenticated) return null
-
   return (
+    <ToastProvider>
     <div className="flex h-screen bg-ivory-cream overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-56 lg:shrink-0">
@@ -60,5 +64,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </ToastProvider>
   )
 }

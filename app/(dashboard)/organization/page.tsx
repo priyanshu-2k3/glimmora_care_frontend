@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
 import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 // ─── Admin view ────────────────────────────────────────────────────────────────
 function AdminOrgView() {
@@ -17,7 +18,7 @@ function AdminOrgView() {
   const [org, setOrg] = useState<OrgOut | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ name: '', address: '', phone: '', website: '' })
+  const [form, setForm] = useState({ name: '', address: '', phone: '', website: '', logo: '' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +45,7 @@ function AdminOrgView() {
     orgApi.getMine()
       .then((data) => {
         setOrg(data)
-        setForm({ name: data.name, address: data.address ?? '', phone: data.phone ?? '', website: data.website ?? '' })
+        setForm({ name: data.name, address: data.address ?? '', phone: data.phone ?? '', website: data.website ?? '', logo: '' })
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {
@@ -97,7 +98,7 @@ function AdminOrgView() {
     try {
       const created = await orgApi.create(createName.trim())
       setOrg(created)
-      setForm({ name: created.name, address: '', phone: '', website: '' })
+      setForm({ name: created.name, address: '', phone: '', website: '', logo: '' })
       setShowCreate(false)
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Failed to create organisation.')
@@ -229,6 +230,7 @@ function AdminOrgView() {
               <Input label="Address" value={form.address} placeholder="123 Medical Street, Mumbai" onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
               <Input label="Phone" type="tel" value={form.phone} placeholder="+91 98765 43210" onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
               <Input label="Website" type="url" value={form.website} placeholder="https://clinic.example.com" onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))} />
+              <Input label="Logo URL" type="url" value={form.logo} placeholder="https://clinic.example.com/logo.png" onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))} hint="Public URL of your organisation logo (mock)" />
               <Button onClick={handleSave} isLoading={saving} className="w-full">
                 <Save className="w-4 h-4" />
                 {saved ? 'Saved!' : 'Save Changes'}
@@ -455,6 +457,7 @@ function AssignAdminModal({
 
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 function SuperAdminOrgView() {
+  const toast = useToast()
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -505,7 +508,8 @@ function SuperAdminOrgView() {
     setCreating(true)
     setCreateError(null)
     try {
-      await adminApi.createOrg(createName.trim())
+      const created = await adminApi.createOrg(createName.trim())
+      toast.success(`Organisation created: ${created.name}`)
       setCreateSuccess(true)
       setCreateName('')
       setCreateAddress('')
@@ -525,6 +529,7 @@ function SuperAdminOrgView() {
 
   function handleAssignSuccess(updatedOrg: AdminOrgItem) {
     setOrgs((prev) => prev.map((o) => o.id === updatedOrg.id ? updatedOrg : o))
+    toast.success(`Admin assigned to ${updatedOrg.name}`)
     setAssignOrgTarget(null)
     // Re-fetch from server so admin_email reflects the actual assigned admin
     loadOrgs()
@@ -532,10 +537,14 @@ function SuperAdminOrgView() {
 
   async function handleRemoveAdmin(orgId: string) {
     setRemoveAdminTargetId(orgId)
+    const org = orgs.find((o) => o.id === orgId)
     try {
       await adminApi.removeOrgAdmin(orgId)
       await loadOrgs()
-    } catch { /* ignore */ }
+      toast.success(`Admin removed from ${org?.name ?? 'organisation'}`)
+    } catch {
+      toast.error('Failed to remove admin')
+    }
     setRemoveAdminTargetId(null)
   }
 
@@ -563,6 +572,7 @@ function SuperAdminOrgView() {
           onClose={() => setEditTarget(null)}
           onSaved={(updated) => {
             setOrgs((prev) => prev.map((o) => o.id === updated.id ? { ...o, ...updated } : o))
+            toast.success(`Organisation updated: ${updated.name}`)
             setEditTarget(null)
           }}
         />
@@ -573,7 +583,9 @@ function SuperAdminOrgView() {
           org={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onDeleted={() => {
+            const name = deleteTarget.name
             setOrgs((prev) => prev.filter((o) => o.id !== deleteTarget.id))
+            toast.success(`Organisation deleted: ${name}`)
             setDeleteTarget(null)
           }}
         />
@@ -581,11 +593,11 @@ function SuperAdminOrgView() {
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">
+          <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
             <Building2 className="w-5 h-5 text-gold-soft" />
             All Organisations
           </h1>
-          <p className="text-sm text-greige font-body mt-1">Platform-wide view of all registered organisations.</p>
+          <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Platform-wide view of all registered organisations.</p>
         </div>
         <Badge variant="dark">{filtered.length} org{filtered.length !== 1 ? 's' : ''}</Badge>
       </div>
@@ -832,6 +844,37 @@ function DoctorOrgView() {
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">{org.org_name}</h1>
         <p className="text-sm text-greige font-body mt-1">Your organisation · {patients.length} assigned patient{patients.length !== 1 ? 's' : ''}</p>
       </div>
+
+      {/* Colleagues — other doctors in the same org (mock) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-body text-base">Colleagues</CardTitle>
+          <CardDescription>Other doctors at {org.org_name}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-sand-light">
+            {[
+              { id: 'col_001', name: 'Dr. Anjali Verma',   specialty: 'Endocrinology' },
+              { id: 'col_002', name: 'Dr. Rajeev Iyer',    specialty: 'Cardiology' },
+              { id: 'col_003', name: 'Dr. Meera Krishnan', specialty: 'General Medicine' },
+              { id: 'col_004', name: 'Dr. Suresh Patel',   specialty: 'Diabetology' },
+            ].map((c) => (
+              <div key={c.id} className="flex items-center gap-3 py-3">
+                <div className="w-9 h-9 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0">
+                  <Stethoscope className="w-4 h-4 text-gold-deep" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-body font-semibold text-charcoal-deep">{c.name}</p>
+                  <p className="text-xs text-greige">{c.specialty}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => alert(`Message ${c.name} (mock)`)}>
+                  Message
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

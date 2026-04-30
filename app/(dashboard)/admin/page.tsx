@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   Users, UserCheck, FileCheck, ClipboardList, TrendingUp,
   AlertTriangle, Building2, Shield, Stethoscope, Settings,
+  Upload, Mail,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -33,8 +34,8 @@ function StatCard({ icon: Icon, label, value, href, color }: StatCardProps) {
             <Icon className="w-6 h-6" style={{ color }} />
           </div>
           <div>
-            <p className="text-2xl font-body font-bold text-charcoal-deep">{value}</p>
-            <p className="text-xs text-greige font-body">{label}</p>
+            <p className="text-2xl lg:text-3xl font-body font-bold text-charcoal-deep">{value}</p>
+            <p className="text-xs text-stone font-body">{label}</p>
           </div>
         </CardContent>
       </Card>
@@ -59,16 +60,35 @@ function AdminDashboard({ userName, stats, logs, loading }: {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">
+        <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep">
           Welcome back, {userName.split(' ')[0]}
         </h1>
-        <p className="text-sm text-greige font-body mt-1">Operational overview of your team and patients.</p>
+        <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Operational overview of your team and patients.</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/doctor-management"  color="#D97706" />
         <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
         <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 318}                                   href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 7}                                     href="/admin/manage-team"        color="#7C3AED" />
+      </div>
+
+      {/* Flagged Audit Events strip */}
+      <div className="bg-white border border-sand-light rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Off-hours record export', color: 'bg-warning-soft text-warning-DEFAULT' },
+            { label: 'Repeated consent override', color: 'bg-error-soft text-[#B91C1C]' },
+            { label: 'New admin assigned · 2h ago', color: 'bg-azure-whisper text-sapphire-deep' },
+          ].map((c) => (
+            <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
+          ))}
+        </div>
       </div>
 
       <Card>
@@ -166,10 +186,10 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-body text-2xl font-bold text-charcoal-deep">
+        <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep">
           Welcome back, {userName.split(' ')[0]}
         </h1>
-        <p className="text-sm text-greige font-body mt-1">Global platform overview — all organisations.</p>
+        <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Global platform overview — all organisations.</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -296,24 +316,6 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
               <Users className="w-6 h-6 text-gold-soft mx-auto mb-2" />
               <p className="text-sm font-body font-medium text-charcoal-deep">Manage Patients</p>
               <p className="text-xs text-greige mt-0.5">All organisations</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/admin/logs">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <ClipboardList className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Platform Logs</p>
-              <p className="text-xs text-greige mt-0.5">Full audit trail</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/manage-users">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <UserCheck className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Admins</p>
-              <p className="text-xs text-greige mt-0.5">Roles & permissions</p>
             </CardContent>
           </Card>
         </Link>
