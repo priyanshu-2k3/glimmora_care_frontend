@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
 import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
@@ -46,9 +47,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
-  const [darkMode, setDarkMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -307,11 +309,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
         {/* Light/Dark toggle */}
         <button
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={toggleTheme}
           className="p-2 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment/60 transition-all duration-200"
-          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
         >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
         {/* Notification bell */}
