@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
+import { User, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -39,10 +39,9 @@ function DarkModeToggle() {
 }
 
 const TABS = [
-  { id: 'profile',       label: 'Profile',       icon: <User className="w-4 h-4" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-  { id: 'security',      label: 'Security',      icon: <Lock className="w-4 h-4" /> },
-  { id: 'sessions',      label: 'Sessions',      icon: <Smartphone className="w-4 h-4" /> },
+  { id: 'profile',  label: 'Profile',  icon: <User className="w-4 h-4" /> },
+  { id: 'security', label: 'Security', icon: <Lock className="w-4 h-4" /> },
+  { id: 'sessions', label: 'Sessions', icon: <Smartphone className="w-4 h-4" /> },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -92,17 +91,6 @@ export default function SettingsPage() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
-
-  // Notifications tab
-  const [notifToggles, setNotifToggles] = useState<Record<string, boolean>>({
-    'Preventive Alerts':  true,
-    'Consent Requests':   true,
-    'Family Activity':    true,
-    'Sync Status Updates': true,
-    'Agent Activity':     false,
-    'New Health Records': false,
-    'Weekly Summary':     false,
-  })
 
   // Password tab
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
@@ -392,34 +380,6 @@ export default function SettingsPage() {
                       {profileSaved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
                     </Button>
                   )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ─── Notifications ─── */}
-            {activeTab === 'notifications' && (
-              <Card>
-                <CardContent className="space-y-4">
-                  {[
-                    { label: 'Preventive Alerts',    desc: 'Receive notifications when risk signals are detected' },
-                    { label: 'Consent Requests',      desc: 'Notify when someone requests access to your records' },
-                    { label: 'Family Activity',       desc: 'Updates when family members accept invites or change records' },
-                    { label: 'Sync Status Updates',   desc: 'Notifications when offline sync completes or fails' },
-                    { label: 'Agent Activity',        desc: 'Alerts when autonomous agents take significant actions' },
-                    { label: 'New Health Records',    desc: 'Notify when new records are added to your vault' },
-                    { label: 'Weekly Summary',        desc: 'Weekly digest of your health trends and insights' },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-sand-light last:border-0">
-                      <div>
-                        <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
-                        <p className="text-xs text-greige">{item.desc}</p>
-                      </div>
-                      <Toggle
-                        checked={notifToggles[item.label] ?? false}
-                        onChange={() => setNotifToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
-                      />
-                    </div>
-                  ))}
                 </CardContent>
               </Card>
             )}

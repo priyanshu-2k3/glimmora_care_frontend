@@ -64,6 +64,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   // Load real notifications and poll every 60s.
   // Reset notifications immediately on user change so a new login never sees
   // the previous user's stale items before the first fetch resolves.
+  // Also listen for `notifications:refresh` events fired after special-operation
+  // toasts (org create, admin assign, user soft-delete, etc.) so the bell
+  // updates immediately without waiting for the next poll tick.
   useEffect(() => {
     setNotifications([])
     if (!getAccessToken()) return
@@ -75,7 +78,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     }
     load()
     const id = setInterval(load, 60000)
-    return () => { alive = false; clearInterval(id) }
+    const onRefresh = () => load()
+    window.addEventListener('notifications:refresh', onRefresh)
+    return () => { alive = false; clearInterval(id); window.removeEventListener('notifications:refresh', onRefresh) }
   }, [user?.id])
 
   // Filter nav items by current user's role + search query — used for the
