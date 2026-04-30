@@ -40,8 +40,8 @@ const DEFAULT_NAV_SECTIONS = [
   { label: 'HEALTH', hrefs: ['/vault', '/intake', '/twin'] },
   { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor', '/assign-doctor'] },
   { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access', '/offline'] },
-  { label: 'ORGANISATION', hrefs: ['/organization', '/organization/doctors', '/organization/patients'] },
-  { label: 'MANAGEMENT', hrefs: ['/manage-users'] },
+  { label: 'ORGANISATION', hrefs: ['/organization', '/admin/organizations'] },
+  { label: 'MANAGEMENT', hrefs: ['/admin/users', '/admin/doctors', '/admin/patients', '/manage-users'] },
   { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },
   { label: 'SYSTEM', hrefs: ['/logs', '/notifications', '/settings'] },
 ]

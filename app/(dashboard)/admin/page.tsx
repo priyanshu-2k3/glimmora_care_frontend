@@ -301,24 +301,6 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/doctors">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <Stethoscope className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Doctors</p>
-              <p className="text-xs text-greige mt-0.5">All organisations</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/admin/patients">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <Users className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Patients</p>
-              <p className="text-xs text-greige mt-0.5">All organisations</p>
-            </CardContent>
-          </Card>
-        </Link>
         <Link href="/admin/settings">
           <Card hover className="text-center py-6">
             <CardContent>
