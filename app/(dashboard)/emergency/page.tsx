@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
-import { familyApi, emergencyApi, getAccessToken, type EmergencyHistoryItem, type BackendMember } from '@/lib/api'
+import { familyApi, emergencyApi, getAccessToken, type EmergencyHistoryItem, type BackendMember, type ManageableMember } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type EmergencyStep = 'idle' | 'confirm' | 'otp' | 'active'
@@ -31,6 +31,11 @@ export default function EmergencyPage() {
   const [historyItems, setHistoryItems] = useState<EmergencyHistoryItem[]>([])
   const [otpError, setOtpError]     = useState<string | null>(null)
 
+  // Acting-for selector for family owners
+  const [manageableMembers, setManageableMembers] = useState<ManageableMember[]>([])
+  const [actingFor, setActingFor] = useState<string>('')   // '' = self
+  const isOwnerActing = !!actingFor
+
   // Load family members + history on mount
   useEffect(() => {
     if (!getAccessToken()) return
@@ -47,12 +52,13 @@ export default function EmergencyPage() {
         .catch(() => {})
     }
     emergencyApi.history().then(setHistoryItems).catch(() => {})
+    familyApi.listManageableMembers().then(setManageableMembers).catch(() => {})
   }, [user])
 
   async function handleConfirm() {
     setIsLoading(true)
     try {
-      const result = await emergencyApi.activate()
+      const result = await emergencyApi.activate(actingFor || undefined)
       // In dev/staging, backend may return the OTP directly for testing
       if (result.dev_otp) setOtp(result.dev_otp)
       setStep('otp')
@@ -69,7 +75,7 @@ export default function EmergencyPage() {
     setIsLoading(true)
     setOtpError(null)
     try {
-      const result = await emergencyApi.verifyOtp(otp)
+      const result = await emergencyApi.verifyOtp(otp, actingFor || undefined)
       setShareLink(result.share_link)
       setExpiresAt(result.expires_at)
       setStep('active')
@@ -90,7 +96,7 @@ export default function EmergencyPage() {
 
   async function handleDeactivate() {
     try {
-      await emergencyApi.deactivate()
+      await emergencyApi.deactivate(actingFor || undefined)
     } catch { /* already deactivated or expired */ }
     setStep('idle')
     setOtp('')
@@ -107,8 +113,36 @@ export default function EmergencyPage() {
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Emergency Access</h1>
-        <p className="text-sm text-greige font-body mt-1">Grant temporary read-only access to critical health data in emergencies</p>
+        <p className="text-sm text-greige font-body mt-1">
+          {isOwnerActing
+            ? 'Triggering emergency access for a family member. The OTP is sent to your email.'
+            : 'Grant temporary read-only access to critical health data in emergencies'}
+        </p>
       </div>
+
+      {/* Acting-for selector — visible to family owners */}
+      {manageableMembers.length > 0 && step === 'idle' && (
+        <Card className="border-gold-soft/40">
+          <CardContent className="p-4">
+            <label className="text-[11px] text-greige font-body block mb-1">Trigger emergency for</label>
+            <select
+              value={actingFor}
+              onChange={(e) => setActingFor(e.target.value)}
+              className="w-full text-sm border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+            >
+              <option value="">Self</option>
+              {manageableMembers.map((m) => {
+                const name = `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.user_id
+                return (
+                  <option key={m.user_id} value={m.user_id} disabled={!m.allow_owner_actions}>
+                    {name}{m.email ? ` (${m.email})` : ''}{!m.allow_owner_actions ? ' — opted out' : ''}
+                  </option>
+                )
+              })}
+            </select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Active banner */}
       {step === 'active' && (
@@ -264,6 +298,11 @@ export default function EmergencyPage() {
                     <p className="text-sm font-body font-medium text-charcoal-deep">
                       {new Date(item.activated_at).toLocaleDateString()} at {new Date(item.activated_at).toLocaleTimeString()}
                     </p>
+                    {item.acted_by_owner_name && (
+                      <p className="text-[11px] text-gold-deep font-body">
+                        Triggered by {item.acted_by_owner_name}{item.subject_name ? ` for ${item.subject_name}` : ''}
+                      </p>
+                    )}
                     <p className="text-xs text-greige font-body">
                       {item.was_accessed ? 'Link was accessed' : 'Link not accessed'} · {item.deactivated_at ? `Deactivated ${new Date(item.deactivated_at).toLocaleTimeString()}` : item.expires_at ? `Expired ${new Date(item.expires_at).toLocaleTimeString()}` : ''}
                     </p>

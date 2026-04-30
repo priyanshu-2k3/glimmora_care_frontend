@@ -300,6 +300,16 @@ export interface ConsentRequest {
   resolved_at: string | null
   revoked_at: string | null
   revocation_reason: string | null
+  acted_by_owner_id?: string | null
+  acted_by_owner_name?: string | null
+}
+
+export interface ManageableMember {
+  user_id: string
+  email: string | null
+  first_name: string | null
+  last_name: string | null
+  allow_owner_actions: boolean
 }
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
@@ -615,6 +625,19 @@ export const familyApi = {
       body: JSON.stringify({ token }),
       auth: false,
     }),
+
+  // ── Owner-on-behalf settings ─────────────────────────────────────────────
+  getAllowOwnerActions: () =>
+    apiFetch<{ allow: boolean }>('/families/me/allow-owner-actions'),
+
+  setAllowOwnerActions: (allow: boolean) =>
+    apiFetch<{ allow: boolean }>('/families/me/allow-owner-actions', {
+      method: 'PUT',
+      body: JSON.stringify({ allow }),
+    }),
+
+  listManageableMembers: () =>
+    apiFetch<ManageableMember[]>('/families/me/manageable-members'),
 }
 
 // ─── Organisation API ──────────────────────────────────────────────────────────
@@ -708,6 +731,19 @@ export const orgApi = {
     apiFetch<{ user_id: string; email: string; first_name: string; last_name: string; created: boolean }>(
       '/organizations/mine/add-doctor',
       { method: 'POST', body: JSON.stringify(data) }
+    ),
+
+  /** Admin: add another admin to the same organisation */
+  addOrgAdmin: (data: { email: string; first_name?: string; last_name?: string }) =>
+    apiFetch<{ user_id: string; email: string; org_id: string; account_created: boolean }>(
+      '/organizations/mine/admins',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+
+  /** List all admins in my organisation */
+  listOrgAdmins: () =>
+    apiFetch<{ user_id: string; email: string; first_name: string | null; last_name: string | null }[]>(
+      '/organizations/mine/admins'
     ),
 
   /** Admin: list all doctor invites */
@@ -877,6 +913,24 @@ export const adminApi = {
           'userId' in opts ? { user_id: opts.userId } : { email: opts.email },
         ),
       },
+    ),
+
+  /** Super admin: detach the currently assigned admin from an organisation */
+  removeOrgAdmin: (orgId: string) =>
+    apiFetch<{ ok: boolean }>(`/admin/organizations/${orgId}/remove-admin`, { method: 'POST' }),
+
+  /** Super admin: update org details */
+  updateOrg: (orgId: string, data: Partial<{ name: string; address: string; phone: string; website: string }>) =>
+    apiFetch<{ id: string; name: string; admin_id: string; address: string | null; phone: string | null; website: string | null }>(
+      `/admin/organizations/${orgId}`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+    ),
+
+  /** Super admin: delete an organisation (refuses if linked users exist; pass force=true to detach and delete) */
+  deleteOrg: (orgId: string, force = false) =>
+    apiFetch<{ ok: boolean; force: boolean; linked_users_detached: number }>(
+      `/admin/organizations/${orgId}${force ? '?force=true' : ''}`,
+      { method: 'DELETE' },
     ),
 
   /** Admin: list all consent records platform-wide */
@@ -1072,6 +1126,37 @@ export const consentApi = {
       method: 'POST',
       body: JSON.stringify({ doctor_email, patient_email, reason }),
     }),
+
+  // ── Family-owner on-behalf-of-member ─────────────────────────────────────
+  ownerGrantDirect: (subject_id: string, doctor_email: string, scope: string[], message?: string, expires_at?: string) =>
+    apiFetch<ConsentRequest>('/consent/owner/grant-direct', {
+      method: 'POST',
+      body: JSON.stringify({ subject_id, doctor_email, scope, message, expires_at }),
+    }),
+
+  ownerApprove: (id: string, subject_id: string) =>
+    apiFetch<ConsentRequest>(`/consent/owner/requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ subject_id }),
+    }),
+
+  ownerReject: (id: string, subject_id: string) =>
+    apiFetch<ConsentRequest>(`/consent/owner/requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ subject_id }),
+    }),
+
+  ownerRevoke: (id: string, subject_id: string, reason: string) =>
+    apiFetch<ConsentRequest>(`/consent/owner/${id}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify({ subject_id, reason }),
+    }),
+
+  getSubjectIncoming: (subject_id: string) =>
+    apiFetch<ConsentRequest[]>(`/consent/owner/${subject_id}/incoming`),
+
+  getSubjectActive: (subject_id: string) =>
+    apiFetch<ConsentRequest[]>(`/consent/owner/${subject_id}/active`),
 }
 
 // ─── Digital Twin API ─────────────────────────────────────────────────────────
@@ -1173,6 +1258,10 @@ export interface EmergencyHistoryItem {
   deactivated_at: string | null
   was_accessed: boolean
   status: string
+  subject_id?: string | null
+  subject_name?: string | null
+  acted_by_owner_id?: string | null
+  acted_by_owner_name?: string | null
 }
 
 export interface EmergencyDataOut {
@@ -1216,17 +1305,23 @@ export const accessApi = {
 // ── Emergency Access API ──────────────────────────────────────────────────────
 
 export const emergencyApi = {
-  activate: () =>
-    apiFetch<{ message: string; dev_otp?: string }>('/emergency/activate', { method: 'POST' }),
-
-  verifyOtp: (otp: string) =>
-    apiFetch<EmergencyTokenOut>('/emergency/verify-otp', {
+  activate: (subject_id?: string) =>
+    apiFetch<{ message: string; dev_otp?: string }>('/emergency/activate', {
       method: 'POST',
-      body: JSON.stringify({ otp }),
+      body: JSON.stringify({ subject_id: subject_id ?? null }),
     }),
 
-  deactivate: () =>
-    apiFetch<{ message: string }>('/emergency/deactivate', { method: 'POST' }),
+  verifyOtp: (otp: string, subject_id?: string) =>
+    apiFetch<EmergencyTokenOut>('/emergency/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ otp, subject_id: subject_id ?? null }),
+    }),
+
+  deactivate: (subject_id?: string) =>
+    apiFetch<{ message: string }>('/emergency/deactivate', {
+      method: 'POST',
+      body: JSON.stringify({ subject_id: subject_id ?? null }),
+    }),
 
   history: () =>
     apiFetch<EmergencyHistoryItem[]>('/emergency/history'),

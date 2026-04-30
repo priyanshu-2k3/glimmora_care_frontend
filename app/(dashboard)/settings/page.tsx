@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { authApi, ApiError, type BackendSession } from '@/lib/api'
+import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -121,6 +121,10 @@ export default function SettingsPage() {
   const [twofaMethod, setTwofaMethod] = useState<string | null>(null)
   const [twofaLoading, setTwofaLoading] = useState(false)
 
+  // Allow family owner to act on my behalf (consent + emergency)
+  const [allowOwnerActions, setAllowOwnerActions] = useState<boolean>(true)
+  const [allowOwnerLoading, setAllowOwnerLoading] = useState(false)
+
   // Google connect
   const [googleConnecting, setGoogleConnecting] = useState(false)
   const [googleConnectMsg, setGoogleConnectMsg] = useState<string | null>(null)
@@ -151,6 +155,24 @@ export default function SettingsPage() {
       })
       .catch(() => {})
   }, [user?.accessToken])
+
+  // Fetch allow-owner-actions toggle (patient only)
+  useEffect(() => {
+    if (!user?.accessToken || user.role !== 'patient') return
+    familyApi.getAllowOwnerActions()
+      .then((data) => setAllowOwnerActions(data.allow))
+      .catch(() => {})
+  }, [user?.accessToken, user?.role])
+
+  async function handleToggleAllowOwnerActions() {
+    setAllowOwnerLoading(true)
+    try {
+      const next = !allowOwnerActions
+      const result = await familyApi.setAllowOwnerActions(next)
+      setAllowOwnerActions(result.allow)
+    } catch { /* ignore */ }
+    setAllowOwnerLoading(false)
+  }
 
   // Sync profile form when user changes (include phone_number in deps so refreshUser() re-syncs it)
   useEffect(() => {
@@ -566,6 +588,21 @@ export default function SettingsPage() {
                         />
                       </div>
                     ))}
+
+                    {/* Allow family owner to act on my behalf — patient only */}
+                    {user?.role === 'patient' && (
+                      <div className="flex items-center justify-between pt-2 border-t border-sand-light">
+                        <div className="flex-1 mr-4">
+                          <p className="text-sm font-body font-medium text-charcoal-deep">Allow family owner to act on my behalf</p>
+                          <p className="text-xs text-greige">Lets the owner of your family group grant/approve consents and trigger emergency access for you.</p>
+                        </div>
+                        <Toggle
+                          checked={allowOwnerActions}
+                          onChange={handleToggleAllowOwnerActions}
+                          disabled={allowOwnerLoading}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t border-sand-light">

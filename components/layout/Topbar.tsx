@@ -7,12 +7,11 @@ import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users,
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
-import { MOCK_NOTIFICATIONS } from '@/data/notifications'
+import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/types/auth'
-import type { Notification } from '@/types/profile'
 
-const TYPE_ICONS: Record<Notification['type'], React.ElementType> = {
+const TYPE_ICONS: Record<string, React.ElementType> = {
   alert: AlertTriangle,
   info: Info,
   consent: Shield,
@@ -21,7 +20,7 @@ const TYPE_ICONS: Record<Notification['type'], React.ElementType> = {
   family: Users,
 }
 
-const TYPE_COLORS: Record<Notification['type'], string> = {
+const TYPE_COLORS: Record<string, string> = {
   alert: 'text-error-DEFAULT',
   info: 'text-stone',
   consent: 'text-gold-deep',
@@ -48,7 +47,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter()
   const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const [notifications, setNotifications] = useState<NotificationOut[]>([])
   const [darkMode, setDarkMode] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -57,6 +56,26 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   )
   const pageTitle = currentNav?.label || 'Dashboard'
   const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  // Load real notifications and poll every 60s
+  useEffect(() => {
+    if (!getAccessToken()) return
+    let alive = true
+    const load = () => {
+      notificationApi.list(20)
+        .then((data) => { if (alive) setNotifications(data) })
+        .catch(() => {})
+    }
+    load()
+    const id = setInterval(load, 60000)
+    return () => { alive = false; clearInterval(id) }
+  }, [user?.id])
+
+  // Refresh on dropdown open
+  useEffect(() => {
+    if (!showNotifications || !getAccessToken()) return
+    notificationApi.list(20).then(setNotifications).catch(() => {})
+  }, [showNotifications])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -70,10 +89,17 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   function markRead(id: string) {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n))
+    notificationApi.markRead(id).catch(() => {})
+  }
+
+  function markAllRead() {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    notificationApi.markAllRead().catch(() => {})
   }
 
   function dismiss(id: string) {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
+    notificationApi.dismiss(id).catch(() => {})
   }
 
   if (!user) return null
@@ -151,7 +177,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 <div className="flex items-center gap-1">
                   {unreadCount > 0 && (
                     <button
-                      onClick={() => setNotifications((p) => p.map((n) => ({ ...n, isRead: true })))}
+                      onClick={markAllRead}
                       className="text-[11px] text-gold-deep hover:text-gold-muted font-body px-2 py-1 rounded hover:bg-parchment transition-colors"
                     >
                       Mark all read
@@ -171,7 +197,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notif) => {
-                    const Icon = TYPE_ICONS[notif.type]
+                    const Icon = TYPE_ICONS[notif.type] ?? Info
                     return (
                       <div
                         key={notif.id}
@@ -182,7 +208,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                         onClick={() => { markRead(notif.id); if (notif.actionHref) { setShowNotifications(false); router.push(notif.actionHref) } }}
                       >
                         <div className="w-7 h-7 rounded-lg bg-parchment flex items-center justify-center shrink-0 mt-0.5">
-                          <Icon className={cn('w-3.5 h-3.5', TYPE_COLORS[notif.type])} />
+                          <Icon className={cn('w-3.5 h-3.5', TYPE_COLORS[notif.type] ?? 'text-stone')} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
