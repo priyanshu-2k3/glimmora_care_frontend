@@ -387,7 +387,7 @@ export default function FamilyPage() {
                 onChange={(e) => setInviteForm((p) => ({ ...p, role: e.target.value as FamilyRole }))}
               />
               {inviteError && (
-                <div className="flex items-center gap-2 bg-error-soft border border-error-DEFAULT/20 rounded-xl p-3">
+                <div className="flex items-center gap-2 bg-error/70 border border-error-DEFAULT/20 rounded-xl p-3">
                   <AlertCircle className="w-4 h-4 text-error-DEFAULT shrink-0" />
                   <p className="text-xs text-error-DEFAULT font-body">{inviteError}</p>
                 </div>
@@ -450,7 +450,7 @@ export default function FamilyPage() {
                     </div>
                   </div>
                 ) : (
-                  <Button variant="danger" className="w-full" onClick={() => setConfirmDelete(true)}>
+                  <Button variant="danger" className="w-full bg-error/70 hover:bg-error-DEFAULT border-error/70" onClick={() => setConfirmDelete(true)}>
                     <Trash2 className="w-4 h-4" />
                     Delete Family Group
                   </Button>
