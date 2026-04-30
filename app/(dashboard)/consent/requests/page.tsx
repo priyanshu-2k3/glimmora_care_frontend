@@ -67,8 +67,14 @@ export default function ConsentRequestsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Link href="/consent" className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+        <Link
+          href="/consent"
+          aria-label="Back to Consent dashboard"
+          title="Back to Consent dashboard"
+          className="inline-flex items-center gap-1.5 px-2 py-1.5 text-greige hover:text-charcoal-deep hover:bg-parchment rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-body font-medium">Back</span>
         </Link>
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep">Consent Requests</h1>
@@ -157,7 +163,9 @@ export default function ConsentRequestsPage() {
 
       {pending.length === 0 && (
         <Card className="py-10 text-center">
-          <Check className="w-10 h-10 text-success-DEFAULT mx-auto mb-3" />
+          <div className="w-14 h-14 rounded-full bg-success-soft/40 border border-success-DEFAULT/30 flex items-center justify-center mx-auto mb-3">
+            <Check className="w-7 h-7 text-success-DEFAULT" strokeWidth={2.5} />
+          </div>
           <p className="font-body font-medium text-charcoal-deep">All caught up!</p>
           <p className="text-sm text-greige mt-1">No pending consent requests</p>
         </Card>

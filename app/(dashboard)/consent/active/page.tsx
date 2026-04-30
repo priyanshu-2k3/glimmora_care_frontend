@@ -58,8 +58,14 @@ export default function ActiveConsentsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Link href="/consent" className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+        <Link
+          href="/consent"
+          aria-label="Back to Consent dashboard"
+          title="Back to Consent dashboard"
+          className="inline-flex items-center gap-1.5 px-2 py-1.5 text-greige hover:text-charcoal-deep hover:bg-parchment rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-body font-medium">Back</span>
         </Link>
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep">Active Consents</h1>
@@ -130,7 +136,7 @@ export default function ActiveConsentsPage() {
 
                   <Button
                     variant="danger"
-                    className="w-full"
+                    className="w-full bg-error/70 hover:bg-error-DEFAULT border-error/70"
                     onClick={() => setRevokeId(consent.id)}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -149,7 +155,7 @@ export default function ActiveConsentsPage() {
                       <button
                         onClick={() => handleRevoke(consent.id)}
                         disabled={revoking || !revokeReason.trim()}
-                        className="text-xs px-3 py-2 rounded-lg bg-error-soft text-error-DEFAULT font-body disabled:opacity-50"
+                        className="text-xs px-3 py-2 rounded-lg bg-error/70 text-error-DEFAULT font-body disabled:opacity-50"
                       >
                         {revoking ? 'Revoking…' : 'Confirm'}
                       </button>

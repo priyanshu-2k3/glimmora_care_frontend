@@ -10,6 +10,8 @@ import type { BulkPreviewRow, BulkPreviewResponse } from '@/types/intake'
 
 type Phase = 'upload' | 'preview' | 'done'
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+
 const CSV_TEMPLATE = `patient_id,title,date,source,marker_name,value,unit,normal_min,normal_max
 pat_001,Annual Panel,2025-02-20,SRL Diagnostics,HbA1c,6.4,%,4.0,5.6
 pat_001,Annual Panel,2025-02-20,SRL Diagnostics,Hemoglobin,13.2,g/dL,12.0,17.5`
@@ -38,6 +40,10 @@ export function BulkImportPanel() {
     const ext = file.name.split('.').pop()?.toLowerCase()
     if (!ext || !['csv', 'xlsx', 'xls'].includes(ext)) {
       setError('Only CSV and XLSX files are supported')
+      return
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File exceeds 10 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB). Please split the file or remove unused rows.`)
       return
     }
     setError(null)
@@ -167,7 +173,13 @@ export function BulkImportPanel() {
           </div>
 
           {error && (
-            <p className="text-xs text-error-DEFAULT font-body">{error}</p>
+            <div
+              role="alert"
+              className="flex items-start gap-2 px-4 py-3 bg-error/70 border border-error-DEFAULT/40 rounded-xl"
+            >
+              <AlertCircle className="w-4 h-4 text-ivory-cream shrink-0 mt-0.5" />
+              <p className="text-xs font-body text-ivory-cream font-medium">{error}</p>
+            </div>
           )}
 
           {isLoading && (

@@ -798,7 +798,7 @@ function PatientConsentView() {
                       <button
                         onClick={() => handleRevoke(consent.id)}
                         disabled={revoking || !revokeReason.trim()}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-error-soft text-error-DEFAULT font-body disabled:opacity-50"
+                        className="text-xs px-3 py-1.5 rounded-lg bg-error/70 text-error-DEFAULT font-body disabled:opacity-50"
                       >
                         {revoking ? '…' : 'Confirm'}
                       </button>
