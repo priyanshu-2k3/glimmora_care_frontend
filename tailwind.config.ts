@@ -61,24 +61,27 @@ const config: Config = {
         violet:  { DEFAULT: '#7C3AED', soft: '#EDE9FE', muted: '#6D28D9' },
         amber:   { DEFAULT: '#D97706', soft: '#FEF3C7', muted: '#B45309' },
 
-        // Semantic Palette
+        // Semantic Palette — proper light-bg / dark-text pairs (AAA contrast).
+        // `soft` is the chip / banner background, `DEFAULT` is the text /
+        // icon / 2px-dot accent that sits on it.
         success: {
-          soft: '#6B8068',
-          DEFAULT: '#4A6347',
-          vivid: '#52A87A',
+          soft: '#D1FAE5',     // light mint
+          DEFAULT: '#047857',  // deep emerald (text on soft)
+          vivid: '#059669',    // mid emerald (charts / dot indicators)
         },
         warning: {
-          soft: '#C4A35A',
-          DEFAULT: '#A68B3D',
+          soft: '#FEF3C7',     // light cream
+          DEFAULT: '#92400E',  // deep amber (text on soft)
+          vivid: '#D97706',    // mid amber (dot indicators)
         },
         error: {
-          soft: '#FEE2E2',
-          DEFAULT: '#DC2626',
-          vivid: '#B91C1C',
+          soft: '#FEE2E2',     // light rose
+          DEFAULT: '#DC2626',  // vivid red (text + icon)
+          vivid: '#B91C1C',    // deep red (hover / pressed)
         },
         info: {
-          soft: '#6B7A8A',
-          DEFAULT: '#4A5A6A',
+          soft: '#DBEAFE',     // light blue
+          DEFAULT: '#1D4ED8',  // deep blue (text on soft)
         },
       },
       fontFamily: {
