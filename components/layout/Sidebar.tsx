@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
   Activity, Globe, WifiOff, Settings, LogOut, ChevronDown, ChevronRight,
@@ -102,14 +102,17 @@ function AdminNavItem({ item, pathname, onClose, depth = 0 }: { item: SidebarIte
 /* ── Main Sidebar ──────────────────────────────────────────────────────────── */
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { user, logout } = useAuth()
   const { profiles, activeProfile, switchProfile, canSwitchProfile } = useProfile()
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false)
 
   async function handleLogout() {
+    // logout() already performs window.location.replace('/login') so that
+    // every cached query, in-memory state, and pending fetch from the
+    // previous session is dropped. Calling router.push here on top of
+    // that caused a double navigation (the same login redirect firing
+    // twice from the sidebar dropdown).
     await logout()
-    router.push('/login')
   }
 
   if (!user) return null

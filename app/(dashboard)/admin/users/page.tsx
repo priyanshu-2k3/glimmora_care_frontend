@@ -44,20 +44,26 @@ export default function ManageUsersPage() {
     if (!editTarget) return
     setEditSaving(true)
     try {
-      const patched: AdminUserOut = { ...editTarget, role: editRole as AdminUserOut['role'], is_active: editActive }
-      try {
-        if (editActive !== editTarget.is_active) {
-          await adminApi.updateUser(editTarget.id, { is_active: editActive })
-        }
-      } catch { /* mock fallback */ }
-      setUsers((prev) => prev.map((x) => (x.id === editTarget.id ? patched : x)))
+      const payload: { role?: string; is_active?: boolean } = {}
+      if (editRole !== editTarget.role) payload.role = editRole
+      if (editActive !== editTarget.is_active) payload.is_active = editActive
+
+      if (Object.keys(payload).length === 0) {
+        toast.success('No changes')
+        setEditTarget(null)
+        return
+      }
+
+      const updated = await adminApi.updateUser(editTarget.id, payload)
+      setUsers((prev) => prev.map((x) => (x.id === editTarget.id ? { ...x, ...updated } : x)))
       const changes: string[] = []
-      if (editRole !== editTarget.role) changes.push(`role -> ${editRole}`)
-      if (editActive !== editTarget.is_active) changes.push(editActive ? 'reactivated' : 'deactivated')
+      if (payload.role) changes.push(`role -> ${payload.role}`)
+      if (payload.is_active !== undefined) changes.push(payload.is_active ? 'reactivated' : 'deactivated')
       toast.success(`User updated${changes.length ? ` (${changes.join(', ')})` : ''}`)
       setEditTarget(null)
-    } catch {
-      toast.error('Failed to update user')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update user'
+      toast.error(msg)
     } finally {
       setEditSaving(false)
     }
