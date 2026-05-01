@@ -87,9 +87,7 @@ export default function AssistantsPage() {
     fetch
       .then((list) => {
         setPatients(list)
-        if (list.length > 0 && !selectedPatientId) {
-          setSelectedPatientId(list[0].patient_id)
-        }
+        // Do NOT auto-select a patient — the doctor must pick one explicitly.
       })
       .catch(() => {})
       .finally(() => setPatientsLoading(false))
@@ -106,6 +104,9 @@ export default function AssistantsPage() {
   const [input, setInput] = useState('')
   const [showPatientPicker, setShowPatientPicker] = useState(false)
   const [patientSearch, setPatientSearch] = useState('')
+  // Hint tooltip: shown automatically when the picker is available and no
+  // patient is selected; fades after a few seconds; reappears on hover.
+  const [showHint, setShowHint] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const config = PERSONA_CONFIG[activePersona]
@@ -121,6 +122,20 @@ export default function AssistantsPage() {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [showPatientPicker])
+
+  // Auto-show the "Select patient" hint when the picker first becomes usable
+  // and no patient is selected yet. Hide after 4s. The hover tooltip on the
+  // button below independently re-shows it whenever the user hovers.
+  useEffect(() => {
+    if (!needsPatientPicker) return
+    if (patientsLoading || patients.length === 0 || selectedPatientId) {
+      setShowHint(false)
+      return
+    }
+    setShowHint(true)
+    const t = setTimeout(() => setShowHint(false), 4000)
+    return () => clearTimeout(t)
+  }, [needsPatientPicker, patientsLoading, patients.length, selectedPatientId])
 
   const selectedPatient = patients.find((p) => p.patient_id === selectedPatientId) ?? null
   const selectedPatientLabel = selectedPatient
@@ -309,8 +324,14 @@ export default function AssistantsPage() {
                   )}
                 </button>
 
-                {/* Hover tooltip */}
-                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-charcoal-deep text-ivory-cream text-[10px] font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
+                {/* Tooltip — auto-shown on first load (fades after 4s),
+                    re-shown on hover. */}
+                <div
+                  className={cn(
+                    'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 rounded-md bg-charcoal-deep text-ivory-cream text-[10px] font-body whitespace-nowrap transition-opacity duration-200 z-20 group-hover:opacity-100',
+                    showHint ? 'opacity-100' : 'opacity-0',
+                  )}
+                >
                   Select patient
                   <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-charcoal-deep" />
                 </div>
