@@ -81,13 +81,6 @@ export const NAV_ITEMS = [
     icon: 'UserPlus',
     roles: ['patient'] as Role[],
   },
-  {
-    href: '/offline',
-    label: 'Offline Sync',
-    icon: 'WifiOff',
-    roles: ['patient'] as Role[],
-  },
-
   /* ── Organisation (admin/doctor: their own org · super_admin: global org mgmt) ─── */
   {
     href: '/organization',
@@ -519,11 +512,6 @@ export const FEATURE_INDEX: { feature: string; href: string; roles: Role[] }[] =
   { feature: 'Default-share toggle for new records', href: '/access', roles: ['patient'] },
   { feature: 'Block / allow specific orgs or doctors', href: '/access', roles: ['patient'] },
 
-  /* ── /offline (patient) ─── */
-  { feature: 'Pending uploads queue', href: '/offline', roles: ['patient'] },
-  { feature: 'Conflict list with resolve actions', href: '/offline', roles: ['patient'] },
-  { feature: 'Sync status indicator and last-sync', href: '/offline', roles: ['patient'] },
-  { feature: 'Sync now trigger', href: '/offline', roles: ['patient'] },
 
   /* ── /assistants (patient + doctor) ─── */
   { feature: 'Persona switcher (general, nutrition, clinical, family)', href: '/assistants', roles: ['patient', 'doctor'] },
