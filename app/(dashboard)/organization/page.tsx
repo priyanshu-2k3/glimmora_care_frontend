@@ -638,15 +638,12 @@ function SuperAdminOrgView() {
         />
       )}
 
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-gold-soft" />
-            All Organisations
-          </h1>
-          <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Platform-wide view of all registered organisations.</p>
-        </div>
-        <Badge variant="dark">{filtered.length} org{filtered.length !== 1 ? 's' : ''}</Badge>
+      <div>
+        <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-gold-soft" />
+          All Organisations
+        </h1>
+        <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Platform-wide view of all registered organisations.</p>
       </div>
 
       {/* Stats bar */}

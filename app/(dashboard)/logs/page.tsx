@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
-import type { AuditTrailEntry, AuditLogOut } from '@/lib/api'
+import type { AuditTrailEntry, AuditLogOut, AdminUserOut, AdminOrgItem } from '@/lib/api'
+import { FriendlyRef, type IdMaps } from '@/components/admin/FriendlyRef'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
@@ -59,7 +60,7 @@ function fromAdminLog(e: AuditLogOut): LogRow {
   return { id: e.id, action: e.action, actor: e.performed_by, detail: e.detail ?? '', severity: e.severity, timestamp: e.timestamp }
 }
 
-function LogEntry({ row }: { row: LogRow }) {
+function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
   const meta = getMeta(row.action)
   const Icon = meta.icon
   return (
@@ -73,11 +74,13 @@ function LogEntry({ row }: { row: LogRow }) {
           {row.severity && <Badge variant="default" className="text-[10px]">{row.severity}</Badge>}
         </div>
         <p className="text-xs text-stone font-body leading-relaxed">{row.detail || '—'}</p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           {row.actor && (
             <>
               <User className="w-3 h-3 text-greige" />
-              <span className="text-[11px] text-greige font-body truncate max-w-[160px]">{row.actor}</span>
+              <span className="text-[11px] text-greige font-body truncate max-w-[200px]">
+                <FriendlyRef refValue={row.actor} maps={idMaps} inline />
+              </span>
               <span className="text-greige">·</span>
             </>
           )}
@@ -130,6 +133,24 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [page, setPage]       = useState(1)
+  // Friendly-name maps for FriendlyRef (admin-only fetch).
+  const [users, setUsers] = useState<Record<string, AdminUserOut>>({})
+  const [orgs,  setOrgs ] = useState<Record<string, AdminOrgItem>>({})
+  const idMaps: IdMaps = { users, orgs }
+
+  useEffect(() => {
+    if (!isAdmin || !getAccessToken()) return
+    let alive = true
+    Promise.all([
+      adminApi.listUsers('').catch(() => [] as AdminUserOut[]),
+      adminApi.listAllOrgs('').catch(() => [] as AdminOrgItem[]),
+    ]).then(([u, o]) => {
+      if (!alive) return
+      setUsers(Object.fromEntries(u.map((x) => [x.id, x])))
+      setOrgs(Object.fromEntries(o.map((x) => [x.id, x])))
+    })
+    return () => { alive = false }
+  }, [isAdmin])
 
   // Admin-specific filters (sent to backend)
   const [severity, setSeverity]     = useState('all')
@@ -380,7 +401,7 @@ export default function LogsPage() {
                     <p className="text-sm text-greige font-body">No logs found</p>
                   </div>
                 ) : (
-                  list.map((row) => <LogEntry key={row.id} row={row} />)
+                  list.map((row) => <LogEntry key={row.id} row={row} idMaps={idMaps} />)
                 )}
               </CardContent>
               {activeTab === 'activity' && totalPages > 1 && (
