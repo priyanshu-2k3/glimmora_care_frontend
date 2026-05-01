@@ -239,7 +239,6 @@ export const SEARCHABLE_SUBPAGES = [
   { href: '/admin/doctor-management/consent',  label: 'Doctor-Management Consent',  roles: ['admin', 'super_admin'] as Role[] },
   { href: '/admin/settings/profile',              label: 'Admin Profile Settings',     roles: ['admin'] as Role[] },
   { href: '/admin/settings/security',             label: 'Admin Security Settings',    roles: ['admin'] as Role[] },
-  { href: '/admin/settings/notification-settings',label: 'Admin Notification Settings',roles: ['admin'] as Role[] },
   { href: '/admin/settings/sessions',              label: 'Admin Active Sessions',     roles: ['admin'] as Role[] },
 ]
 
@@ -380,7 +379,6 @@ export const FEATURE_INDEX: { feature: string; href: string; roles: Role[] }[] =
   /* ── /admin/settings (admin) ─── */
   { feature: 'Admin profile & org branding', href: '/admin/settings/profile', roles: ['admin'] },
   { feature: 'Password policy, 2FA enforcement, IP allow-list, SSO', href: '/admin/settings/security', roles: ['admin'] },
-  { feature: 'Org notification routing & templates', href: '/admin/settings/notification-settings', roles: ['admin'] },
   { feature: 'Org admin sessions list with revoke', href: '/admin/settings/sessions', roles: ['admin'] },
 
   /* ── /logs (all auth roles) ─── */
