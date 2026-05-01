@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Info, AlertTriangle, RotateCcw, ChevronRight } from 'lucide-react'
+import { Send, Bot, Info, AlertTriangle, RotateCcw, ChevronRight, Users, Check, X as XIcon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
 import type { Persona } from '@/types/chat'
@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
-import { Select } from '@/components/ui/Select'
 import { formatConfidence } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { orgApi, getAccessToken } from '@/lib/api'
@@ -88,9 +87,7 @@ export default function AssistantsPage() {
     fetch
       .then((list) => {
         setPatients(list)
-        if (list.length > 0 && !selectedPatientId) {
-          setSelectedPatientId(list[0].patient_id)
-        }
+        // Do NOT auto-select a patient — the doctor must pick one explicitly.
       })
       .catch(() => {})
       .finally(() => setPatientsLoading(false))
@@ -105,8 +102,54 @@ export default function AssistantsPage() {
     )
 
   const [input, setInput] = useState('')
+  const [showPatientPicker, setShowPatientPicker] = useState(false)
+  const [patientSearch, setPatientSearch] = useState('')
+  // Hint tooltip: shown automatically when the picker is available and no
+  // patient is selected; fades after a few seconds; reappears on hover.
+  const [showHint, setShowHint] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const config = PERSONA_CONFIG[activePersona]
+
+  // Close patient picker on outside click
+  useEffect(() => {
+    if (!showPatientPicker) return
+    function onClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPatientPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [showPatientPicker])
+
+  // Auto-show the "Select patient" hint when the picker first becomes usable
+  // and no patient is selected yet. Hide after 4s. The hover tooltip on the
+  // button below independently re-shows it whenever the user hovers.
+  useEffect(() => {
+    if (!needsPatientPicker) return
+    if (patientsLoading || patients.length === 0 || selectedPatientId) {
+      setShowHint(false)
+      return
+    }
+    setShowHint(true)
+    const t = setTimeout(() => setShowHint(false), 4000)
+    return () => clearTimeout(t)
+  }, [needsPatientPicker, patientsLoading, patients.length, selectedPatientId])
+
+  const selectedPatient = patients.find((p) => p.patient_id === selectedPatientId) ?? null
+  const selectedPatientLabel = selectedPatient
+    ? (`${selectedPatient.first_name ?? ''} ${selectedPatient.last_name ?? ''}`.trim()
+        || selectedPatient.email
+        || selectedPatient.patient_id)
+    : null
+
+  const filteredPatients = patientSearch.trim()
+    ? patients.filter((p) => {
+        const name = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim().toLowerCase()
+        return name.includes(patientSearch.toLowerCase()) || (p.email ?? '').toLowerCase().includes(patientSearch.toLowerCase())
+      })
+    : patients
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -142,42 +185,6 @@ export default function AssistantsPage() {
           <strong>Important:</strong> This assistant provides informational context only. It does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical decisions.
         </p>
       </div>
-
-      {/* Patient picker — doctor / admin only.  Scopes the health context
-           injected into the prompt.  When no patient is selected the AI
-           answers generically (no records / insights in context). */}
-      {needsPatientPicker && (
-        <Card>
-          <CardContent>
-            {patientsLoading ? (
-              <div className="h-10 bg-sand-light rounded-lg animate-pulse" />
-            ) : patients.length === 0 ? (
-              <p className="text-sm text-greige font-body">
-                No patients assigned yet — the assistant will answer without any
-                patient-specific context.
-              </p>
-            ) : (
-              <Select
-                label="Discuss patient"
-                options={[
-                  { value: '', label: 'No specific patient (generic questions only)' },
-                  ...patients.map((p) => ({
-                    value: p.patient_id,
-                    label: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()
-                      || p.email
-                      || p.patient_id,
-                  })),
-                ]}
-                value={selectedPatientId}
-                onChange={(e) => {
-                  setSelectedPatientId(e.target.value)
-                  clearMessages()
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Chat window */}
       <Card className="flex flex-col" style={{ height: '500px' }}>
@@ -276,7 +283,138 @@ export default function AssistantsPage() {
 
         {/* Input */}
         <div className="border-t border-sand-light p-3 shrink-0">
-          <div className="flex gap-2">
+          {/* Selected-patient chip — visible context line */}
+          {needsPatientPicker && selectedPatientLabel && (
+            <div className="flex items-center gap-2 mb-2 ml-1">
+              <span className="text-[11px] text-greige font-body">Discussing:</span>
+              <span className="inline-flex items-center gap-1.5 bg-gold-whisper border border-gold-soft/40 text-charcoal-deep text-[11px] font-body font-medium px-2.5 py-0.5 rounded-full">
+                {selectedPatientLabel}
+                <button
+                  type="button"
+                  onClick={() => { setSelectedPatientId(''); clearMessages() }}
+                  className="text-greige hover:text-charcoal-deep"
+                  aria-label="Clear selected patient"
+                >
+                  <XIcon className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-2 items-center">
+            {/* Patient picker icon — doctor / admin only */}
+            {needsPatientPicker && (
+              <div ref={pickerRef} className="relative group shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPatientPicker((s) => !s)}
+                  disabled={patientsLoading || patients.length === 0}
+                  aria-label="Select patient"
+                  className={cn(
+                    'p-2.5 rounded-xl border transition-all duration-200 relative',
+                    selectedPatientId
+                      ? 'bg-gold-whisper border-gold-soft text-gold-deep'
+                      : 'bg-ivory-warm border-sand-DEFAULT text-greige hover:text-charcoal-deep hover:border-gold-soft/60',
+                    (patientsLoading || patients.length === 0) && 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  <Users className="w-4 h-4" />
+                  {selectedPatientId && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gold-deep rounded-full border border-white" />
+                  )}
+                </button>
+
+                {/* Tooltip — auto-shown on first load (fades after 4s),
+                    re-shown on hover. */}
+                <div
+                  className={cn(
+                    'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 rounded-md bg-charcoal-deep text-ivory-cream text-[10px] font-body whitespace-nowrap transition-opacity duration-200 z-20 group-hover:opacity-100',
+                    showHint ? 'opacity-100' : 'opacity-0',
+                  )}
+                >
+                  Select patient
+                  <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-charcoal-deep" />
+                </div>
+
+                {/* Dropdown popover */}
+                {showPatientPicker && (
+                  <div className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-sand-light rounded-xl shadow-xl z-30 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-sand-light flex items-center justify-between">
+                      <p className="text-[11px] font-body font-semibold text-charcoal-deep uppercase tracking-wide">Select patient</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowPatientPicker(false)}
+                        className="text-greige hover:text-charcoal-deep"
+                        aria-label="Close"
+                      >
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="px-3 py-2 border-b border-sand-light">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={patientSearch}
+                        onChange={(e) => setPatientSearch(e.target.value)}
+                        placeholder="Search patients…"
+                        className="w-full bg-ivory-warm border border-sand-light rounded-lg px-2.5 py-1.5 text-xs font-body text-charcoal-deep placeholder:text-greige focus:outline-none focus:border-gold-soft"
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto py-1">
+                      {/* Generic / clear option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPatientId('')
+                          setShowPatientPicker(false)
+                          setPatientSearch('')
+                          clearMessages()
+                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-body transition-colors',
+                          !selectedPatientId ? 'bg-gold-whisper/40 text-charcoal-deep' : 'text-stone hover:bg-parchment/60',
+                        )}
+                      >
+                        <span>No specific patient — generic questions</span>
+                        {!selectedPatientId && <Check className="w-3.5 h-3.5 text-gold-deep shrink-0" />}
+                      </button>
+                      {filteredPatients.length === 0 && patientSearch.trim() && (
+                        <p className="px-3 py-2 text-xs text-greige font-body">No matches</p>
+                      )}
+                      {filteredPatients.map((p) => {
+                        const label = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id
+                        const isSel = p.patient_id === selectedPatientId
+                        return (
+                          <button
+                            key={p.patient_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedPatientId(p.patient_id)
+                              setShowPatientPicker(false)
+                              setPatientSearch('')
+                              clearMessages()
+                            }}
+                            className={cn(
+                              'w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-body transition-colors',
+                              isSel ? 'bg-gold-whisper/40 text-charcoal-deep' : 'text-stone hover:bg-parchment/60',
+                            )}
+                          >
+                            <span className="truncate">{label}</span>
+                            {isSel && <Check className="w-3.5 h-3.5 text-gold-deep shrink-0" />}
+                          </button>
+                        )
+                      })}
+                      {patients.length === 0 && !patientsLoading && (
+                        <p className="px-3 py-2 text-xs text-greige font-body">
+                          No patients available. The assistant will answer without patient context.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <input
               data-testid="chat-input"
               className="flex-1 bg-ivory-warm border border-sand-DEFAULT rounded-xl px-4 py-2.5 text-sm font-body text-charcoal-deep placeholder:text-greige focus:outline-none focus:border-gold-soft transition-colors"

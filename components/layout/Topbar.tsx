@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon, ChevronRight } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { NAV_ITEMS, SEARCHABLE_SUBPAGES, ROLES } from '@/lib/constants'
+import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
 import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -48,7 +48,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
-  const [darkMode, setDarkMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -64,6 +63,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   // Load real notifications and poll every 60s.
   // Reset notifications immediately on user change so a new login never sees
   // the previous user's stale items before the first fetch resolves.
+  // Also listen for `notifications:refresh` events fired after special-operation
+  // toasts (org create, admin assign, user soft-delete, etc.) so the bell
+  // updates immediately without waiting for the next poll tick.
   useEffect(() => {
     setNotifications([])
     if (!getAccessToken()) return
@@ -75,26 +77,73 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     }
     load()
     const id = setInterval(load, 60000)
-    return () => { alive = false; clearInterval(id) }
+    const onRefresh = () => load()
+    window.addEventListener('notifications:refresh', onRefresh)
+    return () => { alive = false; clearInterval(id); window.removeEventListener('notifications:refresh', onRefresh) }
   }, [user?.id])
 
-  // Filter nav items by current user's role + search query — used for the
-  // search dropdown so the user can jump to any page they have access to.
+  // Filter nav items + feature index by current user's role + search query.
+  // Strict role gating: a feature whose `roles` does not include the active
+  // user's role must NEVER appear, regardless of text match. Page matches
+  // (NAV_ITEMS + SEARCHABLE_SUBPAGES) are listed first, then feature matches.
+  type SearchMatch =
+    | { kind: 'page'; href: string; label: string }
+    | { kind: 'feature'; href: string; feature: string; parentLabel: string }
+
   const searchTrimmed = searchQuery.trim().toLowerCase()
-  const searchMatches = searchTrimmed && user
+  const searchMatches: SearchMatch[] = searchTrimmed && user
     ? (() => {
-        const all = [...NAV_ITEMS, ...SEARCHABLE_SUBPAGES]
-          .filter((item) => item.roles.includes(user.role as Role))
+        const role = user.role as Role
+        // Step 1 — role filter, Step 2 — text filter, on pages
+        const pages = [...NAV_ITEMS, ...SEARCHABLE_SUBPAGES]
+          .filter((item) => item.roles.includes(role))
           .filter((item) => item.label.toLowerCase().includes(searchTrimmed) || item.href.toLowerCase().includes(searchTrimmed))
-        const seen = new Set<string>()
-        const unique: typeof all = []
-        for (const item of all) {
-          if (seen.has(item.href)) continue
-          seen.add(item.href)
-          unique.push(item)
-          if (unique.length >= 8) break
+
+        const pageHrefs = new Set<string>()
+        const pageLabelByHref = new Map<string, string>()
+        const pageMatches: SearchMatch[] = []
+        for (const p of pages) {
+          if (pageHrefs.has(p.href)) continue
+          pageHrefs.add(p.href)
+          pageLabelByHref.set(p.href, p.label)
+          pageMatches.push({ kind: 'page', href: p.href, label: p.label })
         }
-        return unique
+
+        // Build a global parent-label lookup so feature chips show a friendly
+        // page name, even when that page didn't itself match the query.
+        const allParentLabels = new Map<string, string>()
+        for (const item of [...NAV_ITEMS, ...SEARCHABLE_SUBPAGES]) {
+          if (!allParentLabels.has(item.href)) allParentLabels.set(item.href, item.label)
+        }
+
+        // Step 1 — role filter, Step 2 — text filter, on features
+        const featureMatches: SearchMatch[] = []
+        for (const f of FEATURE_INDEX) {
+          if (!f.roles.includes(role)) continue
+          if (
+            !f.feature.toLowerCase().includes(searchTrimmed) &&
+            !f.href.toLowerCase().includes(searchTrimmed)
+          ) continue
+
+          // Dedupe: skip if a page row with the same href already appears AND
+          // the feature text closely matches the page label (avoid noise).
+          if (pageHrefs.has(f.href)) {
+            const pageLabel = (pageLabelByHref.get(f.href) ?? '').toLowerCase()
+            const featLower = f.feature.toLowerCase()
+            if (pageLabel && (featLower === pageLabel || pageLabel.includes(featLower) || featLower.includes(pageLabel))) {
+              continue
+            }
+          }
+
+          featureMatches.push({
+            kind: 'feature',
+            href: f.href,
+            feature: f.feature,
+            parentLabel: allParentLabels.get(f.href) ?? f.href,
+          })
+        }
+
+        return [...pageMatches, ...featureMatches].slice(0, 12)
       })()
     : []
 
@@ -221,15 +270,31 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 </div>
               ) : (
                 <ul className="max-h-72 overflow-y-auto py-1">
-                  {searchMatches.map((item) => (
-                    <li key={item.href}>
+                  {searchMatches.map((item, idx) => (
+                    <li key={`${item.kind}-${item.href}-${idx}`}>
                       <button
                         type="button"
                         onMouseDown={(e) => { e.preventDefault(); goToMatch(item.href) }}
                         className="w-full text-left px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors flex items-center justify-between gap-2"
                       >
-                        <span className="font-medium truncate">{item.label}</span>
-                        <span className="text-[10px] text-greige truncate">{item.href}</span>
+                        {item.kind === 'page' ? (
+                          <>
+                            <span className="font-medium truncate">{item.label}</span>
+                            <span className="text-[10px] text-greige truncate">{item.href}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex flex-col min-w-0 flex-1">
+                              <span className="font-medium truncate">{item.feature}</span>
+                              <span className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[9px] uppercase tracking-wide text-gold-deep bg-champagne/40 px-1.5 py-0.5 rounded">
+                                  on {item.parentLabel}
+                                </span>
+                                <span className="text-[10px] text-greige truncate">{item.href}</span>
+                              </span>
+                            </span>
+                          </>
+                        )}
                       </button>
                     </li>
                   ))}
@@ -238,15 +303,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </div>
           )}
         </div>
-
-        {/* Light/Dark toggle */}
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment/60 transition-all duration-200"
-          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
 
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>

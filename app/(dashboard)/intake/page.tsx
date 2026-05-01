@@ -81,13 +81,17 @@ export default function IntakePage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  if (!user) return null
+  // Only patients and doctors may upload health records — redirect others.
+  // Must run in an effect (not during render) to avoid the React 19
+  // "setState during render" warning from Next's LinkComponent.
+  useEffect(() => {
+    if (user && user.role !== 'patient' && user.role !== 'doctor') {
+      router.replace('/dashboard')
+    }
+  }, [user, router])
 
-  // Only patients and doctors may upload health records
-  if (user.role !== 'patient' && user.role !== 'doctor') {
-    router.replace('/dashboard')
-    return null
-  }
+  if (!user) return null
+  if (user.role !== 'patient' && user.role !== 'doctor') return null
 
   const showPatientSelector = !isPatient || profiles.length > 0
 

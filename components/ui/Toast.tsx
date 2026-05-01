@@ -34,6 +34,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => {
       setItems((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
+    // Special-operation success → ask Topbar/notifications to refresh now
+    // (the backend creates a notification; we surface it without waiting for
+    // the 60s poll). Errors do not trigger a refresh.
+    if (variant === 'success' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notifications:refresh', { detail: { message } }))
+    }
   }, [])
 
   const value: ToastContextValue = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Bell, Lock, Sun, Moon, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
+import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -16,33 +16,11 @@ import { Tabs } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/types/auth'
 
-function DarkModeToggle() {
-  const [dark, setDark] = useState(() =>
-    typeof window !== 'undefined' && document.documentElement.classList.contains('dark')
-  )
-  function toggle() {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    localStorage.setItem('theme', next ? 'dark' : 'light')
-  }
-  return (
-    <button
-      onClick={toggle}
-      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-sand-light bg-white hover:bg-parchment hover:border-gold-soft transition-all duration-200 text-sm font-body text-stone"
-      title="Toggle dark mode"
-    >
-      {dark ? <Sun className="w-4 h-4 text-gold-deep" /> : <Moon className="w-4 h-4 text-greige" />}
-      <span className="text-xs">{dark ? 'Light' : 'Dark'}</span>
-    </button>
-  )
-}
 
 const TABS = [
-  { id: 'profile',       label: 'Profile',       icon: <User className="w-4 h-4" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-  { id: 'security',      label: 'Security',      icon: <Lock className="w-4 h-4" /> },
-  { id: 'sessions',      label: 'Sessions',      icon: <Smartphone className="w-4 h-4" /> },
+  { id: 'profile',  label: 'Profile',  icon: <User className="w-4 h-4" /> },
+  { id: 'security', label: 'Security', icon: <Lock className="w-4 h-4" /> },
+  { id: 'sessions', label: 'Sessions', icon: <Smartphone className="w-4 h-4" /> },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -92,17 +70,6 @@ export default function SettingsPage() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
-
-  // Notifications tab
-  const [notifToggles, setNotifToggles] = useState<Record<string, boolean>>({
-    'Preventive Alerts':  true,
-    'Consent Requests':   true,
-    'Family Activity':    true,
-    'Sync Status Updates': true,
-    'Agent Activity':     false,
-    'New Health Records': false,
-    'Weekly Summary':     false,
-  })
 
   // Password tab
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
@@ -290,12 +257,9 @@ export default function SettingsPage() {
           <ChevronRight className="w-3 h-3" />
           <span className="text-gold-deep">Settings</span>
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Settings</h1>
-            <p className="text-sm text-stone font-body mt-2">Manage your account, preferences and security</p>
-          </div>
-          <DarkModeToggle />
+        <div>
+          <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Settings</h1>
+          <p className="text-sm text-stone font-body mt-2">Manage your account, preferences and security</p>
         </div>
       </div>
 
@@ -392,34 +356,6 @@ export default function SettingsPage() {
                       {profileSaved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
                     </Button>
                   )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ─── Notifications ─── */}
-            {activeTab === 'notifications' && (
-              <Card>
-                <CardContent className="space-y-4">
-                  {[
-                    { label: 'Preventive Alerts',    desc: 'Receive notifications when risk signals are detected' },
-                    { label: 'Consent Requests',      desc: 'Notify when someone requests access to your records' },
-                    { label: 'Family Activity',       desc: 'Updates when family members accept invites or change records' },
-                    { label: 'Sync Status Updates',   desc: 'Notifications when offline sync completes or fails' },
-                    { label: 'Agent Activity',        desc: 'Alerts when autonomous agents take significant actions' },
-                    { label: 'New Health Records',    desc: 'Notify when new records are added to your vault' },
-                    { label: 'Weekly Summary',        desc: 'Weekly digest of your health trends and insights' },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-sand-light last:border-0">
-                      <div>
-                        <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
-                        <p className="text-xs text-greige">{item.desc}</p>
-                      </div>
-                      <Toggle
-                        checked={notifToggles[item.label] ?? false}
-                        onChange={() => setNotifToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
-                      />
-                    </div>
-                  ))}
                 </CardContent>
               </Card>
             )}

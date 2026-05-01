@@ -1,4 +1,7 @@
+'use client'
+
 import { TabNav } from "@/components/layout/TabNav";
+import { useAuth } from "@/context/AuthContext";
 
 const items = [
   { label: "Overview", href: "/vault" },
@@ -9,9 +12,12 @@ const items = [
 ];
 
 export default function VaultLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  // Doctor portal: hide the vault sub-tabs entirely.
+  const showTabs = user?.role !== 'doctor';
   return (
     <div className="space-y-2">
-      <TabNav items={items} />
+      {showTabs && <TabNav items={items} />}
       {children}
     </div>
   );

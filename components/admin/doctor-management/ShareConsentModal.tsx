@@ -5,7 +5,10 @@ import { Share2, Check, AlertCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { consentApi } from '@/lib/api'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 interface ShareConsentModalProps {
   isOpen: boolean
@@ -13,12 +16,17 @@ interface ShareConsentModalProps {
 }
 
 export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
+  const toast = useToast()
   const [patientEmail, setPatientEmail] = useState('')
   const [doctorEmail, setDoctorEmail] = useState('')
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const patientValid = EMAIL_RE.test(patientEmail.trim())
+  const doctorValid = EMAIL_RE.test(doctorEmail.trim())
+  const formValid = patientValid && doctorValid
 
   function reset() {
     setPatientEmail('')
@@ -37,8 +45,8 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
     e.preventDefault()
     const pe = patientEmail.trim().toLowerCase()
     const de = doctorEmail.trim().toLowerCase()
-    if (!pe || !de) {
-      setError('Patient and doctor email are required.')
+    if (!EMAIL_RE.test(pe) || !EMAIL_RE.test(de)) {
+      setError('Enter a valid email address')
       return
     }
     setError(null)
@@ -47,6 +55,7 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
       await consentApi.adminRequest(de, pe, reason.trim() || undefined)
       setSaving(false)
       setSuccess(true)
+      toast.success('Consent request sent — awaiting patient approval')
       setTimeout(() => handleClose(), 1500)
     } catch (err: unknown) {
       setSaving(false)
@@ -75,23 +84,33 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
           </div>
         )}
 
-        <Input
-          label="Patient Email"
-          type="email"
-          placeholder="patient@example.com"
-          value={patientEmail}
-          onChange={(e) => { setPatientEmail(e.target.value); setError(null) }}
-          required
-        />
+        <div>
+          <Input
+            label="Patient Email"
+            type="email"
+            placeholder="patient@example.com"
+            value={patientEmail}
+            onChange={(e) => { setPatientEmail(e.target.value); setError(null) }}
+            required
+          />
+          {patientEmail && !patientValid && (
+            <p className="text-[11px] text-[#B91C1C] font-body mt-1">Enter a valid email address</p>
+          )}
+        </div>
 
-        <Input
-          label="Doctor Email"
-          type="email"
-          placeholder="doctor@example.com"
-          value={doctorEmail}
-          onChange={(e) => { setDoctorEmail(e.target.value); setError(null) }}
-          required
-        />
+        <div>
+          <Input
+            label="Doctor Email"
+            type="email"
+            placeholder="doctor@example.com"
+            value={doctorEmail}
+            onChange={(e) => { setDoctorEmail(e.target.value); setError(null) }}
+            required
+          />
+          {doctorEmail && !doctorValid && (
+            <p className="text-[11px] text-[#B91C1C] font-body mt-1">Enter a valid email address</p>
+          )}
+        </div>
 
         <Input
           label="Reason (optional)"
@@ -102,7 +121,7 @@ export function ShareConsentModal({ isOpen, onClose }: ShareConsentModalProps) {
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
-          <Button type="submit" isLoading={saving} disabled={saving || success} className="flex-1">
+          <Button type="submit" isLoading={saving} disabled={saving || success || !formValid} className="flex-1">
             <Share2 className="w-4 h-4" />
             {saving ? 'Sending…' : success ? 'Sent!' : 'Send Request'}
           </Button>

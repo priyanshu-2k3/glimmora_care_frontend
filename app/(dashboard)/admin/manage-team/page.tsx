@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, Search, UserPlus, Mail, Check, AlertCircle } from 'lucide-react'
+import { Users, Search, UserPlus, Mail, Check, AlertCircle, Pencil, Trash2, RotateCcw } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -11,11 +11,13 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/components/ui/Toast'
 import { orgApi, adminApi, type DoctorOut, type AdminDoctorOut } from '@/lib/api'
 
 type AddMode = 'invite' | 'direct'
+type MemberRole = 'admin' | 'doctor' | 'staff' | 'viewer'
 
-// Unified display shape
+// Unified display shape (with local mock-only fields for edit/soft-delete)
 interface DisplayDoctor {
   user_id: string
   email: string
@@ -23,11 +25,17 @@ interface DisplayDoctor {
   last_name: string | null
   location: string | null
   patient_count: number
+  role: MemberRole
+  is_active: boolean
 }
 
 function toDisplay(d: DoctorOut | AdminDoctorOut): DisplayDoctor {
   if ('user_id' in d) {
-    return d as DisplayDoctor
+    return {
+      ...(d as DoctorOut),
+      role: 'doctor',
+      is_active: true,
+    }
   }
   return {
     user_id: d.id,
@@ -36,11 +44,14 @@ function toDisplay(d: DoctorOut | AdminDoctorOut): DisplayDoctor {
     last_name: d.last_name,
     location: null,
     patient_count: d.patient_count,
+    role: 'doctor',
+    is_active: true,
   }
 }
 
 export default function ManageTeamPage() {
   const { user } = useAuth()
+  const toast = useToast()
   const isSuperAdmin = user?.role === 'super_admin'
 
   const [doctors, setDoctors] = useState<DisplayDoctor[]>([])
@@ -60,6 +71,14 @@ export default function ManageTeamPage() {
   const [adding, setAdding] = useState(false)
   const [addSuccess, setAddSuccess] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+
+  // Edit modal state
+  const [editing, setEditing] = useState<DisplayDoctor | null>(null)
+  const [editRole, setEditRole] = useState<MemberRole>('doctor')
+  const [editActive, setEditActive] = useState(true)
+
+  // Delete confirmation state
+  const [deletingMember, setDeletingMember] = useState<DisplayDoctor | null>(null)
 
   function loadDoctors() {
     const promise = isSuperAdmin
@@ -137,6 +156,37 @@ export default function ManageTeamPage() {
     }
   }
 
+  function openEdit(d: DisplayDoctor) {
+    setEditing(d)
+    setEditRole(d.role)
+    setEditActive(d.is_active)
+  }
+
+  function saveEdit() {
+    if (!editing) return
+    setDoctors((prev) => prev.map((d) =>
+      d.user_id === editing.user_id ? { ...d, role: editRole, is_active: editActive } : d,
+    ))
+    toast.success(`Updated ${editing.first_name ?? editing.email}`)
+    setEditing(null)
+  }
+
+  function confirmDelete() {
+    if (!deletingMember) return
+    setDoctors((prev) => prev.map((d) =>
+      d.user_id === deletingMember.user_id ? { ...d, is_active: false } : d,
+    ))
+    toast.success(`${deletingMember.first_name ?? deletingMember.email} deactivated`)
+    setDeletingMember(null)
+  }
+
+  function restoreMember(d: DisplayDoctor) {
+    setDoctors((prev) => prev.map((m) =>
+      m.user_id === d.user_id ? { ...m, is_active: true } : m,
+    ))
+    toast.success(`${d.first_name ?? d.email} restored`)
+  }
+
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -169,44 +219,136 @@ export default function ManageTeamPage() {
           <EmptyState icon={Users} title="No doctors found" description="Add a doctor to get started." />
         ) : (
           <div className="space-y-3">
-            {filtered.map((d) => (
-              <Card key={d.user_id} hover>
-                <CardContent>
-                  <div className="flex items-center gap-4">
-                    <Avatar name={`${d.first_name ?? ''} ${d.last_name ?? ''}`} size="md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-body font-semibold text-charcoal-deep text-sm">
-                        {d.first_name ?? ''} {d.last_name ?? ''}
-                      </p>
-                      <p className="text-xs text-greige">{d.email}</p>
-                      {d.location && <p className="text-xs text-greige mt-0.5">{d.location}</p>}
-                    </div>
-                    {(() => {
-                      // Mock status + last_login derived deterministically from email
-                      const idx = d.email.length % 3
-                      const status = (['active', 'pending', 'disabled'] as const)[idx]
-                      const lastLoginHours = (d.email.charCodeAt(0) % 48) + 1
-                      const statusColor = status === 'active'
-                        ? 'bg-success-soft text-success-DEFAULT'
-                        : status === 'pending'
-                        ? 'bg-warning-soft text-warning-DEFAULT'
-                        : 'bg-error-soft text-[#B91C1C]'
-                      return (
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <Badge variant="gold">{d.patient_count} patients</Badge>
-                          <span className={`text-[10px] font-body font-semibold px-2 py-0.5 rounded-full capitalize ${statusColor}`}>
-                            {status}
+            {filtered.map((d) => {
+              const isSelf = d.email === user?.email
+              const deleted = !d.is_active
+              return (
+                <Card key={d.user_id} hover>
+                  <CardContent>
+                    <div className="flex items-center gap-4">
+                      <Avatar name={`${d.first_name ?? ''} ${d.last_name ?? ''}`} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body font-semibold text-charcoal-deep text-sm">
+                          {d.first_name ?? ''} {d.last_name ?? ''}
+                        </p>
+                        <p className="text-xs text-greige">{d.email}</p>
+                        {d.location && <p className="text-xs text-greige mt-0.5">{d.location}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <Badge variant="gold">{d.patient_count} patients</Badge>
+                        <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full capitalize bg-parchment text-charcoal-warm">
+                          {d.role}
+                        </span>
+                        {deleted ? (
+                          <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-error-soft text-[#B91C1C]">
+                            Deleted
                           </span>
-                          <span className="text-[10px] text-greige">Last login: {lastLoginHours}h ago</span>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        ) : (
+                          <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-success-soft text-success-DEFAULT">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0 ml-2">
+                        {deleted ? (
+                          <button
+                            onClick={() => restoreMember(d)}
+                            className="p-1.5 rounded-lg text-greige hover:text-success-DEFAULT hover:bg-success-soft transition-colors"
+                            aria-label="Restore"
+                            title="Restore"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => openEdit(d)}
+                              className="p-1.5 rounded-lg text-greige hover:text-gold-deep hover:bg-parchment transition-colors"
+                              aria-label="Edit"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingMember(d)}
+                              disabled={isSelf}
+                              className="p-1.5 rounded-lg text-greige hover:text-[#B91C1C] hover:bg-error-soft transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              aria-label="Delete"
+                              title={isSelf ? 'Cannot delete yourself' : 'Soft delete'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
+
+        {/* Edit modal */}
+        <Modal isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Team Member">
+          {editing && (
+            <div className="space-y-4">
+              <p className="text-xs text-greige font-body">
+                {editing.first_name ?? ''} {editing.last_name ?? ''} · {editing.email}
+              </p>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-body font-medium text-stone">Role</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as MemberRole)}
+                  className="w-full rounded-xl border border-sand-light bg-white px-3 py-2.5 text-sm font-body text-charcoal-deep focus:outline-none focus:ring-2 focus:ring-gold-soft focus:border-gold-soft"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="doctor">Doctor</option>
+                  <option value="staff">Staff</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-body text-charcoal-deep cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editActive}
+                  onChange={(e) => setEditActive(e.target.checked)}
+                  className="accent-gold-deep"
+                />
+                Active
+              </label>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button type="button" onClick={saveEdit} className="flex-1">Save Changes</Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Delete confirmation modal */}
+        <Modal isOpen={!!deletingMember} onClose={() => setDeletingMember(null)} title="Soft Delete Team Member">
+          {deletingMember && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2 bg-warning-soft border border-warning-DEFAULT/30 rounded-xl p-3">
+                <AlertCircle className="w-4 h-4 text-warning-DEFAULT shrink-0 mt-0.5" />
+                <p className="text-xs font-body text-charcoal-deep">
+                  Soft delete will deactivate the user without removing data. They can be restored later.
+                </p>
+              </div>
+              <p className="text-sm font-body text-charcoal-deep">
+                Deactivate <span className="font-semibold">{deletingMember.first_name ?? ''} {deletingMember.last_name ?? ''}</span> ({deletingMember.email})?
+              </p>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={() => setDeletingMember(null)}>Cancel</Button>
+                <Button variant="danger" type="button" onClick={confirmDelete} className="flex-1">
+                  <Trash2 className="w-4 h-4" />
+                  Soft Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
 
         {!isSuperAdmin && <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Doctor">
           <div className="space-y-4">

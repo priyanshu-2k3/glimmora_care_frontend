@@ -1,18 +1,16 @@
 'use client'
 
-import { User, Bell, Lock, Smartphone } from 'lucide-react'
+import { User, Lock, Smartphone } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Tabs } from '@/components/ui/Tabs'
 import { ProfileForm } from '@/components/admin/settings/ProfileForm'
-import { NotificationSettingsForm } from '@/components/admin/settings/NotificationSettingsForm'
 import { SecuritySettings } from '@/components/admin/settings/SecuritySettings'
 import { SessionManagementTable } from '@/components/admin/settings/SessionManagementTable'
 
 const TABS = [
-  { id: 'profile',       label: 'Profile',       icon: <User className="w-4 h-4" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-  { id: 'security',      label: 'Security',      icon: <Lock className="w-4 h-4" /> },
-  { id: 'sessions',      label: 'Sessions',      icon: <Smartphone className="w-4 h-4" /> },
+  { id: 'profile',  label: 'Profile',  icon: <User className="w-4 h-4" /> },
+  { id: 'security', label: 'Security', icon: <Lock className="w-4 h-4" /> },
+  { id: 'sessions', label: 'Sessions', icon: <Smartphone className="w-4 h-4" /> },
 ]
 
 export default function AdminSettingsPage() {
@@ -28,7 +26,6 @@ export default function AdminSettingsPage() {
           {(activeTab) => (
             <>
               {activeTab === 'profile' && <ProfileForm />}
-              {activeTab === 'notifications' && <NotificationSettingsForm />}
               {activeTab === 'security' && <SecuritySettings />}
               {activeTab === 'sessions' && <SessionManagementTable />}
             </>

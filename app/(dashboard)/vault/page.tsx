@@ -143,9 +143,12 @@ export default function VaultPage() {
     realNameMap.set(p.patient_id, displayName)
   }
 
-  // Derive unique patients from real records (for doctor/admin card view)
+  // Derive unique patients from real records (for doctor/admin card view).
+  // Skip records with no patientId — they would collide on a null Map key
+  // and produce duplicate React keys downstream.
   const patientMap = new Map<string, { name: string; consented: number; total: number; district?: string; age?: number }>()
   for (const rec of records) {
+    if (!rec.patientId) continue
     const prev = patientMap.get(rec.patientId) ?? { name: rec.patientId, consented: 0, total: 0 }
     prev.total++
     if (rec.consentStatus === 'granted') prev.consented++
@@ -252,8 +255,8 @@ export default function VaultPage() {
 
         {!isLoading && patientRecords.length > 0 && (
           <div className="space-y-3">
-            {patientRecords.map((record) => (
-              <div key={record.id} className="relative">
+            {patientRecords.map((record, i) => (
+              <div key={record.id ?? `rec-${i}`} className="relative">
                 <Link href={`/vault/${record.id}`}>
                   <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200">
                     <div className="flex items-start justify-between gap-3">
@@ -279,8 +282,8 @@ export default function VaultPage() {
                     </div>
                     {record.markers.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        {record.markers.slice(0, 4).map((m) => (
-                          <span key={m.id} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-[#B91C1C]' : 'bg-parchment text-stone')}>
+                        {record.markers.slice(0, 4).map((m, mi) => (
+                          <span key={m.id ?? `${record.id ?? i}-m-${mi}`} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-[#B91C1C]' : 'bg-parchment text-stone')}>
                             {m.name}: {m.value} {m.unit}
                           </span>
                         ))}
@@ -299,9 +302,11 @@ export default function VaultPage() {
     )
   }
 
-  /* ── Doctor / Admin card view: only show patients with consent granted ── */
+  /* ── Doctor / Admin card view: doctors only see patients who have granted consent ── */
   if (canViewAll) {
-    const patientEntries = [...patientMap.entries()].filter(([, p]) => {
+    const patientEntries = [...patientMap.entries()].filter(([pid, p]) => {
+      if (!pid) return false
+      // Doctor: must have at least one record with consent granted
       if (isDoctor && p.consented === 0) return false
       if (!search) return true
       return p.name.toLowerCase().includes(search.toLowerCase())
@@ -501,11 +506,11 @@ export default function VaultPage() {
                 {bulkToast}
               </div>
             )}
-            {pageSlice.map((rec) => {
+            {pageSlice.map((rec, ri) => {
               const abnormalMarkers = rec.markers.filter((m) => m.isAbnormal)
               const isSelected = selectedRecordIds.has(rec.id)
               return (
-                <div key={rec.id} className="block group relative">
+                <div key={rec.id ?? `rec-${ri}`} className="block group relative">
                   <input
                     type="checkbox"
                     checked={isSelected}

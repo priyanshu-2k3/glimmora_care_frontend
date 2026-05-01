@@ -44,15 +44,7 @@ export const ADMIN_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'ORGANISATION',
     items: [
-      {
-        href: '/organization',
-        label: 'Organisation',
-        icon: 'Building2',
-        children: [
-          { href: '/organization/doctors',  label: 'Doctors',  icon: 'Stethoscope' },
-          { href: '/organization/patients', label: 'Patients', icon: 'Users' },
-        ],
-      },
+      { href: '/organization', label: 'Organisation', icon: 'Building2' },
     ],
   },
   {

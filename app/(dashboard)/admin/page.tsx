@@ -283,7 +283,7 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
 
       {/* Management quick links — super admin only */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Link href="/admin/organizations">
+        <Link href="/organization">
           <Card hover className="text-center py-6">
             <CardContent>
               <Building2 className="w-6 h-6 text-gold-soft mx-auto mb-2" />
@@ -298,24 +298,6 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
               <Shield className="w-6 h-6 text-gold-soft mx-auto mb-2" />
               <p className="text-sm font-body font-medium text-charcoal-deep">Manage Users</p>
               <p className="text-xs text-greige mt-0.5">All accounts</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/admin/doctors">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <Stethoscope className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Doctors</p>
-              <p className="text-xs text-greige mt-0.5">All organisations</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/admin/patients">
-          <Card hover className="text-center py-6">
-            <CardContent>
-              <Users className="w-6 h-6 text-gold-soft mx-auto mb-2" />
-              <p className="text-sm font-body font-medium text-charcoal-deep">Manage Patients</p>
-              <p className="text-xs text-greige mt-0.5">All organisations</p>
             </CardContent>
           </Card>
         </Link>
