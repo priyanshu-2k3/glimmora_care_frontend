@@ -68,14 +68,19 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
     return () => clearTimeout(t)
   }, [])
 
+  // White card body with a clear left strip + matching icon — readable
+  // against any page background; vivid (not muted) accent so success ≠ error.
   const styles = {
-    success: 'bg-white border-success-DEFAULT/40',
-    error:   'bg-white border-[#DC2626]/40',
-    info:    'bg-white border-gold-soft/40',
+    success: 'bg-white border-emerald-DEFAULT/45 border-l-4 border-l-emerald-DEFAULT',
+    error:   'bg-white border-coral-DEFAULT/45   border-l-4 border-l-coral-DEFAULT',
+    info:    'bg-white border-ocean-DEFAULT/40   border-l-4 border-l-ocean-DEFAULT',
   }[item.variant]
 
   const Icon = item.variant === 'success' ? CheckCircle : item.variant === 'error' ? AlertCircle : Info
-  const iconColor = item.variant === 'success' ? 'text-[#059669]' : item.variant === 'error' ? 'text-[#B91C1C]' : 'text-gold-deep'
+  const iconColor =
+    item.variant === 'success' ? 'text-emerald-muted'
+    : item.variant === 'error' ? 'text-coral-muted'
+    : 'text-ocean-muted'
 
   return (
     <div

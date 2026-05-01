@@ -9,7 +9,29 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination } from '@/components/ui/Pagination'
-import { adminApi, type AuditLogOut } from '@/lib/api'
+import { adminApi, type AuditLogOut, type AdminUserOut, type AdminOrgItem } from '@/lib/api'
+
+// Friendly label resolution for "user:abc…" / "org:abc…" refs.
+function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
+  if (!ref) return { kind: null, id: '' }
+  const m = ref.match(/^(user|org):(.+)$/)
+  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+  return { kind: null, id: ref }
+}
+
+function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | undefined; users: Record<string, AdminUserOut>; orgs: Record<string, AdminOrgItem> }) {
+  const { kind, id } = parseRef(refValue)
+  if (!refValue) return null
+  if (kind === 'user' && users[id]) {
+    const u = users[id]
+    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+    return <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
+  }
+  if (kind === 'org' && orgs[id]) {
+    return <span className="text-charcoal-deep">Org: <span className="font-medium">{orgs[id].name}</span></span>
+  }
+  return <span className="text-greige break-all">{refValue}</span>
+}
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
   info: 'success',
@@ -34,6 +56,8 @@ export default function AdminLogsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [users, setUsers] = useState<Record<string, AdminUserOut>>({})
+  const [orgs, setOrgs] = useState<Record<string, AdminOrgItem>>({})
 
   useEffect(() => {
     let active = true
@@ -47,6 +71,15 @@ export default function AdminLogsPage() {
         }
       })
       .finally(() => { if (active) setLoading(false) })
+    // Load id → entity maps in parallel for friendly labels
+    Promise.all([
+      adminApi.listUsers('').catch(() => [] as AdminUserOut[]),
+      adminApi.listAllOrgs('').catch(() => [] as AdminOrgItem[]),
+    ]).then(([u, o]) => {
+      if (!active) return
+      setUsers(Object.fromEntries(u.map((x) => [x.id, x])))
+      setOrgs(Object.fromEntries(o.map((x) => [x.id, x])))
+    })
     return () => { active = false }
   }, [])
 
@@ -148,8 +181,15 @@ export default function AdminLogsPage() {
                         <p className="text-sm font-body font-medium text-charcoal-deep">{log.action}</p>
                         <Badge variant={SEVERITY_VARIANT[log.severity] ?? 'success'} className="capitalize shrink-0">{log.severity}</Badge>
                       </div>
-                      {log.target && <p className="text-xs text-greige mt-0.5">{log.target}</p>}
-                      <p className="text-xs text-greige mt-0.5">By: {log.performed_by} · {formatDateTime(log.timestamp)}</p>
+                      {log.target && (
+                        <p className="text-xs text-greige mt-0.5">
+                          Target: <FriendlyRef refValue={log.target} users={users} orgs={orgs} />
+                        </p>
+                      )}
+                      <p className="text-xs text-greige mt-0.5 flex flex-wrap items-center gap-x-1">
+                        By: <FriendlyRef refValue={log.performed_by} users={users} orgs={orgs} />
+                        <span>· {formatDateTime(log.timestamp)}</span>
+                      </p>
                     </div>
                   </div>
                 </CardContent>

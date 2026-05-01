@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -61,6 +61,18 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   )
   const pageTitle = currentNav?.label || 'Dashboard'
   const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  // Role-aware destinations brought in from main: super-admin lands on the
+  // admin profile/settings; patient lands on /profiles; otherwise /settings.
+  const isAdminRole = user?.role === 'admin' || user?.role === 'super_admin'
+  const profileHref  = isAdminRole ? '/admin/settings/profile' : user?.role === 'patient' ? '/profiles' : '/settings'
+  const settingsHref = isAdminRole ? '/admin/settings' : '/settings'
+
+  async function handleLogout() {
+    setShowUserMenu(false)
+    await logout()
+    router.push('/login')
+  }
 
   // Load real notifications and poll every 60s.
   // Reset notifications immediately on user change so a new login never sees
@@ -191,16 +203,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  const isAdminRole = user?.role === 'admin' || user?.role === 'super_admin'
-  const profileHref = isAdminRole ? '/admin/settings/profile' : user?.role === 'patient' ? '/profiles' : '/settings'
-  const settingsHref = isAdminRole ? '/admin/settings' : '/settings'
-
-  async function handleLogout() {
-    setShowUserMenu(false)
-    await logout()
-    router.push('/login')
-  }
 
   function markRead(id: string) {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n))
@@ -420,38 +422,37 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         {/* Divider */}
         <div className="w-px h-5 bg-sand-light mx-1" />
 
-        {/* User */}
+        {/* User pill — click for profile / settings / logout dropdown */}
         <div className="relative" ref={userMenuRef}>
           <button
             type="button"
-            onClick={() => setShowUserMenu((v) => !v)}
+            onClick={() => setShowUserMenu((s) => !s)}
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
             aria-label="Open account menu"
             className={cn(
-              'bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
+              'flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
               showUserMenu
                 ? 'border-gold-soft/60 bg-champagne/30'
-                : 'hover:border-gold-soft/40 hover:bg-champagne/20'
+                : 'hover:border-gold-soft/40 hover:bg-champagne/20',
             )}
           >
-            <div className="flex items-center gap-2">
-              <Avatar name={user.name} size="sm" />
-              <div className="hidden sm:block leading-tight text-left">
-                <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
-                <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
-              </div>
+            <Avatar name={user.name} size="sm" />
+            <div className="hidden sm:block leading-tight text-left">
+              <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
+              <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
             </div>
+            <ChevronDown className={cn('w-3.5 h-3.5 text-greige transition-transform', showUserMenu && 'rotate-180')} />
           </button>
 
           {showUserMenu && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-sand-light overflow-hidden z-50"
-            >
+            <div role="menu" className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-sand-light overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-sand-light">
                 <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
-                <p className="text-[11px] font-body text-greige truncate">{ROLES[user.role as Role]?.label}</p>
+                <p className="text-[11px] font-body text-greige truncate">{user.email}</p>
+                <span className="inline-block mt-1.5 text-[10px] font-body font-semibold uppercase tracking-wide text-gold-deep">
+                  {ROLES[user.role as Role]?.label}
+                </span>
               </div>
               <ul className="py-1">
                 <li>
@@ -459,9 +460,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                     href={profileHref}
                     role="menuitem"
                     onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
                   >
-                    <UserIcon className="w-3.5 h-3.5 text-greige" />
+                    <UserIcon className="w-4 h-4 text-greige" />
                     Profile
                   </Link>
                 </li>
@@ -470,9 +471,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                     href={settingsHref}
                     role="menuitem"
                     onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
                   >
-                    <SettingsIcon className="w-3.5 h-3.5 text-greige" />
+                    <SettingsIcon className="w-4 h-4 text-greige" />
                     Settings
                   </Link>
                 </li>
@@ -482,9 +483,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   type="button"
                   role="menuitem"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-body text-error hover:bg-error-soft/40  transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-body text-coral-muted hover:bg-coral-soft/40 transition-colors"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                   Logout
                 </button>
               </div>

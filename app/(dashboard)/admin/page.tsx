@@ -12,10 +12,54 @@ import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import {
   adminApi,
-  type AdminStatsOut, type AuditLogOut,
+  type AdminStatsOut, type AuditLogOut, type AdminUserOut,
   type AdminPatientOut, type AdminDoctorOut, type AdminOrgItem,
 } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
+
+// ── Friendly label resolution for audit-log target/performed_by IDs ──────────
+// Backend stores refs like "user:6512abcd…" or "org:6512abcd…". We resolve
+// them against admin-loaded user/org lists for human-readable labels.
+type IdMaps = {
+  users: Record<string, AdminUserOut>
+  orgs:  Record<string, AdminOrgItem>
+}
+
+function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
+  if (!ref) return { kind: null, id: '' }
+  const m = ref.match(/^(user|org):(.+)$/)
+  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+  return { kind: null, id: ref }
+}
+
+function FriendlyRef({ refValue, maps }: { refValue: string | null | undefined; maps: IdMaps }) {
+  const { kind, id } = parseRef(refValue)
+  if (!refValue) return <span className="text-greige italic">—</span>
+  if (kind === 'user') {
+    const u = maps.users[id]
+    if (u) {
+      const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+      return (
+        <span className="inline-flex flex-col">
+          <span className="text-charcoal-deep">Doctor: {name}</span>
+          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">{id.slice(0, 12)}…</span>
+        </span>
+      )
+    }
+  }
+  if (kind === 'org') {
+    const o = maps.orgs[id]
+    if (o) {
+      return (
+        <span className="inline-flex flex-col">
+          <span className="text-charcoal-deep">Organisation: {o.name}</span>
+          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">{id.slice(0, 12)}…</span>
+        </span>
+      )
+    }
+  }
+  return <span className="text-stone">{refValue}</span>
+}
 
 interface StatCardProps {
   icon: React.ElementType
@@ -51,11 +95,12 @@ const SEVERITY_DOT: Record<string, string> = {
 
 // ── Org-scoped admin view ──────────────────────────────────────────────────────
 
-function AdminDashboard({ userName, stats, logs, loading }: {
+function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
   userName: string
   stats: AdminStatsOut | null
   logs: AuditLogOut[]
   loading: boolean
+  idMaps: IdMaps
 }) {
   return (
     <div className="space-y-6">
@@ -113,7 +158,10 @@ function AdminDashboard({ userName, stats, logs, loading }: {
                   <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
-                    <p className="text-xs text-greige">{log.target} · {log.performed_by}</p>
+                    <div className="text-xs text-greige flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                      {log.target && <FriendlyRef refValue={log.target} maps={idMaps} />}
+                      {log.performed_by && <FriendlyRef refValue={log.performed_by} maps={idMaps} />}
+                    </div>
                   </div>
                   <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>
                 </div>
@@ -158,11 +206,12 @@ function AdminDashboard({ userName, stats, logs, loading }: {
 
 // ── Super admin view ───────────────────────────────────────────────────────────
 
-function SuperAdminDashboard({ userName, stats, logs, loading }: {
+function SuperAdminDashboard({ userName, stats, logs, loading, idMaps }: {
   userName: string
   stats: AdminStatsOut | null
   logs: AuditLogOut[]
   loading: boolean
+  idMaps: IdMaps
 }) {
   const [tab, setTab] = useState<'patients' | 'doctors' | 'orgs'>('patients')
   const [patients, setPatients] = useState<AdminPatientOut[]>([])
@@ -335,7 +384,10 @@ function SuperAdminDashboard({ userName, stats, logs, loading }: {
                   <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
-                    <p className="text-xs text-greige">{log.target} · {log.performed_by}</p>
+                    <div className="text-xs text-greige flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                      {log.target && <FriendlyRef refValue={log.target} maps={idMaps} />}
+                      {log.performed_by && <FriendlyRef refValue={log.performed_by} maps={idMaps} />}
+                    </div>
                   </div>
                   <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>
                 </div>
@@ -355,16 +407,24 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStatsOut | null>(null)
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [loading, setLoading] = useState(true)
+  const [idMaps, setIdMaps] = useState<IdMaps>({ users: {}, orgs: {} })
 
   useEffect(() => {
     let active = true
     Promise.all([
       adminApi.getStats().catch(() => null),
       adminApi.getAuditLogs({ limit: 4 }).catch(() => []),
-    ]).then(([s, l]) => {
+      adminApi.listUsers().catch(() => [] as AdminUserOut[]),
+      adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
+    ]).then(([s, l, users, orgs]) => {
       if (!active) return
       setStats(s)
       setLogs(Array.isArray(l) ? l : [])
+      const userMap: Record<string, AdminUserOut> = {}
+      users.forEach((u) => { userMap[u.id] = u })
+      const orgMap: Record<string, AdminOrgItem> = {}
+      orgs.forEach((o) => { orgMap[o.id] = o })
+      setIdMaps({ users: userMap, orgs: orgMap })
       setLoading(false)
     })
     return () => { active = false }
@@ -379,6 +439,7 @@ export default function AdminDashboardPage() {
             stats={stats}
             logs={logs}
             loading={loading}
+            idMaps={idMaps}
           />
         ) : (
           <AdminDashboard
@@ -386,6 +447,7 @@ export default function AdminDashboardPage() {
             stats={stats}
             logs={logs}
             loading={loading}
+            idMaps={idMaps}
           />
         )}
       </div>
