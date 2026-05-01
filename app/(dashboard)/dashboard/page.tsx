@@ -547,10 +547,10 @@ function AdminView({ userName }: { userName: string }) {
   return (
     <div className="space-y-5">
       <WelcomeBanner name={userName} role="Administrator" chips={[
-        { label: 'Patients',  value: String(totalPatients), color: C.ocean.bg },
-        { label: 'Records',   value: String(totalRecords),  color: C.teal.bg },
-        { label: 'Doctors',   value: String(stats?.total_doctors ?? '—'), color: C.violet.bg },
-        { label: 'Orgs',      value: String(stats?.total_organizations ?? '—'), color: C.emerald.bg },
+        { label: 'Patients (org)', value: String(totalPatients), color: C.ocean.bg },
+        { label: 'Doctors (org)',  value: String(stats?.total_doctors ?? '—'), color: C.violet.bg },
+        { label: 'Assignments',    value: String(stats?.total_assignments ?? '—'), color: C.teal.bg },
+        { label: 'New (30d)',      value: String(stats?.new_users_last_30_days ?? '—'), color: C.emerald.bg },
       ]} />
 
       {loading ? (
@@ -558,12 +558,12 @@ function AdminView({ userName }: { userName: string }) {
           {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Users}       label="Total Patients"      value={totalPatients}               accent={C.ocean} />
-          <StatCard icon={FileText}    label="Health Records"      value={totalRecords}                accent={C.teal} />
-          <StatCard icon={Users}       label="Total Doctors"       value={stats?.total_doctors ?? '—'} accent={C.violet} />
-          <StatCard icon={CheckCircle} label="New Users (30d)"     value={stats?.new_users_last_30_days ?? '—'} accent={C.emerald} />
-          <StatCard icon={Upload}      label="Monthly Uploads"     value={318}                          accent={C.amber} />
+        // Org-scoped — backend `/admin/stats` returns counts limited to this admin's organisation.
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={Users}       label="Patients in your org"   value={totalPatients}                          accent={C.ocean} />
+          <StatCard icon={Users}       label="Doctors in your org"    value={stats?.total_doctors ?? '—'}            accent={C.violet} />
+          <StatCard icon={FileText}    label="Active assignments"     value={stats?.total_assignments ?? '—'}        accent={C.teal} />
+          <StatCard icon={CheckCircle} label="New users (30d)"        value={stats?.new_users_last_30_days ?? '—'}   accent={C.emerald} />
         </div>
       )}
 
