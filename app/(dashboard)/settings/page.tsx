@@ -219,7 +219,8 @@ export default function SettingsPage() {
     }
   }
 
-  async function handlePasswordChange() {
+  async function handlePasswordChange(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (pwForm.next !== pwForm.confirm) {
       setPwError('Passwords do not match.')
       return
@@ -431,7 +432,7 @@ export default function SettingsPage() {
                         <p className="text-xs font-body text-success-DEFAULT">Password updated successfully.</p>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <form onSubmit={handlePasswordChange} className="space-y-3">
                       <Input
                         label="Current Password"
                         type={showPw.current ? 'text' : 'password'}
@@ -471,12 +472,12 @@ export default function SettingsPage() {
                           </button>
                         }
                       />
-                    </div>
-                    {!isDemo && (
-                      <Button variant="outline" className="mt-3" onClick={handlePasswordChange} isLoading={pwSaving}>
-                        Update Password
-                      </Button>
-                    )}
+                      {!isDemo && (
+                        <Button type="submit" variant="outline" className="mt-3" isLoading={pwSaving}>
+                          Update Password
+                        </Button>
+                      )}
+                    </form>
                   </div>
 
                   {/* Security options */}

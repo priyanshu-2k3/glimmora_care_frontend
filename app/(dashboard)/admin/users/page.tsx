@@ -39,7 +39,8 @@ export default function ManageUsersPage() {
     setEditActive(u.is_active)
   }
 
-  async function saveEdit() {
+  async function saveEdit(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!editTarget) return
     setEditSaving(true)
     try {
@@ -62,7 +63,8 @@ export default function ManageUsersPage() {
     }
   }
 
-  async function confirmSoftDelete() {
+  async function confirmSoftDelete(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!deleteTarget) return
     setDeleting(true)
     try {
@@ -312,7 +314,7 @@ export default function ManageUsersPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="space-y-4">
+              <form onSubmit={saveEdit} className="space-y-4">
                 <div>
                   <label className="text-xs font-body font-medium text-stone block mb-1">Role</label>
                   <select
@@ -331,10 +333,10 @@ export default function ManageUsersPage() {
                   <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
                 </label>
                 <div className="flex gap-2 justify-end pt-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
-                  <Button size="sm" isLoading={editSaving} onClick={saveEdit}>Save</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
+                  <Button type="submit" size="sm" isLoading={editSaving}>Save</Button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -354,12 +356,12 @@ export default function ManageUsersPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-                <Button variant="danger" size="sm" isLoading={deleting} onClick={confirmSoftDelete}>
+              <form onSubmit={confirmSoftDelete} className="flex gap-2 justify-end pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                <Button type="submit" variant="danger" size="sm" isLoading={deleting}>
                   <Trash2 className="w-3.5 h-3.5" /> Soft delete
                 </Button>
-              </div>
+              </form>
             </div>
           </div>
         )}
