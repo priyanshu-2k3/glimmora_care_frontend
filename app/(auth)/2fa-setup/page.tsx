@@ -88,7 +88,8 @@ export default function TwoFASetupPage() {
     setStep('email')
   }
 
-  async function handleStartSms() {
+  async function handleStartSms(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!smsPhone.trim() || smsPhone.trim().length < 8) {
       setError('Enter a valid phone number')
       return
@@ -267,25 +268,27 @@ export default function TwoFASetupPage() {
             <h2 className="font-display text-xl text-charcoal-deep mb-1">SMS Authentication</h2>
             <p className="text-sm text-greige font-body">Enter your phone number. We'll send a one-time code each time you sign in.</p>
           </div>
-          <Input
-            label="Phone Number"
-            type="tel"
-            placeholder="+91 98765 43210"
-            value={smsPhone}
-            onChange={(e) => { setSmsPhone(e.target.value); setError(null) }}
-          />
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
-            <Button
-              className="flex-1"
-              onClick={handleStartSms}
-              isLoading={isLoading}
-              disabled={isLoading || smsPhone.trim().length < 8}
-            >
-              <Smartphone className="w-4 h-4" />
-              Send OTP
-            </Button>
-          </div>
+          <form onSubmit={handleStartSms}>
+            <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={smsPhone}
+              onChange={(e) => { setSmsPhone(e.target.value); setError(null) }}
+            />
+            <div className="flex gap-2 mt-4">
+              <Button type="button" variant="outline" onClick={() => setStep('choose')}><ArrowLeft className="w-4 h-4" /></Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                isLoading={isLoading}
+                disabled={isLoading || smsPhone.trim().length < 8}
+              >
+                <Smartphone className="w-4 h-4" />
+                Send OTP
+              </Button>
+            </div>
+          </form>
         </>
       )}
 

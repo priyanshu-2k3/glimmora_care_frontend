@@ -39,30 +39,38 @@ export default function ManageUsersPage() {
     setEditActive(u.is_active)
   }
 
-  async function saveEdit() {
+  async function saveEdit(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!editTarget) return
     setEditSaving(true)
     try {
-      const patched: AdminUserOut = { ...editTarget, role: editRole as AdminUserOut['role'], is_active: editActive }
-      try {
-        if (editActive !== editTarget.is_active) {
-          await adminApi.updateUser(editTarget.id, { is_active: editActive })
-        }
-      } catch { /* mock fallback */ }
-      setUsers((prev) => prev.map((x) => (x.id === editTarget.id ? patched : x)))
+      const payload: { role?: string; is_active?: boolean } = {}
+      if (editRole !== editTarget.role) payload.role = editRole
+      if (editActive !== editTarget.is_active) payload.is_active = editActive
+
+      if (Object.keys(payload).length === 0) {
+        toast.success('No changes')
+        setEditTarget(null)
+        return
+      }
+
+      const updated = await adminApi.updateUser(editTarget.id, payload)
+      setUsers((prev) => prev.map((x) => (x.id === editTarget.id ? { ...x, ...updated } : x)))
       const changes: string[] = []
-      if (editRole !== editTarget.role) changes.push(`role -> ${editRole}`)
-      if (editActive !== editTarget.is_active) changes.push(editActive ? 'reactivated' : 'deactivated')
+      if (payload.role) changes.push(`role -> ${payload.role}`)
+      if (payload.is_active !== undefined) changes.push(payload.is_active ? 'reactivated' : 'deactivated')
       toast.success(`User updated${changes.length ? ` (${changes.join(', ')})` : ''}`)
       setEditTarget(null)
-    } catch {
-      toast.error('Failed to update user')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update user'
+      toast.error(msg)
     } finally {
       setEditSaving(false)
     }
   }
 
-  async function confirmSoftDelete() {
+  async function confirmSoftDelete(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!deleteTarget) return
     setDeleting(true)
     try {
@@ -312,7 +320,7 @@ export default function ManageUsersPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="space-y-4">
+              <form onSubmit={saveEdit} className="space-y-4">
                 <div>
                   <label className="text-xs font-body font-medium text-stone block mb-1">Role</label>
                   <select
@@ -331,10 +339,10 @@ export default function ManageUsersPage() {
                   <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
                 </label>
                 <div className="flex gap-2 justify-end pt-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
-                  <Button size="sm" isLoading={editSaving} onClick={saveEdit}>Save</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
+                  <Button type="submit" size="sm" isLoading={editSaving}>Save</Button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -354,12 +362,12 @@ export default function ManageUsersPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-                <Button variant="danger" size="sm" isLoading={deleting} onClick={confirmSoftDelete}>
+              <form onSubmit={confirmSoftDelete} className="flex gap-2 justify-end pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                <Button type="submit" variant="danger" size="sm" isLoading={deleting}>
                   <Trash2 className="w-3.5 h-3.5" /> Soft delete
                 </Button>
-              </div>
+              </form>
             </div>
           </div>
         )}

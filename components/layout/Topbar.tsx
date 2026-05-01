@@ -70,8 +70,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   async function handleLogout() {
     setShowUserMenu(false)
+    // logout() in AuthContext does window.location.replace('/login') itself.
+    // Calling router.push here as well caused a duplicate navigation that
+    // showed the same redirect/toast twice — a known "multiple same issues
+    // triggered" symptom on the profile dropdown.
     await logout()
-    router.push('/login')
   }
 
   // Load real notifications and poll every 60s.

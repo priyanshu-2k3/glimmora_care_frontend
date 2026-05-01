@@ -14,15 +14,31 @@ function LoginPageInner() {
   const { login, googleLogin, googleLoginWithRole, isLoading, error, clearError, pendingGoogleRole, user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const nextUrl = searchParams.get('next') ?? '/dashboard'
+  const nextParam = searchParams.get('next')
+
+  // Role-aware landing page. super_admin and admin manage the platform from
+  // /admin; doctor/patient/ngo_worker/gov_analyst all start at /dashboard
+  // (which itself renders a role-specific view). Honor an explicit ?next= if
+  // the user was redirected here from a guarded route.
+  function landingFor(role: Role | undefined): string {
+    if (nextParam) return nextParam
+    switch (role) {
+      case 'super_admin': return '/admin'
+      case 'admin':       return '/admin'
+      case 'doctor':      return '/dashboard'
+      case 'patient':     return '/dashboard'
+      default:            return '/dashboard'
+    }
+  }
 
   // Redirect after Google login completes without needing role selection
   const [googleLoginAttempted, setGoogleLoginAttempted] = useState(false)
   useEffect(() => {
     if (googleLoginAttempted && user && !pendingGoogleRole && !isLoading) {
-      router.push(nextUrl)
+      router.push(landingFor(user.role))
     }
-  }, [googleLoginAttempted, user, pendingGoogleRole, isLoading, router, nextUrl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleLoginAttempted, user, pendingGoogleRole, isLoading, router])
 
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
@@ -56,7 +72,7 @@ function LoginPageInner() {
   async function handleGoogleRoleSelect(role: Role) {
     const success = await googleLoginWithRole(role)
     if (success) {
-      router.push(nextUrl)
+      router.push(landingFor(role))
     }
   }
 
@@ -72,7 +88,7 @@ function LoginPageInner() {
       if (loggedInUser?.emailVerified === false) {
         router.push('/verify-email')
       } else {
-        router.push(nextUrl)
+        router.push(landingFor(loggedInUser?.role))
       }
     } catch {
       // error is set in context

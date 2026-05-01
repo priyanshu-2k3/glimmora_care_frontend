@@ -108,7 +108,8 @@ function AdminOrgView() {
     }
   }
 
-  async function handleSave() {
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     const phoneErr = validatePhone(form.phone, { optional: true })
     if (phoneErr) { setError(phoneErr); return }
     const webErr = validateWebsite(form.website, { optional: true })
@@ -230,17 +231,17 @@ function AdminOrgView() {
             </div>
           )}
           {editing ? (
-            <>
+            <form onSubmit={handleSave} className="space-y-4">
               <Input label="Organisation Name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
               <Input label="Address" value={form.address} placeholder="123 Medical Street, Mumbai" onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
               <Input label="Phone" type="tel" value={form.phone} placeholder="+91 98765 43210" onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
               <Input label="Website" type="url" value={form.website} placeholder="https://clinic.example.com" onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))} />
               <Input label="Logo URL" type="url" value={form.logo} placeholder="https://clinic.example.com/logo.png" onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))} hint="Public URL of your organisation logo (mock)" />
-              <Button onClick={handleSave} isLoading={saving} className="w-full">
+              <Button type="submit" isLoading={saving} className="w-full">
                 <Save className="w-4 h-4" />
                 {saved ? 'Saved!' : 'Save Changes'}
               </Button>
-            </>
+            </form>
           ) : (
             <div className="space-y-3 text-sm font-body">
               {[
@@ -518,7 +519,12 @@ function SuperAdminOrgView() {
     setCreating(true)
     setCreateError(null)
     try {
-      const created = await adminApi.createOrg(createName.trim())
+      const created = await adminApi.createOrg({
+        name: createName.trim(),
+        address: createAddress.trim() || undefined,
+        phone: createPhone.trim() || undefined,
+        website: createWebsite.trim() ? normaliseWebsite(createWebsite) : undefined,
+      })
       toast.success(`Organisation created: ${created.name}`)
       setCreateSuccess(true)
       setCreateName('')
@@ -607,19 +613,20 @@ function SuperAdminOrgView() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" size="sm" onClick={() => setConfirmRemoveAdmin(null)}>Cancel</Button>
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="sm"
-                  isLoading={removeAdminTargetId === confirmRemoveAdmin.id}
-                  onClick={() => handleRemoveAdmin(confirmRemoveAdmin.id)}
-                >
-                  <UserMinus className="w-3.5 h-3.5" />
-                  Remove
-                </Button>
-              </div>
+              <form onSubmit={(e) => { e.preventDefault(); handleRemoveAdmin(confirmRemoveAdmin.id) }}>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmRemoveAdmin(null)}>Cancel</Button>
+                  <Button
+                    type="submit"
+                    variant="danger"
+                    size="sm"
+                    isLoading={removeAdminTargetId === confirmRemoveAdmin.id}
+                  >
+                    <UserMinus className="w-3.5 h-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </div>
@@ -638,15 +645,12 @@ function SuperAdminOrgView() {
         />
       )}
 
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-gold-soft" />
-            All Organisations
-          </h1>
-          <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Platform-wide view of all registered organisations.</p>
-        </div>
-        <Badge variant="dark">{filtered.length} org{filtered.length !== 1 ? 's' : ''}</Badge>
+      <div>
+        <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-gold-soft" />
+          All Organisations
+        </h1>
+        <p className="text-sm lg:text-[15px] text-stone font-body mt-1">Platform-wide view of all registered organisations.</p>
       </div>
 
       {/* Stats bar */}
@@ -1060,7 +1064,9 @@ function DeleteOrgModal({
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleDelete() {
+  async function handleDelete(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    if (!canDelete) return
     setDeleting(true); setError(null)
     try {
       await adminApi.deleteOrg(org.id, force)
@@ -1097,7 +1103,8 @@ function DeleteOrgModal({
             </button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
+          <form onSubmit={handleDelete} className="space-y-3">
           <div className="bg-error-soft/40 border border-[#DC2626]/20 rounded-xl p-3 space-y-1">
             <p className="text-xs font-body text-charcoal-deep">
               <span className="font-semibold">{org.doctor_count}</span> doctor(s) ·{' '}
@@ -1134,11 +1141,12 @@ function DeleteOrgModal({
 
           <div className="flex gap-2 justify-end pt-1">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button type="button" variant="danger" size="sm" isLoading={deleting} disabled={!canDelete} onClick={handleDelete}>
+            <Button type="submit" variant="danger" size="sm" isLoading={deleting} disabled={!canDelete}>
               <Trash2 className="w-3.5 h-3.5" />
               Delete{force ? ' (forced)' : ''}
             </Button>
           </div>
+          </form>
         </CardContent>
       </Card>
     </div>

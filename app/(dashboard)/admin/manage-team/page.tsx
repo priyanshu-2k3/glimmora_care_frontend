@@ -162,7 +162,8 @@ export default function ManageTeamPage() {
     setEditActive(d.is_active)
   }
 
-  function saveEdit() {
+  function saveEdit(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!editing) return
     setDoctors((prev) => prev.map((d) =>
       d.user_id === editing.user_id ? { ...d, role: editRole, is_active: editActive } : d,
@@ -171,7 +172,8 @@ export default function ManageTeamPage() {
     setEditing(null)
   }
 
-  function confirmDelete() {
+  function confirmDelete(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!deletingMember) return
     setDoctors((prev) => prev.map((d) =>
       d.user_id === deletingMember.user_id ? { ...d, is_active: false } : d,
@@ -292,7 +294,7 @@ export default function ManageTeamPage() {
         {/* Edit modal */}
         <Modal isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Team Member">
           {editing && (
-            <div className="space-y-4">
+            <form onSubmit={saveEdit} className="space-y-4">
               <p className="text-xs text-greige font-body">
                 {editing.first_name ?? ''} {editing.last_name ?? ''} · {editing.email}
               </p>
@@ -320,16 +322,16 @@ export default function ManageTeamPage() {
               </label>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" type="button" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button type="button" onClick={saveEdit} className="flex-1">Save Changes</Button>
+                <Button type="submit" className="flex-1">Save Changes</Button>
               </div>
-            </div>
+            </form>
           )}
         </Modal>
 
         {/* Delete confirmation modal */}
         <Modal isOpen={!!deletingMember} onClose={() => setDeletingMember(null)} title="Soft Delete Team Member">
           {deletingMember && (
-            <div className="space-y-4">
+            <form onSubmit={confirmDelete} className="space-y-4">
               <div className="flex items-start gap-2 bg-warning-soft border border-warning-DEFAULT/30 rounded-xl p-3">
                 <AlertCircle className="w-4 h-4 text-warning-DEFAULT shrink-0 mt-0.5" />
                 <p className="text-xs font-body text-charcoal-deep">
@@ -341,12 +343,12 @@ export default function ManageTeamPage() {
               </p>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" type="button" onClick={() => setDeletingMember(null)}>Cancel</Button>
-                <Button variant="danger" type="button" onClick={confirmDelete} className="flex-1">
+                <Button variant="danger" type="submit" className="flex-1">
                   <Trash2 className="w-4 h-4" />
                   Soft Delete
                 </Button>
               </div>
-            </div>
+            </form>
           )}
         </Modal>
 
