@@ -701,12 +701,22 @@ export interface AssignedDoctorOut {
 }
 
 export const orgApi = {
-  /** Admin: create organisation */
-  create: (name: string) =>
-    apiFetch<OrgOut>('/organizations', {
+  /** Admin / super-admin: create organisation. `name` is required;
+   *  address / phone / website are optional and persist on creation. */
+  create: (data: string | { name: string; address?: string; phone?: string; website?: string }) => {
+    const body = typeof data === 'string'
+      ? { name: data }
+      : {
+          name: data.name,
+          address: data.address || null,
+          phone: data.phone || null,
+          website: data.website || null,
+        }
+    return apiFetch<OrgOut>('/organizations', {
       method: 'POST',
-      body: JSON.stringify({ name }),
-    }),
+      body: JSON.stringify(body),
+    })
+  },
 
   /** Admin + doctor: get my organisation */
   getMine: () =>
@@ -907,11 +917,16 @@ export const adminApi = {
   listAllOrgs: (search = '') =>
     apiFetch<AdminOrgItem[]>(`/admin/organizations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
 
-  /** Super admin: create a new organisation */
-  createOrg: (name: string) =>
+  /** Super admin: create a new organisation (full details). */
+  createOrg: (data: { name: string; address?: string; phone?: string; website?: string }) =>
     apiFetch<OrgOut>('/organizations', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({
+        name: data.name,
+        address: data.address || null,
+        phone: data.phone || null,
+        website: data.website || null,
+      }),
     }),
 
   /** Super admin: assign an admin user to an organisation.

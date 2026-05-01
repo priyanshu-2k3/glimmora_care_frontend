@@ -28,11 +28,11 @@ export function parseRef(ref: string | null | undefined): { kind: 'user' | 'org'
 export function FriendlyRef({
   refValue,
   maps,
-  showId = true,
   inline = false,
 }: {
   refValue: string | null | undefined
   maps: IdMaps
+  /** Kept for API stability — IDs are no longer rendered in the UI. */
   showId?: boolean
   inline?: boolean
 }) {
@@ -46,36 +46,16 @@ export function FriendlyRef({
 
   if (u) {
     const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-    if (inline) {
-      return <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
-    }
-    return (
-      <span className="inline-flex flex-col">
-        <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
-        {showId && (
-          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">
-            {id.slice(0, 12)}…
-          </span>
-        )}
-      </span>
-    )
+    return inline
+      ? <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
+      : <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
   }
   if (o) {
-    if (inline) {
-      return <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
-    }
-    return (
-      <span className="inline-flex flex-col">
-        <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
-        {showId && (
-          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">
-            {id.slice(0, 12)}…
-          </span>
-        )}
-      </span>
-    )
+    return inline
+      ? <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
+      : <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
   }
 
-  // Unknown id — show the raw value but truncated.
-  return <span className="text-greige break-all">{refValue.slice(0, 24)}{refValue.length > 24 ? '…' : ''}</span>
+  // Unknown reference — fall back to a neutral label rather than leaking raw ids.
+  return <span className="text-greige italic">Unknown reference</span>
 }

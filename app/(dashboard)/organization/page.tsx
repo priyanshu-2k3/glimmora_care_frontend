@@ -518,7 +518,12 @@ function SuperAdminOrgView() {
     setCreating(true)
     setCreateError(null)
     try {
-      const created = await adminApi.createOrg(createName.trim())
+      const created = await adminApi.createOrg({
+        name: createName.trim(),
+        address: createAddress.trim() || undefined,
+        phone: createPhone.trim() || undefined,
+        website: createWebsite.trim() ? normaliseWebsite(createWebsite) : undefined,
+      })
       toast.success(`Organisation created: ${created.name}`)
       setCreateSuccess(true)
       setCreateName('')

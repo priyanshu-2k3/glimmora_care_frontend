@@ -652,7 +652,7 @@ function SuperAdminView({ userName }: { userName: string }) {
     setCreateError(null)
     setCreateMsg(null)
     try {
-      await adminApi.createOrg(orgName.trim())
+      await adminApi.createOrg({ name: orgName.trim() })
       setCreateMsg(`Organisation "${orgName.trim()}" created.`)
       setOrgName('')
       // Refresh orgs list
