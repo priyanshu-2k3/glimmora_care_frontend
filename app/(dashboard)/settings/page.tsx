@@ -185,20 +185,24 @@ export default function SettingsPage() {
     router.push('/login')
   }
 
-  async function handleProfileSave() {
+  async function handleProfileSave(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (!user?.accessToken) return
     setProfileSaving(true)
     setProfileError(null)
     try {
       const [firstName, ...rest] = profileForm.name.trim().split(' ')
-      await authApi.updateMe({
+      const payload: Record<string, unknown> = {
         first_name: firstName || profileForm.name,
         last_name: rest.join(' ') || undefined,
         email: profileForm.email !== user.email ? profileForm.email : undefined,
         organization: profileForm.organization || null,
         location: profileForm.location || null,
         gender: profileForm.gender || null,
-      })
+        // phone update — backend may or may not honour, kept for forward-compat
+        phone_number: profileForm.phone || null,
+      }
+      await authApi.updateMe(payload as Parameters<typeof authApi.updateMe>[0])
       await refreshUser()
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 2000)
@@ -293,6 +297,7 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <form onSubmit={handleProfileSave} className="space-y-4">
                   {profileError && (
                     <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
                       <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
@@ -312,8 +317,7 @@ export default function SettingsPage() {
                       placeholder="+91 98765 43210"
                       value={profileForm.phone}
                       onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
-                      disabled={true}
-                      hint="Contact support to change your phone number"
+                      disabled={isDemo}
                     />
                   </div>
                   <Input
@@ -352,10 +356,11 @@ export default function SettingsPage() {
                     </div>
                   )}
                   {!isDemo && (
-                    <Button onClick={handleProfileSave} isLoading={profileSaving} disabled={profileSaving}>
+                    <Button type="submit" isLoading={profileSaving} disabled={profileSaving}>
                       {profileSaved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
                     </Button>
                   )}
+                  </form>
                 </CardContent>
               </Card>
             )}
@@ -489,24 +494,37 @@ export default function SettingsPage() {
                           </button>
                         )}
                       </div>
-                      <Toggle
-                        checked={twofaEnabled}
-                        onChange={async () => {
-                          if (isDemo) return
-                          if (twofaEnabled) {
-                            setTwofaLoading(true)
-                            try {
-                              await authApi.twofa.disable()
-                              setTwofaEnabled(false)
-                              setTwofaMethod(null)
-                              setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': false }))
-                            } catch { /* ignore */ }
-                            setTwofaLoading(false)
-                          } else {
-                            router.push('/2fa-setup')
-                          }
-                        }}
-                      />
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'text-[11px] font-body font-bold px-2 py-0.5 rounded-full border tracking-wider',
+                            twofaEnabled
+                              ? 'bg-emerald-soft text-emerald-muted border-emerald-muted/30'
+                              : 'bg-parchment text-greige border-sand-light',
+                          )}
+                        >
+                          {twofaLoading ? '…' : twofaEnabled ? 'ON' : 'OFF'}
+                        </span>
+                        <Toggle
+                          checked={twofaEnabled}
+                          disabled={twofaLoading}
+                          onChange={async () => {
+                            if (isDemo) return
+                            if (twofaEnabled) {
+                              setTwofaLoading(true)
+                              try {
+                                await authApi.twofa.disable()
+                                setTwofaEnabled(false)
+                                setTwofaMethod(null)
+                                setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': false }))
+                              } catch { /* ignore */ }
+                              setTwofaLoading(false)
+                            } else {
+                              router.push('/2fa-setup')
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                     {/* Other security toggles */}
                     {[
@@ -551,24 +569,59 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-body font-medium text-charcoal-deep">Export my data</p>
-                        <p className="text-xs text-greige">Download a JSON archive of your profile, records, consents, and audit history.</p>
+                        <p className="text-xs text-greige">Download a CSV summary of your profile and account info.</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const payload = { user, exportedAt: new Date().toISOString() }
-                          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-                          const url = URL.createObjectURL(blob)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = `glimmora-export-${new Date().toISOString().slice(0, 10)}.json`
-                          a.click()
-                          URL.revokeObjectURL(url)
-                        }}
-                      >
-                        <Download className="w-4 h-4" /> Export
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Primary: CSV
+                            const csvEscape = (v: unknown) => {
+                              const s = v === null || v === undefined ? '' : String(v)
+                              return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+                            }
+                            const profileRows: [string, unknown][] = [
+                              ['record_kind', 'profile'],
+                              ['user_id', user.id],
+                              ['name', user.name],
+                              ['email', user.email],
+                              ['role', user.role],
+                              ['organization', user.organization ?? ''],
+                              ['location', user.location ?? ''],
+                              ['phone_number', user.phone_number ?? ''],
+                              ['gender', user.gender ?? ''],
+                              ['exported_at', new Date().toISOString()],
+                            ]
+                            const lines = ['field,value', ...profileRows.map(([k, v]) => `${csvEscape(k)},${csvEscape(v)}`)]
+                            const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `glimmora-export-${new Date().toISOString().slice(0, 10)}.csv`
+                            a.click()
+                            URL.revokeObjectURL(url)
+                          }}
+                        >
+                          <Download className="w-4 h-4" /> Export CSV
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const payload = { user, exportedAt: new Date().toISOString() }
+                            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `glimmora-export-${new Date().toISOString().slice(0, 10)}.json`
+                            a.click()
+                            URL.revokeObjectURL(url)
+                          }}
+                          className="text-[11px] text-gold-deep hover:text-gold-muted underline font-body"
+                        >
+                          JSON (advanced)
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-sand-light">
                       <div>

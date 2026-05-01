@@ -5,13 +5,27 @@ import { Search, Stethoscope, Loader2, X, FileText } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { adminApi, type AdminDoctorOut } from '@/lib/api'
+import { adminApi, type AdminDoctorOut, type AuditLogOut } from '@/lib/api'
+import { formatDate } from '@/lib/utils'
 
 export default function ManageDoctorsPage() {
   const [doctors, setDoctors] = useState<AdminDoctorOut[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [profileTarget, setProfileTarget] = useState<AdminDoctorOut | null>(null)
+  const [doctorLogs, setDoctorLogs] = useState<AuditLogOut[]>([])
+  const [doctorLogsLoading, setDoctorLogsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!profileTarget) { setDoctorLogs([]); return }
+    let active = true
+    setDoctorLogsLoading(true)
+    adminApi.getAuditLogs({ search: profileTarget.email, limit: 30 })
+      .then((logs) => { if (active) setDoctorLogs(logs) })
+      .catch(() => { if (active) setDoctorLogs([]) })
+      .finally(() => { if (active) setDoctorLogsLoading(false) })
+    return () => { active = false }
+  }, [profileTarget])
 
   async function load(s = search) {
     setLoading(true)
@@ -144,17 +158,19 @@ export default function ManageDoctorsPage() {
                   <p className="text-xs font-body font-semibold text-charcoal-deep mb-2 flex items-center gap-2">
                     <FileText className="w-3.5 h-3.5 text-gold-soft" /> Audit trail
                   </p>
-                  <div className="space-y-1.5">
-                    {[
-                      { ts: '2 hours ago', evt: 'Viewed patient vault · pat_018' },
-                      { ts: 'Yesterday', evt: 'Granted consent on record rec_412' },
-                      { ts: '3 days ago', evt: 'Uploaded prescription PDF' },
-                    ].map((e) => (
-                      <div key={e.evt} className="flex items-start gap-2 text-xs">
-                        <span className="text-greige w-24 shrink-0">{e.ts}</span>
-                        <span className="text-stone">{e.evt}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                    {doctorLogsLoading ? (
+                      <p className="text-xs text-greige italic">Loading activity…</p>
+                    ) : doctorLogs.length === 0 ? (
+                      <p className="text-xs text-greige italic">No recent activity for this doctor.</p>
+                    ) : (
+                      doctorLogs.map((e) => (
+                        <div key={e.id} className="flex items-start gap-2 text-xs">
+                          <span className="text-greige w-28 shrink-0">{formatDate(e.timestamp)}</span>
+                          <span className="text-stone">{e.action}{e.detail ? ` — ${e.detail}` : ''}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

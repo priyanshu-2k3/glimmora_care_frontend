@@ -480,6 +480,7 @@ function SuperAdminOrgView() {
   const [editTarget, setEditTarget] = useState<AdminOrgItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminOrgItem | null>(null)
   const [removeAdminTargetId, setRemoveAdminTargetId] = useState<string | null>(null)
+  const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState<AdminOrgItem | null>(null)
 
   function loadOrgs() {
     return adminApi.listAllOrgs()
@@ -542,10 +543,14 @@ function SuperAdminOrgView() {
       await adminApi.removeOrgAdmin(orgId)
       await loadOrgs()
       toast.success(`Admin removed from ${org?.name ?? 'organisation'}`)
-    } catch {
-      toast.error('Failed to remove admin')
+    } catch (err) {
+      const detail = err instanceof ApiError ? err.detail : (err instanceof Error ? err.message : 'Failed to remove admin')
+      toast.error(detail)
+      // eslint-disable-next-line no-console
+      console.error('removeOrgAdmin failed', { orgId, err })
     }
     setRemoveAdminTargetId(null)
+    setConfirmRemoveAdmin(null)
   }
 
   if (loading) {
@@ -576,6 +581,39 @@ function SuperAdminOrgView() {
             setEditTarget(null)
           }}
         />
+      )}
+
+      {confirmRemoveAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={() => setConfirmRemoveAdmin(null)} />
+          <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white">
+            <CardHeader>
+              <CardTitle className="font-body text-base flex items-center gap-2 text-charcoal-deep">
+                <UserMinus className="w-4 h-4 text-[#B91C1C]" />
+                Remove Admin
+              </CardTitle>
+              <CardDescription className="mt-0.5">
+                Detach <span className="font-medium text-charcoal-deep">{confirmRemoveAdmin.admin_email ?? 'the current admin'}</span> from{' '}
+                <span className="font-medium text-charcoal-deep">{confirmRemoveAdmin.name}</span>?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" size="sm" onClick={() => setConfirmRemoveAdmin(null)}>Cancel</Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  isLoading={removeAdminTargetId === confirmRemoveAdmin.id}
+                  onClick={() => handleRemoveAdmin(confirmRemoveAdmin.id)}
+                >
+                  <UserMinus className="w-3.5 h-3.5" />
+                  Remove
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {deleteTarget && (
@@ -744,7 +782,7 @@ function SuperAdminOrgView() {
                           variant="outline"
                           size="sm"
                           isLoading={removeAdminTargetId === org.id}
-                          onClick={() => handleRemoveAdmin(org.id)}
+                          onClick={() => setConfirmRemoveAdmin(org)}
                           className="text-xs px-2 py-1 h-auto !text-[#B91C1C] !border-[#DC2626]/40 hover:!text-[#7F1D1D] hover:!bg-[#FEE2E2]"
                           title="Detach the current admin"
                         >
@@ -938,7 +976,10 @@ function EditOrgModal({
       })
       onSaved({ ...org, ...updated })
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to update organisation.')
+      const detail = err instanceof ApiError ? err.detail : (err instanceof Error ? err.message : 'Failed to update organisation.')
+      setError(detail)
+      // eslint-disable-next-line no-console
+      console.error('updateOrg failed', { orgId: org.id, err })
     } finally {
       setSaving(false)
     }
@@ -1012,7 +1053,10 @@ function DeleteOrgModal({
       await adminApi.deleteOrg(org.id, force)
       onDeleted()
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to delete organisation.')
+      const detail = err instanceof ApiError ? err.detail : (err instanceof Error ? err.message : 'Failed to delete organisation.')
+      setError(detail)
+      // eslint-disable-next-line no-console
+      console.error('deleteOrg failed', { orgId: org.id, force, err })
     } finally {
       setDeleting(false)
     }

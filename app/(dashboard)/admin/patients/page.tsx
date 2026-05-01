@@ -5,13 +5,30 @@ import { Search, Users, Loader2, X, FileText } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { adminApi, type AdminPatientOut } from '@/lib/api'
+import { adminApi, intakeApi, type AdminPatientOut } from '@/lib/api'
+import type { HealthRecord } from '@/types/intake'
+import { formatDate } from '@/lib/utils'
 
 export default function ManagePatientsPage() {
   const [patients, setPatients] = useState<AdminPatientOut[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [detailTarget, setDetailTarget] = useState<AdminPatientOut | null>(null)
+  const [patientRecords, setPatientRecords] = useState<HealthRecord[] | null>(null)
+  const [recordsLoading, setRecordsLoading] = useState(false)
+  const [recordsError, setRecordsError] = useState(false)
+
+  useEffect(() => {
+    if (!detailTarget) { setPatientRecords(null); setRecordsError(false); return }
+    let active = true
+    setRecordsLoading(true)
+    setRecordsError(false)
+    intakeApi.getRecords(detailTarget.id)
+      .then((recs) => { if (active) setPatientRecords(recs) })
+      .catch(() => { if (active) { setPatientRecords(null); setRecordsError(true) } })
+      .finally(() => { if (active) setRecordsLoading(false) })
+    return () => { active = false }
+  }, [detailTarget])
 
   async function load(s = search) {
     setLoading(true)
@@ -113,27 +130,55 @@ export default function ManagePatientsPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="bg-parchment border border-sand-light rounded-xl p-3 mb-3">
-                <p className="text-[11px] text-greige uppercase tracking-wider mb-1">Vault Summary (read-only)</p>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-2xl font-body font-bold text-charcoal-deep">12</p>
-                    <p className="text-[10px] text-greige">Records</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-body font-bold text-charcoal-deep">38</p>
-                    <p className="text-[10px] text-greige">Markers</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-body font-bold text-warning-DEFAULT">3</p>
-                    <p className="text-[10px] text-greige">Flagged</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-stone">
-                <FileText className="w-3.5 h-3.5 text-greige" />
-                <span>Last record: <span className="text-charcoal-deep font-medium">CBC Report · 12 Apr 2026</span></span>
-              </div>
+              {(() => {
+                const records = patientRecords ?? []
+                const recordsCount = records.length
+                const markersCount = records.reduce((s, r) => s + (r.markers?.length ?? 0), 0)
+                const flaggedCount = records.reduce(
+                  (s, r) => s + (r.markers?.filter((m) => m.isAbnormal).length ?? 0),
+                  0,
+                )
+                const sortedByDate = [...records].sort(
+                  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+                )
+                const last = sortedByDate[0]
+                const showDash = recordsLoading || recordsError || patientRecords === null
+                return (
+                  <>
+                    <div className="bg-parchment border border-sand-light rounded-xl p-3 mb-3">
+                      <p className="text-[11px] text-greige uppercase tracking-wider mb-1">Vault Summary (read-only)</p>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-2xl font-body font-bold text-charcoal-deep">{showDash ? '—' : recordsCount}</p>
+                          <p className="text-[10px] text-greige">Records</p>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-body font-bold text-charcoal-deep">{showDash ? '—' : markersCount}</p>
+                          <p className="text-[10px] text-greige">Markers</p>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-body font-bold text-warning-DEFAULT">{showDash ? '—' : flaggedCount}</p>
+                          <p className="text-[10px] text-greige">Flagged</p>
+                        </div>
+                      </div>
+                      {recordsError && (
+                        <p className="text-[10px] text-greige italic mt-2 text-center">Live counts unavailable</p>
+                      )}
+                      {recordsLoading && (
+                        <p className="text-[10px] text-greige italic mt-2 text-center">Loading…</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-stone">
+                      <FileText className="w-3.5 h-3.5 text-greige" />
+                      {last ? (
+                        <span>Last record: <span className="text-charcoal-deep font-medium">{last.title} · {formatDate(last.date)}</span></span>
+                      ) : (
+                        <span className="text-greige italic">{showDash ? 'Loading recent record…' : 'No records yet.'}</span>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         )}
