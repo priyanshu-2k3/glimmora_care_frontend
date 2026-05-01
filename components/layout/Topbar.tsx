@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, Sun, Moon, ChevronRight } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -48,7 +48,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
-  const [darkMode, setDarkMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -304,15 +303,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </div>
           )}
         </div>
-
-        {/* Light/Dark toggle */}
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-lg text-greige hover:text-charcoal-deep hover:bg-parchment/60 transition-all duration-200"
-          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
 
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>
