@@ -861,9 +861,14 @@ export interface AdminDoctorOut {
 }
 
 export const adminApi = {
-  /** List all users (searchable) */
-  listUsers: (search = '') =>
-    apiFetch<AdminUserOut[]>(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  /** List all users (searchable, optional role filter) */
+  listUsers: (search = '', role = '') => {
+    const qs = new URLSearchParams()
+    if (search) qs.set('search', search)
+    if (role) qs.set('role', role)
+    const suffix = qs.toString() ? `?${qs.toString()}` : ''
+    return apiFetch<AdminUserOut[]>(`/admin/users${suffix}`)
+  },
 
   /** Update a user's role or active status */
   updateUser: (userId: string, data: { role?: string; is_active?: boolean }) =>

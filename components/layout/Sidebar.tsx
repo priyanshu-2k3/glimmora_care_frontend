@@ -272,11 +272,19 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               <div className="space-y-0.5">
                 {sectionItems.map((item) => {
                   const Icon = ICONS[item.icon]
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                  // Super admin has no personal dashboard — the platform landing
+                  // page is /admin, so retarget the Dashboard item there. Skips
+                  // the /dashboard → /admin redirect and lets the active-state
+                  // highlight match the URL.
+                  const targetHref =
+                    item.href === '/dashboard' && user.role === 'super_admin'
+                      ? '/admin'
+                      : item.href
+                  const isActive = pathname === targetHref || pathname.startsWith(targetHref + '/')
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={targetHref}
                       onClick={onClose}
                       className={cn(
                         'flex items-center gap-3 py-2 rounded-lg text-sm font-body font-medium transition-all duration-200 group',

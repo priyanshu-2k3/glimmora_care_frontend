@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, LogOut } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -47,20 +47,32 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchWrapRef = useRef<HTMLDivElement>(null)
-  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const currentNav = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   )
   const pageTitle = currentNav?.label || 'Dashboard'
   const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  // Role-aware destinations brought in from main: super-admin lands on the
+  // admin profile/settings; patient lands on /profiles; otherwise /settings.
+  const isAdminRole = user?.role === 'admin' || user?.role === 'super_admin'
+  const profileHref  = isAdminRole ? '/admin/settings/profile' : user?.role === 'patient' ? '/profiles' : '/settings'
+  const settingsHref = isAdminRole ? '/admin/settings' : '/settings'
+
+  async function handleLogout() {
+    setShowUserMenu(false)
+    await logout()
+    router.push('/login')
+  }
 
   // Load real notifications and poll every 60s.
   // Reset notifications immediately on user change so a new login never sees
@@ -410,19 +422,20 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         {/* Divider */}
         <div className="w-px h-5 bg-sand-light mx-1" />
 
-        {/* User pill — click for profile / logout dropdown */}
+        {/* User pill — click for profile / settings / logout dropdown */}
         <div className="relative" ref={userMenuRef}>
           <button
             type="button"
             onClick={() => setShowUserMenu((s) => !s)}
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
+            aria-label="Open account menu"
             className={cn(
               'flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
               showUserMenu
-                ? 'border-gold-soft/60 bg-champagne/20'
+                ? 'border-gold-soft/60 bg-champagne/30'
                 : 'hover:border-gold-soft/40 hover:bg-champagne/20',
             )}
-            aria-haspopup="menu"
-            aria-expanded={showUserMenu}
           >
             <Avatar name={user.name} size="sm" />
             <div className="hidden sm:block leading-tight text-left">
@@ -433,7 +446,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-sand-light overflow-hidden z-50">
+            <div role="menu" className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-sand-light overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-sand-light">
                 <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
                 <p className="text-[11px] font-body text-greige truncate">{user.email}</p>
@@ -444,7 +457,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               <ul className="py-1">
                 <li>
                   <Link
-                    href="/settings"
+                    href={profileHref}
+                    role="menuitem"
                     onClick={() => setShowUserMenu(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
                   >
@@ -453,20 +467,28 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   </Link>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setShowUserMenu(false)
-                      await logout()
-                      router.push('/login')
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-body text-coral-muted hover:bg-coral-soft/40 transition-colors text-left border-t border-sand-light"
+                  <Link
+                    href={settingsHref}
+                    role="menuitem"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
                   >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
+                    <SettingsIcon className="w-4 h-4 text-greige" />
+                    Settings
+                  </Link>
                 </li>
               </ul>
+              <div className="border-t border-sand-light py-1">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-body text-coral-muted hover:bg-coral-soft/40 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
             </div>
           )}
         </div>
