@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -45,14 +45,16 @@ interface TopbarProps {
 export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchWrapRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const currentNav = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
@@ -181,6 +183,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       }
       if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
         setShowSearchDropdown(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -405,15 +410,65 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         {/* Divider */}
         <div className="w-px h-5 bg-sand-light mx-1" />
 
-        {/* User */}
-        <div className="bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 hover:border-gold-soft/40 hover:bg-champagne/20 transition-all duration-200 cursor-default">
-          <div className="flex items-center gap-2">
+        {/* User pill — click for profile / logout dropdown */}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowUserMenu((s) => !s)}
+            className={cn(
+              'flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
+              showUserMenu
+                ? 'border-gold-soft/60 bg-champagne/20'
+                : 'hover:border-gold-soft/40 hover:bg-champagne/20',
+            )}
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
+          >
             <Avatar name={user.name} size="sm" />
-            <div className="hidden sm:block leading-tight">
+            <div className="hidden sm:block leading-tight text-left">
               <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
               <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
             </div>
-          </div>
+            <ChevronDown className={cn('w-3.5 h-3.5 text-greige transition-transform', showUserMenu && 'rotate-180')} />
+          </button>
+
+          {showUserMenu && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-sand-light overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-sand-light">
+                <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
+                <p className="text-[11px] font-body text-greige truncate">{user.email}</p>
+                <span className="inline-block mt-1.5 text-[10px] font-body font-semibold uppercase tracking-wide text-gold-deep">
+                  {ROLES[user.role as Role]?.label}
+                </span>
+              </div>
+              <ul className="py-1">
+                <li>
+                  <Link
+                    href="/settings"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 text-greige" />
+                    Profile
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowUserMenu(false)
+                      await logout()
+                      router.push('/login')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-body text-coral-muted hover:bg-coral-soft/40 transition-colors text-left border-t border-sand-light"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </header>
