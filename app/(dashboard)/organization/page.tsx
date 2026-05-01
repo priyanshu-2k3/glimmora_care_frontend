@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext'
 import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
 
 // ─── Admin view ────────────────────────────────────────────────────────────────
 function AdminOrgView() {
@@ -108,6 +109,10 @@ function AdminOrgView() {
   }
 
   async function handleSave() {
+    const phoneErr = validatePhone(form.phone, { optional: true })
+    if (phoneErr) { setError(phoneErr); return }
+    const webErr = validateWebsite(form.website, { optional: true })
+    if (webErr) { setError(webErr); return }
     setSaving(true)
     setError(null)
     try {
@@ -115,7 +120,7 @@ function AdminOrgView() {
         name: form.name || undefined,
         address: form.address || undefined,
         phone: form.phone || undefined,
-        website: form.website || undefined,
+        website: form.website ? normaliseWebsite(form.website) : undefined,
       })
       setOrg(updated)
       setEditing(false)
@@ -506,6 +511,10 @@ function SuperAdminOrgView() {
   async function handleCreateOrg(e: React.FormEvent) {
     e.preventDefault()
     if (!createName.trim()) return
+    const phoneErr = validatePhone(createPhone, { optional: true })
+    if (phoneErr) { setCreateError(phoneErr); return }
+    const webErr = validateWebsite(createWebsite, { optional: true })
+    if (webErr) { setCreateError(webErr); return }
     setCreating(true)
     setCreateError(null)
     try {
@@ -966,13 +975,17 @@ function EditOrgModal({
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    const phoneErr = validatePhone(phone, { optional: true })
+    if (phoneErr) { setError(phoneErr); return }
+    const webErr = validateWebsite(website, { optional: true })
+    if (webErr) { setError(webErr); return }
     setSaving(true); setError(null)
     try {
       const updated = await adminApi.updateOrg(org.id, {
         name: name.trim(),
         address: address.trim(),
         phone: phone.trim(),
-        website: website.trim(),
+        website: website ? normaliseWebsite(website) : '',
       })
       onSaved({ ...org, ...updated })
     } catch (err) {

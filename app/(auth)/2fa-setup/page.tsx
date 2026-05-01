@@ -60,13 +60,21 @@ export default function TwoFASetupPage() {
     try {
       const data = await authApi.twofa.totpSetup()
       setTotpSecret(data.secret)
-      // Ensure QR is treated as data URI if it contains base64 content
-      const qr = data.qr_uri
-      setTotpQr(
-        qr.startsWith('data:') ? qr :
-        qr.startsWith('iVBOR') || qr.startsWith('/9j/') ? `data:image/png;base64,${qr}` :
-        qr
-      )
+      // Coerce the backend response into a renderable image source.
+      //   - data:image/...   → use as-is
+      //   - base64 PNG/JPEG  → wrap as data URI
+      //   - otpauth://…       → render via a public QR-image generator
+      //   - http(s)://…       → use as-is (assume backend already returned an image URL)
+      const qr = data.qr_uri ?? ''
+      let src = qr
+      if (qr.startsWith('data:') || qr.startsWith('http://') || qr.startsWith('https://')) {
+        src = qr
+      } else if (qr.startsWith('iVBOR') || qr.startsWith('/9j/')) {
+        src = `data:image/png;base64,${qr}`
+      } else if (qr.startsWith('otpauth://')) {
+        src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qr)}`
+      }
+      setTotpQr(src)
       setBackupCodes(data.backup_codes ?? [])
       setStep('app')
     } catch (err) {

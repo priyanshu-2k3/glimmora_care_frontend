@@ -6,6 +6,7 @@ import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircl
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
+import { validateEmail, validatePhone } from '@/lib/validators'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -188,6 +189,11 @@ export default function SettingsPage() {
   async function handleProfileSave(e?: React.FormEvent) {
     if (e) e.preventDefault()
     if (!user?.accessToken) return
+    // Inline validation before hitting the API.
+    const emailErr = validateEmail(profileForm.email)
+    if (emailErr) { setProfileError(emailErr); return }
+    const phoneErr = validatePhone(profileForm.phone, { optional: true })
+    if (phoneErr) { setProfileError(phoneErr); return }
     setProfileSaving(true)
     setProfileError(null)
     try {
