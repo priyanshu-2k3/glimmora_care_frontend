@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { Avatar } from '@/components/ui/Avatar'
@@ -45,12 +45,14 @@ interface TopbarProps {
 export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchWrapRef = useRef<HTMLDivElement>(null)
 
@@ -182,10 +184,23 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
         setShowSearchDropdown(false)
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const isAdminRole = user?.role === 'admin' || user?.role === 'super_admin'
+  const profileHref = isAdminRole ? '/admin/settings/profile' : user?.role === 'patient' ? '/profiles' : '/settings'
+  const settingsHref = isAdminRole ? '/admin/settings' : '/settings'
+
+  async function handleLogout() {
+    setShowUserMenu(false)
+    await logout()
+    router.push('/login')
+  }
 
   function markRead(id: string) {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n))
@@ -406,14 +421,75 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <div className="w-px h-5 bg-sand-light mx-1" />
 
         {/* User */}
-        <div className="bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 hover:border-gold-soft/40 hover:bg-champagne/20 transition-all duration-200 cursor-default">
-          <div className="flex items-center gap-2">
-            <Avatar name={user.name} size="sm" />
-            <div className="hidden sm:block leading-tight">
-              <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
-              <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+        <div className="relative" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowUserMenu((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
+            aria-label="Open account menu"
+            className={cn(
+              'bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
+              showUserMenu
+                ? 'border-gold-soft/60 bg-champagne/30'
+                : 'hover:border-gold-soft/40 hover:bg-champagne/20'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Avatar name={user.name} size="sm" />
+              <div className="hidden sm:block leading-tight text-left">
+                <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
+                <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+              </div>
             </div>
-          </div>
+          </button>
+
+          {showUserMenu && (
+            <div
+              role="menu"
+              className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-sand-light overflow-hidden z-50"
+            >
+              <div className="px-4 py-3 border-b border-sand-light">
+                <p className="text-sm font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
+                <p className="text-[11px] font-body text-greige truncate">{ROLES[user.role as Role]?.label}</p>
+              </div>
+              <ul className="py-1">
+                <li>
+                  <Link
+                    href={profileHref}
+                    role="menuitem"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
+                  >
+                    <UserIcon className="w-3.5 h-3.5 text-greige" />
+                    Profile
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={settingsHref}
+                    role="menuitem"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-body text-charcoal-deep hover:bg-parchment/60 transition-colors"
+                  >
+                    <SettingsIcon className="w-3.5 h-3.5 text-greige" />
+                    Settings
+                  </Link>
+                </li>
+              </ul>
+              <div className="border-t border-sand-light py-1">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-body text-error hover:bg-error-soft/40  transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

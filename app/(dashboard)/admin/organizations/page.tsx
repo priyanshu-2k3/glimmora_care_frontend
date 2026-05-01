@@ -6,7 +6,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { adminApi, ApiError, type AdminOrgItem } from '@/lib/api'
+import { adminApi, ApiError, type AdminOrgItem, type AdminUserOut } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 
 export default function ManageOrganizationsPage() {
@@ -22,12 +22,18 @@ export default function ManageOrganizationsPage() {
 
   // Assign admin
   const [assignOrgId, setAssignOrgId] = useState('')
+  // 'existing' = pick from admin dropdown · 'new' = enter email to auto-create
+  const [assignMode, setAssignMode] = useState<'existing' | 'new'>('existing')
+  const [assignAdminId, setAssignAdminId] = useState('')
   const [assignEmail, setAssignEmail] = useState('')
   const [assignFirst, setAssignFirst] = useState('')
   const [assignLast, setAssignLast] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [assignMsg, setAssignMsg] = useState<string | null>(null)
   const [assignError, setAssignError] = useState<string | null>(null)
+
+  // Pool of existing admin users for the dropdown
+  const [admins, setAdmins] = useState<AdminUserOut[]>([])
 
   async function reload() {
     try {
@@ -40,7 +46,16 @@ export default function ManageOrganizationsPage() {
     }
   }
 
-  useEffect(() => { reload() }, [])
+  async function reloadAdmins() {
+    try {
+      const data = await adminApi.listUsers('', 'admin')
+      setAdmins(data)
+    } catch {
+      setAdmins([])
+    }
+  }
+
+  useEffect(() => { reload(); reloadAdmins() }, [])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -62,14 +77,19 @@ export default function ManageOrganizationsPage() {
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault()
-    if (!assignOrgId || !assignEmail.trim()) return
+    if (!assignOrgId) return
+    if (assignMode === 'existing' && !assignAdminId) return
+    if (assignMode === 'new' && !assignEmail.trim()) return
     setAssigning(true); setAssignError(null); setAssignMsg(null)
     try {
-      const result = await adminApi.assignAdmin(assignOrgId, {
-        email: assignEmail.trim(),
-        first_name: assignFirst.trim() || undefined,
-        last_name: assignLast.trim() || undefined,
-      } as never)
+      const payload = assignMode === 'existing'
+        ? { userId: assignAdminId }
+        : {
+            email: assignEmail.trim(),
+            first_name: assignFirst.trim() || undefined,
+            last_name: assignLast.trim() || undefined,
+          }
+      const result = await adminApi.assignAdmin(assignOrgId, payload as never)
       const orgName = orgs.find((o) => o.id === assignOrgId)?.name ?? 'organisation'
       setAssignMsg(
         // assignAdmin response includes account_created when admin was auto-created
@@ -78,8 +98,11 @@ export default function ManageOrganizationsPage() {
           : 'Admin assigned.'
       )
       toast.success(`Admin assigned to ${orgName}`)
-      setAssignOrgId(''); setAssignEmail(''); setAssignFirst(''); setAssignLast('')
+      setAssignOrgId('')
+      setAssignAdminId(''); setAssignEmail(''); setAssignFirst(''); setAssignLast('')
+      setAssignMode('existing')
       await reload()
+      await reloadAdmins()
       setTimeout(() => setAssignMsg(null), 4000)
     } catch (err: unknown) {
       setAssignError(err instanceof ApiError ? err.detail : 'Failed to assign admin.')
@@ -151,17 +174,65 @@ export default function ManageOrganizationsPage() {
                     </option>
                   ))}
                 </select>
-                <Input
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={assignEmail}
-                  onChange={(e) => { setAssignEmail(e.target.value); setAssignError(null) }}
-                  required
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="First name (optional)" value={assignFirst} onChange={(e) => setAssignFirst(e.target.value)} />
-                  <Input placeholder="Last name (optional)" value={assignLast} onChange={(e) => setAssignLast(e.target.value)} />
+
+                {/* Mode toggle: pick existing admin vs auto-create new */}
+                <div className="flex gap-1 p-1 bg-ivory-cream border border-sand-light rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => { setAssignMode('existing'); setAssignError(null) }}
+                    className={`flex-1 text-xs font-body font-medium px-3 py-1.5 rounded-lg transition-colors ${assignMode === 'existing' ? 'bg-white text-charcoal-deep shadow-sm' : 'text-greige hover:text-charcoal-deep'}`}
+                  >
+                    Pick existing admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAssignMode('new'); setAssignError(null) }}
+                    className={`flex-1 text-xs font-body font-medium px-3 py-1.5 rounded-lg transition-colors ${assignMode === 'new' ? 'bg-white text-charcoal-deep shadow-sm' : 'text-greige hover:text-charcoal-deep'}`}
+                  >
+                    Add new admin
+                  </button>
                 </div>
+
+                {assignMode === 'existing' ? (
+                  <select
+                    value={assignAdminId}
+                    onChange={(e) => { setAssignAdminId(e.target.value); setAssignError(null) }}
+                    required
+                    className="w-full text-sm font-body border border-sand-light rounded-xl px-3 py-2 bg-ivory-cream focus:outline-none focus:border-gold-soft"
+                  >
+                    <option value="">Select admin…</option>
+                    {admins.length === 0 ? (
+                      <option disabled>No admin accounts yet — switch to &quot;Add new admin&quot;</option>
+                    ) : (
+                      admins.map((a) => {
+                        const fullName = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim()
+                        const label = fullName ? `${fullName} · ${a.email}` : a.email
+                        return (
+                          <option key={a.id} value={a.id}>
+                            {label}
+                          </option>
+                        )
+                      })
+                    )}
+                  </select>
+                ) : (
+                  <>
+                    <Input
+                      type="email"
+                      placeholder="admin@example.com"
+                      value={assignEmail}
+                      onChange={(e) => { setAssignEmail(e.target.value); setAssignError(null) }}
+                      required
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="First name (optional)" value={assignFirst} onChange={(e) => setAssignFirst(e.target.value)} />
+                      <Input placeholder="Last name (optional)" value={assignLast} onChange={(e) => setAssignLast(e.target.value)} />
+                    </div>
+                    <p className="text-[11px] text-greige font-body">
+                      If no account exists for this email, one will be auto-created with role &quot;admin&quot; and a temporary password.
+                    </p>
+                  </>
+                )}
                 {assignError && (
                   <div className="flex items-start gap-2 bg-[#FEE2E2] border border-[#DC2626]/30 rounded-xl p-3">
                     <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
