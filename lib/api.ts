@@ -339,6 +339,7 @@ export const authApi = {
     location?: string | null
     gender?: string | null
     profile_photo?: string | null
+    phone_number?: string | null
   }) =>
     apiFetch<BackendUser>('/auth/me', {
       method: 'PATCH',

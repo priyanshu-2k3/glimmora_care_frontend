@@ -18,6 +18,7 @@ export function ProfileForm() {
     first_name: '',
     last_name: '',
     location: '',
+    phone_number: '',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -31,6 +32,7 @@ export function ProfileForm() {
         first_name: first ?? '',
         last_name: rest.join(' '),
         location: user.location ?? '',
+        phone_number: user.phone_number ?? '',
       })
     }
     return () => { active = false }
@@ -48,6 +50,7 @@ export function ProfileForm() {
         first_name: form.first_name,
         last_name: form.last_name,
         location: form.location,
+        phone_number: form.phone_number || undefined,
       })
       await refreshUser()
       setSaving(false)
@@ -91,6 +94,14 @@ export function ProfileForm() {
           label="Last Name"
           value={form.last_name}
           onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))}
+          disabled={isDemo}
+        />
+        <Input
+          label="Phone Number"
+          type="tel"
+          placeholder="+91 98765 43210"
+          value={form.phone_number}
+          onChange={(e) => setForm((p) => ({ ...p, phone_number: e.target.value }))}
           disabled={isDemo}
         />
         <Input

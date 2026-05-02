@@ -275,12 +275,16 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               <div className="space-y-0.5">
                 {sectionItems.map((item) => {
                   const Icon = ICONS[item.icon]
-                  // Super admin has no personal dashboard — the platform landing
-                  // page is /admin, so retarget the Dashboard item there. Skips
-                  // the /dashboard → /admin redirect and lets the active-state
-                  // highlight match the URL.
-                  const targetHref = item.href
-                  const isActive = pathname === targetHref || pathname.startsWith(targetHref + '/')
+                  // Super admin lands on /admin (their platform hub).
+                  // Retarget the Dashboard nav item to /admin so clicking it goes
+                  // directly there, and isActive highlights correctly at that URL.
+                  const isSuperAdmin = user.role === 'super_admin'
+                  const targetHref = isSuperAdmin && item.href === '/dashboard' ? '/admin' : item.href
+                  const isActive =
+                    pathname === targetHref ||
+                    pathname.startsWith(targetHref + '/') ||
+                    // /admin/* sub-routes should also keep Dashboard highlighted
+                    (targetHref === '/admin' && pathname.startsWith('/admin'))
                   return (
                     <Link
                       key={item.href}

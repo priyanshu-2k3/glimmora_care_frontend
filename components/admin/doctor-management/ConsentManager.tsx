@@ -18,10 +18,14 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'default'
   revoked:  'error',
 }
 
+const STATUS_OPTIONS = ['all', 'approved', 'pending', 'revoked', 'expired', 'rejected'] as const
+type StatusFilter = typeof STATUS_OPTIONS[number]
+
 export function ConsentManager() {
   const [records, setRecords] = useState<ConsentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -32,6 +36,7 @@ export function ConsentManager() {
   }, [])
 
   const filtered = records.filter((r) => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false
     if (!search) return true
     const q = search.toLowerCase()
     return (
@@ -62,12 +67,29 @@ export function ConsentManager() {
 
   return (
     <div className="space-y-4">
-      <Input
-        placeholder="Search by patient or doctor email…"
-        leftIcon={<Search className="w-4 h-4" />}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="bg-parchment/60 border border-sand-light rounded-xl px-4 py-2.5 text-xs text-stone font-body">
+        Showing patient–doctor consent records scoped to your organisation. Use the filters to narrow results.
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-1 min-w-48">
+          <Input
+            placeholder="Search by patient or doctor email…"
+            leftIcon={<Search className="w-4 h-4" />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          className="border border-sand-DEFAULT bg-ivory-warm rounded-xl px-3 py-2.5 text-sm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft focus:ring-1 focus:ring-gold-soft/30 transition-all duration-200"
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s === 'all' ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</option>
+          ))}
+        </select>
+      </div>
 
       {actionMsg && (
         <div className={`flex items-center gap-2 rounded-xl p-3 border ${

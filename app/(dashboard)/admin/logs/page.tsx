@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardList, Search, AlertCircle, Download, AlertTriangle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ClipboardList, Search, AlertCircle, Download, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -32,7 +33,9 @@ function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | unde
   if (o) {
     return <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
   }
-  return <span className="text-greige italic">Unknown</span>
+  // Show the raw ref value (truncated) rather than a blank "Unknown" label
+  const display = refValue.length > 24 ? `${refValue.slice(0, 8)}…${refValue.slice(-6)}` : refValue
+  return <span className="text-greige font-mono text-[11px]" title={refValue}>{display}</span>
 }
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
@@ -52,6 +55,7 @@ function formatDateTime(ts: string) {
 }
 
 export default function AdminLogsPage() {
+  const router = useRouter()
   const PAGE_SIZE = 25
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [search, setSearch] = useState('')
@@ -118,6 +122,14 @@ export default function AdminLogsPage() {
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm font-body text-greige hover:text-charcoal-deep transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">

@@ -27,8 +27,21 @@ export default function ManageDoctorsPage() {
     if (!profileTarget) { setDoctorLogs([]); return }
     let active = true
     setDoctorLogsLoading(true)
-    adminApi.getAuditLogs({ search: profileTarget.email, limit: 30 })
-      .then((logs) => { if (active) setDoctorLogs(logs) })
+    adminApi.getAuditLogs({ search: profileTarget.email, limit: 100 })
+      .then((logs) => {
+        if (!active) return
+        // Client-side: keep only entries that involve this doctor's ID or email.
+        // Protects against backends that ignore the search param and return all logs.
+        const id = profileTarget.id
+        const email = profileTarget.email.toLowerCase()
+        const filtered = logs.filter((l) =>
+          l.performed_by === id ||
+          (l.target ?? '') === id ||
+          l.performed_by.toLowerCase() === email ||
+          (l.target ?? '').toLowerCase() === email
+        )
+        setDoctorLogs(filtered)
+      })
       .catch(() => { if (active) setDoctorLogs([]) })
       .finally(() => { if (active) setDoctorLogsLoading(false) })
     return () => { active = false }

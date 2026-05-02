@@ -93,18 +93,21 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/doctor-management"  color="#D97706" />
+        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/patients"           color="#D97706" />
         <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
         <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
-        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 318}                                   href="/admin/logs"               color="#0D9488" />
-        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 7}                                     href="/admin/manage-team"        color="#7C3AED" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 0}                                     href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 0}                                     href="/admin/manage-team"        color="#7C3AED" />
       </div>
 
       {/* Flagged Audit Events strip */}
       <div className="bg-white border border-sand-light rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+          </div>
+          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {[
