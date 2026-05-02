@@ -519,30 +519,22 @@ function DoctorView({ userName }: { userName: string }) {
 // ─── Admin view ───────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { href: '/vault',                 icon: Shield,    label: 'Health Vault',     sub: 'Browse organisation records', color: C.teal   },
-  { href: '/admin/manage-team',     icon: Users,     label: 'Manage Team',      sub: 'Doctors and team members',    color: C.ocean  },
-  { href: '/admin/doctor-management', icon: UserPlus, label: 'Doctor Management', sub: 'Assign, share, consents',  color: C.violet },
-  { href: '/admin/logs',            icon: FileText,  label: 'Audit Logs',       sub: 'Org activity history',        color: C.amber  },
+  { href: '/admin/manage-team',       icon: Users,     label: 'Manage Team',       sub: 'Doctors and team members',  color: C.ocean  },
+  { href: '/admin/doctor-management', icon: UserPlus,  label: 'Doctor Management', sub: 'Assign, share, consents',   color: C.violet },
+  { href: '/organization',            icon: Building2, label: 'Organisation',       sub: 'Org details and directory', color: C.teal   },
+  { href: '/admin/logs',              icon: FileText,  label: 'Audit Logs',         sub: 'Org activity history',      color: C.amber  },
 ]
 
 function AdminView({ userName }: { userName: string }) {
   const [stats, setStats]   = useState<AdminStatsOut | null>(null)
-  const [records, setRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
-    Promise.all([
-      adminApi.getStats().catch(() => null),
-      intakeApi.getRecords().catch(() => [] as HealthRecord[]),
-    ]).then(([s, r]) => {
-      setStats(s)
-      setRecords(r)
-    }).finally(() => setLoading(false))
+    adminApi.getStats().catch(() => null).then(setStats).finally(() => setLoading(false))
   }, [])
 
   const totalPatients = stats?.total_patients ?? 0
-  const totalRecords  = records.length
 
   return (
     <div className="space-y-5">

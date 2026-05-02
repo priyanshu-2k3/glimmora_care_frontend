@@ -41,7 +41,7 @@ export const NAV_ITEMS = [
     href: '/vault',
     label: 'Health Vault',
     icon: 'Shield',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
+    roles: ['patient', 'doctor'] as Role[],
   },
   {
     href: '/intake',
@@ -150,7 +150,7 @@ export const NAV_ITEMS = [
     href: '/admin',
     label: 'Admin Panel',
     icon: 'LayoutDashboard',
-    roles: ['admin', 'super_admin'] as Role[],
+    roles: ['super_admin'] as Role[],
   },
   {
     href: '/admin/manage-team',
