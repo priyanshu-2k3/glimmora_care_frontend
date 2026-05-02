@@ -139,7 +139,26 @@ export default function LogsPage() {
   const idMaps: IdMaps = { users, orgs }
 
   useEffect(() => {
-    if (!isAdmin || !getAccessToken()) return
+    if (!getAccessToken()) return
+    // Seed the current user's own entry so their ID resolves to their name
+    // even without admin permissions to fetch the full user list.
+    if (user?.id) {
+      const nameParts = (user.name ?? '').split(' ')
+      const selfEntry: AdminUserOut = {
+        id: user.id,
+        email: user.email ?? '',
+        first_name: nameParts[0] ?? '',
+        last_name: nameParts.slice(1).join(' '),
+        role: user.role ?? '',
+        is_active: true,
+        email_verified: true,
+        organization: null,
+        location: null,
+        created_at: null,
+      }
+      setUsers((prev) => ({ ...prev, [user.id]: selfEntry }))
+    }
+    if (!isAdmin) return
     let alive = true
     Promise.all([
       adminApi.listUsers('').catch(() => [] as AdminUserOut[]),
@@ -150,7 +169,7 @@ export default function LogsPage() {
       setOrgs(Object.fromEntries(o.map((x) => [x.id, x])))
     })
     return () => { alive = false }
-  }, [isAdmin])
+  }, [isAdmin, user?.id])
 
   // Admin-specific filters (sent to backend)
   const [severity, setSeverity]     = useState('all')
@@ -292,7 +311,7 @@ export default function LogsPage() {
         <Search className="w-4 h-4 text-greige shrink-0" />
         <input
           type="text"
-          placeholder={isAdmin ? 'Search by action, target, or user ID…' : 'Search logs…'}
+          placeholder={isAdmin ? 'Search by action, target, or user name…' : 'Search logs…'}
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           className="flex-1 bg-transparent text-sm font-body text-charcoal-deep placeholder:text-greige outline-none"

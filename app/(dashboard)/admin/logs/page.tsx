@@ -22,15 +22,17 @@ function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null
 function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | undefined; users: Record<string, AdminUserOut>; orgs: Record<string, AdminOrgItem> }) {
   const { kind, id } = parseRef(refValue)
   if (!refValue) return null
-  if (kind === 'user' && users[id]) {
-    const u = users[id]
+  // Backend stores bare ObjectIds (kind === null) — try both maps
+  const u = (kind === 'user' || kind === null) ? users[id] : undefined
+  const o = (kind === 'org'  || kind === null) ? orgs[id]  : undefined
+  if (u) {
     const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
     return <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
   }
-  if (kind === 'org' && orgs[id]) {
-    return <span className="text-charcoal-deep">Org: <span className="font-medium">{orgs[id].name}</span></span>
+  if (o) {
+    return <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
   }
-  return <span className="text-greige break-all">{refValue}</span>
+  return <span className="text-greige italic">Unknown</span>
 }
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
@@ -150,7 +152,7 @@ export default function AdminLogsPage() {
         </div>
 
         <Input
-          placeholder="Search by action, target, or user ID…"
+          placeholder="Search by action, target, or user name…"
           leftIcon={<Search className="w-4 h-4" />}
           value={search}
           onChange={(e) => handleSearch(e.target.value)}

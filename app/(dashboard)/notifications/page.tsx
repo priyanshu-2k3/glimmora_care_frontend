@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Check, Trash2, Loader2, X } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -30,6 +31,7 @@ function timeAgo(iso: string) {
 
 export default function NotificationsPage() {
   const { user, refreshUser } = useAuth()
+  const router = useRouter()
   const isReal = !!getAccessToken()
 
   // Real family invites
@@ -198,8 +200,11 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={notif.id}
-                  className={cn('flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer', !notif.isRead && 'bg-gold-whisper/30')}
-                  onClick={() => handleMarkRead(notif.id)}
+                  className={cn('flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer hover:bg-ivory-warm', !notif.isRead && 'bg-gold-whisper/30')}
+                  onClick={() => {
+                    handleMarkRead(notif.id)
+                    if (notif.actionHref) router.push(notif.actionHref)
+                  }}
                 >
                   <div className={cn('w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5', meta.bg)}>
                     <Icon className={cn('w-4 h-4', meta.color)} />

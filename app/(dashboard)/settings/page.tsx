@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
+import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -339,6 +339,7 @@ export default function SettingsPage() {
                     placeholder="City, State"
                     value={profileForm.location}
                     onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProfileSave() } }}
                     disabled={isDemo}
                   />
                   {user.role === 'patient' && (
@@ -510,13 +511,13 @@ export default function SettingsPage() {
                                   'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
                                   twofaEnabled
                                     ? 'bg-emerald-DEFAULT text-white border-emerald-DEFAULT'
-                                    : 'bg-white text-greige border-sand-light',
+                                    : 'bg-stone/10 text-stone border-stone/30',
                                 )}
                               >
                                 <span
                                   className={cn(
                                     'w-1.5 h-1.5 rounded-full',
-                                    twofaEnabled ? 'bg-white' : 'bg-greige',
+                                    twofaEnabled ? 'bg-white' : 'bg-stone/60',
                                   )}
                                 />
                                 {twofaLoading ? 'Updating…' : twofaEnabled ? 'On' : 'Off'}
@@ -778,6 +779,18 @@ export default function SettingsPage() {
           </>
         )}
       </Tabs>
+      </div>
+
+      {/* Logout — always visible regardless of which tab is active (Bug 17) */}
+      <div className="pt-2 border-t border-sand-light mt-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-sm font-body text-coral-muted hover:text-[#B91C1C] transition-colors py-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign out of your account
+        </button>
       </div>
     </div>
   )

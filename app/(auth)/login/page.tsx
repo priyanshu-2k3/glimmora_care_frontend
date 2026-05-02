@@ -16,15 +16,15 @@ function LoginPageInner() {
   const searchParams = useSearchParams()
   const nextParam = searchParams.get('next')
 
-  // Role-aware landing page. super_admin and admin manage the platform from
-  // /admin; doctor/patient/ngo_worker/gov_analyst all start at /dashboard
-  // (which itself renders a role-specific view). Honor an explicit ?next= if
-  // the user was redirected here from a guarded route.
+  // Role-aware landing page. super_admin lands on /admin (their platform hub);
+  // all other roles (admin, doctor, patient, …) start at /dashboard which
+  // renders a role-specific view. Honor an explicit ?next= if the user was
+  // redirected here from a guarded route.
   function landingFor(role: Role | undefined): string {
     if (nextParam) return nextParam
     switch (role) {
       case 'super_admin': return '/admin'
-      case 'admin':       return '/admin'
+      case 'admin':       return '/dashboard'
       case 'doctor':      return '/dashboard'
       case 'patient':     return '/dashboard'
       default:            return '/dashboard'
