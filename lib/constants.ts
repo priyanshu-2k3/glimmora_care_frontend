@@ -41,7 +41,7 @@ export const NAV_ITEMS = [
     href: '/vault',
     label: 'Health Vault',
     icon: 'Shield',
-    roles: ['patient', 'doctor', 'admin'] as Role[],
+    roles: ['patient', 'doctor'] as Role[],
   },
   {
     href: '/intake',
@@ -150,7 +150,7 @@ export const NAV_ITEMS = [
     href: '/admin',
     label: 'Admin Panel',
     icon: 'LayoutDashboard',
-    roles: ['admin', 'super_admin'] as Role[],
+    roles: ['super_admin'] as Role[],
   },
   {
     href: '/admin/manage-team',
@@ -296,14 +296,14 @@ export const FEATURE_INDEX: { feature: string; href: string; roles: Role[] }[] =
   { feature: 'Search patients by name / email', href: '/admin/patients', roles: ['super_admin'] },
   { feature: 'Open patient detail (read-only vault summary)', href: '/admin/patients', roles: ['super_admin'] },
 
-  /* ── /admin/organizations (super_admin only) ─── */
-  { feature: 'Organisation table with admin / counts', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Search organisations by name', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Create organisation wizard', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Edit organisation details', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Delete organisation (force-detach option)', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Assign admin to organisation', href: '/admin/organizations', roles: ['super_admin'] },
-  { feature: 'Remove admin from organisation', href: '/admin/organizations', roles: ['super_admin'] },
+  /* ── /organization (super_admin platform-wide view) ─── */
+  { feature: 'Organisation table with admin / counts', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Search organisations by name', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Create organisation wizard', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Edit organisation details', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Delete organisation (force-detach option)', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Assign admin to organisation', href: '/organization', roles: ['super_admin'] },
+  { feature: 'Remove admin from organisation', href: '/organization', roles: ['super_admin'] },
 
   /* ── /agents (super_admin) ─── */
   { feature: 'Five autonomous agent cards', href: '/agents', roles: ['super_admin'] },

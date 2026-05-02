@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX } from 'lucide-react'
+import { User, Lock, Save, Shield, Smartphone, Laptop, Globe, Trash2, AlertCircle, Check, ChevronRight, Eye, EyeOff, Loader2, Download, UserX, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { authApi, ApiError, familyApi, type BackendSession } from '@/lib/api'
 import { ROLES } from '@/lib/constants'
@@ -219,7 +219,8 @@ export default function SettingsPage() {
     }
   }
 
-  async function handlePasswordChange() {
+  async function handlePasswordChange(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (pwForm.next !== pwForm.confirm) {
       setPwError('Passwords do not match.')
       return
@@ -338,6 +339,7 @@ export default function SettingsPage() {
                     placeholder="City, State"
                     value={profileForm.location}
                     onChange={(e) => setProfileForm((p) => ({ ...p, location: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleProfileSave() } }}
                     disabled={isDemo}
                   />
                   {user.role === 'patient' && (
@@ -431,7 +433,7 @@ export default function SettingsPage() {
                         <p className="text-xs font-body text-success-DEFAULT">Password updated successfully.</p>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <form onSubmit={handlePasswordChange} className="space-y-3">
                       <Input
                         label="Current Password"
                         type={showPw.current ? 'text' : 'password'}
@@ -471,65 +473,100 @@ export default function SettingsPage() {
                           </button>
                         }
                       />
-                    </div>
-                    {!isDemo && (
-                      <Button variant="outline" className="mt-3" onClick={handlePasswordChange} isLoading={pwSaving}>
-                        Update Password
-                      </Button>
-                    )}
+                      {!isDemo && (
+                        <Button type="submit" variant="outline" className="mt-3" isLoading={pwSaving}>
+                          Update Password
+                        </Button>
+                      )}
+                    </form>
                   </div>
 
                   {/* Security options */}
                   <div className="pt-4 border-t border-sand-light space-y-3">
                     <p className="text-sm font-body font-medium text-charcoal-deep">Security Options</p>
-                    {/* 2FA toggle — wired to real API */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-body font-medium text-charcoal-deep">Two-Factor Authentication</p>
-                        <p className="text-xs text-greige">
-                          {twofaEnabled
-                            ? `Enabled via ${twofaMethod ?? '2FA'}`
-                            : 'Add extra security via OTP on login'}
-                        </p>
-                        {!twofaEnabled && !isDemo && (
-                          <button
-                            className="text-xs text-gold-deep hover:text-gold-muted font-body mt-0.5 transition-colors"
-                            onClick={() => router.push('/2fa-setup')}
+                    {/* 2FA — full card block, eye-catching status */}
+                    <div
+                      className={cn(
+                        'rounded-2xl border p-4 transition-colors',
+                        twofaEnabled
+                          ? 'bg-emerald-soft/40 border-emerald-DEFAULT/30'
+                          : 'bg-ivory-warm border-sand-light',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div
+                            className={cn(
+                              'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                              twofaEnabled ? 'bg-emerald-DEFAULT text-white' : 'bg-parchment text-greige',
+                            )}
                           >
-                            Set up 2FA →
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            'text-[11px] font-body font-bold px-2 py-0.5 rounded-full border tracking-wider',
-                            twofaEnabled
-                              ? 'bg-emerald-soft text-emerald-muted border-emerald-muted/30'
-                              : 'bg-parchment text-greige border-sand-light',
+                            <Shield className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-body font-semibold text-charcoal-deep">Two-Factor Authentication</p>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
+                                  twofaEnabled
+                                    ? 'bg-emerald-DEFAULT text-white border-emerald-DEFAULT'
+                                    : 'bg-stone/10 text-stone border-stone/30',
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'w-1.5 h-1.5 rounded-full',
+                                    twofaEnabled ? 'bg-white' : 'bg-stone/60',
+                                  )}
+                                />
+                                {twofaLoading ? 'Updating…' : twofaEnabled ? 'On' : 'Off'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-stone font-body mt-1">
+                              {twofaEnabled
+                                ? `Enabled via ${twofaMethod ?? 'authenticator'}. You'll be prompted for an OTP on every login.`
+                                : 'Add a second login step for extra account security.'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Toggle
+                            checked={twofaEnabled}
+                            disabled={twofaLoading || isDemo}
+                            onChange={async () => {
+                              if (isDemo) return
+                              if (twofaEnabled) {
+                                setTwofaLoading(true)
+                                try {
+                                  await authApi.twofa.disable()
+                                  setTwofaEnabled(false)
+                                  setTwofaMethod(null)
+                                  setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': false }))
+                                } catch { /* ignore */ }
+                                setTwofaLoading(false)
+                              } else {
+                                router.push('/2fa-setup')
+                              }
+                            }}
+                          />
+                          {!twofaEnabled && !isDemo && (
+                            <button
+                              className="text-[11px] text-gold-deep hover:text-gold-muted font-body font-semibold whitespace-nowrap transition-colors"
+                              onClick={() => router.push('/2fa-setup')}
+                            >
+                              Set up 2FA →
+                            </button>
                           )}
-                        >
-                          {twofaLoading ? '…' : twofaEnabled ? 'ON' : 'OFF'}
-                        </span>
-                        <Toggle
-                          checked={twofaEnabled}
-                          disabled={twofaLoading}
-                          onChange={async () => {
-                            if (isDemo) return
-                            if (twofaEnabled) {
-                              setTwofaLoading(true)
-                              try {
-                                await authApi.twofa.disable()
-                                setTwofaEnabled(false)
-                                setTwofaMethod(null)
-                                setSecurityToggles((prev) => ({ ...prev, 'Two-Factor Authentication': false }))
-                              } catch { /* ignore */ }
-                              setTwofaLoading(false)
-                            } else {
-                              router.push('/2fa-setup')
-                            }
-                          }}
-                        />
+                          {twofaEnabled && !isDemo && (
+                            <button
+                              className="text-[11px] text-greige hover:text-coral-muted font-body whitespace-nowrap transition-colors"
+                              onClick={() => router.push('/2fa-setup')}
+                            >
+                              Reconfigure
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {/* Other security toggles */}
@@ -742,6 +779,18 @@ export default function SettingsPage() {
           </>
         )}
       </Tabs>
+      </div>
+
+      {/* Logout — always visible regardless of which tab is active (Bug 17) */}
+      <div className="pt-2 border-t border-sand-light mt-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-sm font-body text-coral-muted hover:text-[#B91C1C] transition-colors py-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign out of your account
+        </button>
       </div>
     </div>
   )

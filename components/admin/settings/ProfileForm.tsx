@@ -38,7 +38,8 @@ export function ProfileForm() {
 
   const isDemo = !user?.accessToken
 
-  async function handleSave() {
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (isDemo) return
     setSaving(true)
     setError(null)
@@ -72,7 +73,8 @@ export function ProfileForm() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
+        <form onSubmit={handleSave} className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
             <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
@@ -98,12 +100,13 @@ export function ProfileForm() {
           disabled={isDemo}
         />
         {!isDemo ? (
-          <Button onClick={handleSave} isLoading={saving} disabled={saving}>
+          <Button type="submit" isLoading={saving} disabled={saving}>
             {saved ? <><Check className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
           </Button>
         ) : (
           <p className="text-xs text-warning-DEFAULT font-body">Demo mode — changes are disabled.</p>
         )}
+        </form>
       </CardContent>
     </Card>
   )

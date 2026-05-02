@@ -99,7 +99,8 @@ export default function RegisterPage() {
     { label: 'Passwords match',        ok: owner.password === owner.confirmPassword && owner.confirmPassword !== '' },
   ]
 
-  async function handleSubmit() {
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     setIsLoading(true)
     clearError()
     try {
@@ -336,7 +337,7 @@ export default function RegisterPage() {
 
       {/* ─── STEP 2: Review ─── */}
       {step === 2 && (
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <h3 className="font-display text-xl text-charcoal-deep mb-0.5">Review your details</h3>
             <p className="text-xs text-greige font-body">Confirm before creating your account.</p>
@@ -371,12 +372,12 @@ export default function RegisterPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(1)} size="lg">
+            <Button type="button" variant="outline" onClick={() => setStep(1)} size="lg">
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <Button
+              type="submit"
               className="flex-1 bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
-              onClick={handleSubmit}
               isLoading={isLoading}
               size="lg"
             >
@@ -384,7 +385,7 @@ export default function RegisterPage() {
               {isLoading ? 'Creating account...' : 'Create Account'}
             </Button>
           </div>
-        </div>
+        </form>
       )}
 
       <p className="mt-5 text-center text-xs text-greige font-body">

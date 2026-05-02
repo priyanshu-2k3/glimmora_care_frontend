@@ -20,16 +20,22 @@ export function Toggle({ checked, onChange, label, disabled, size = 'md' }: Togg
     <label className={cn('flex items-center gap-2 cursor-pointer', disabled && 'opacity-50 cursor-not-allowed')}>
       <div
         onClick={() => !disabled && onChange(!checked)}
+        role="switch"
+        aria-checked={checked}
         className={cn(
-          'relative inline-flex items-center rounded-full transition-colors duration-200',
+          'relative inline-flex items-center rounded-full border transition-colors duration-200 shadow-inner',
           s.track,
-          checked ? 'bg-charcoal-deep' : 'bg-sand-DEFAULT'
+          // Vivid emerald ON / muted slate OFF — high-contrast at a glance.
+          checked
+            ? 'bg-emerald-DEFAULT border-emerald-DEFAULT/60'
+            : 'bg-sand-DEFAULT border-sand-DEFAULT'
         )}
       >
         <span
           className={cn(
-            'absolute left-0.5 inline-block rounded-full bg-ivory-cream shadow transition-transform duration-200',
+            'absolute left-0.5 inline-block rounded-full bg-white shadow ring-1 transition-transform duration-200',
             s.thumb,
+            checked ? 'ring-emerald-DEFAULT/30' : 'ring-charcoal-deep/10',
             checked && s.translate
           )}
         />

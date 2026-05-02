@@ -32,33 +32,14 @@ function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null
   return { kind: null, id: ref }
 }
 
-function FriendlyRef({ refValue, maps }: { refValue: string | null | undefined; maps: IdMaps }) {
+function resolveName(refValue: string | null | undefined, maps: IdMaps): string | null {
+  if (!refValue) return null
   const { kind, id } = parseRef(refValue)
-  if (!refValue) return <span className="text-greige italic">—</span>
-  if (kind === 'user') {
-    const u = maps.users[id]
-    if (u) {
-      const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-      return (
-        <span className="inline-flex flex-col">
-          <span className="text-charcoal-deep">Doctor: {name}</span>
-          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">{id.slice(0, 12)}…</span>
-        </span>
-      )
-    }
-  }
-  if (kind === 'org') {
-    const o = maps.orgs[id]
-    if (o) {
-      return (
-        <span className="inline-flex flex-col">
-          <span className="text-charcoal-deep">Organisation: {o.name}</span>
-          <span className="text-[10px] text-greige bg-parchment border border-sand-light rounded px-1 inline-block w-fit mt-0.5">{id.slice(0, 12)}…</span>
-        </span>
-      )
-    }
-  }
-  return <span className="text-stone">{refValue}</span>
+  const u = (kind === 'user' || kind === null) ? maps.users[id] : undefined
+  const o = (kind === 'org'  || kind === null) ? maps.orgs[id]  : undefined
+  if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+  if (o) return o.name
+  return null
 }
 
 interface StatCardProps {
@@ -159,8 +140,14 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
                     <div className="text-xs text-greige flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                      {log.target && <FriendlyRef refValue={log.target} maps={idMaps} />}
-                      {log.performed_by && <FriendlyRef refValue={log.performed_by} maps={idMaps} />}
+                      {(() => {
+                        const byName = resolveName(log.performed_by, idMaps)
+                        const onName = resolveName(log.target, idMaps)
+                        return <>
+                          {byName && <span>By: <span className="text-charcoal-deep font-medium">{byName}</span></span>}
+                          {onName && <span>→ <span className="text-charcoal-deep font-medium">{onName}</span></span>}
+                        </>
+                      })()}
                     </div>
                   </div>
                   <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>
@@ -385,8 +372,14 @@ function SuperAdminDashboard({ userName, stats, logs, loading, idMaps }: {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-body text-charcoal-deep">{log.action}</p>
                     <div className="text-xs text-greige flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                      {log.target && <FriendlyRef refValue={log.target} maps={idMaps} />}
-                      {log.performed_by && <FriendlyRef refValue={log.performed_by} maps={idMaps} />}
+                      {(() => {
+                        const byName = resolveName(log.performed_by, idMaps)
+                        const onName = resolveName(log.target, idMaps)
+                        return <>
+                          {byName && <span>By: <span className="text-charcoal-deep font-medium">{byName}</span></span>}
+                          {onName && <span>→ <span className="text-charcoal-deep font-medium">{onName}</span></span>}
+                        </>
+                      })()}
                     </div>
                   </div>
                   <p className="text-xs text-greige font-body shrink-0">{formatDate(log.timestamp)}</p>

@@ -18,7 +18,8 @@ export function SecuritySettings() {
   const [pwError, setPwError] = useState<string | null>(null)
   const [twoFa, setTwoFa] = useState(false)
 
-  async function handlePasswordChange() {
+  async function handlePasswordChange(e?: React.FormEvent) {
+    if (e) e.preventDefault()
     if (pwForm.next !== pwForm.confirm) {
       setPwError('Passwords do not match.')
       return
@@ -57,16 +58,16 @@ export function SecuritySettings() {
               <p className="text-xs font-body text-success-DEFAULT">Password updated successfully.</p>
             </div>
           )}
-          <div className="space-y-3">
+          <form onSubmit={handlePasswordChange} className="space-y-3">
             <Input label="Current Password" type="password" placeholder="••••••••" value={pwForm.current} onChange={(e) => { setPwForm((p) => ({ ...p, current: e.target.value })); setPwError(null) }} disabled={isDemo} />
             <Input label="New Password" type="password" placeholder="••••••••" value={pwForm.next} onChange={(e) => { setPwForm((p) => ({ ...p, next: e.target.value })); setPwError(null) }} disabled={isDemo} />
             <Input label="Confirm New Password" type="password" placeholder="••••••••" value={pwForm.confirm} onChange={(e) => { setPwForm((p) => ({ ...p, confirm: e.target.value })); setPwError(null) }} disabled={isDemo} />
-          </div>
-          {!isDemo && (
-            <Button variant="outline" className="mt-3" onClick={handlePasswordChange} isLoading={pwSaving}>
-              Update Password
-            </Button>
-          )}
+            {!isDemo && (
+              <Button type="submit" variant="outline" className="mt-3" isLoading={pwSaving}>
+                Update Password
+              </Button>
+            )}
+          </form>
         </div>
 
         {/* 2FA toggle */}

@@ -5,7 +5,7 @@ import { Search, Stethoscope, Loader2, X, FileText } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { adminApi, type AdminDoctorOut, type AuditLogOut } from '@/lib/api'
+import { adminApi, type AdminDoctorOut, type AuditLogOut, type AdminOrgItem } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
 export default function ManageDoctorsPage() {
@@ -15,6 +15,13 @@ export default function ManageDoctorsPage() {
   const [profileTarget, setProfileTarget] = useState<AdminDoctorOut | null>(null)
   const [doctorLogs, setDoctorLogs] = useState<AuditLogOut[]>([])
   const [doctorLogsLoading, setDoctorLogsLoading] = useState(false)
+  const [orgMap, setOrgMap] = useState<Record<string, AdminOrgItem>>({})
+
+  useEffect(() => {
+    adminApi.listAllOrgs('').then((orgs) => {
+      setOrgMap(Object.fromEntries(orgs.map((o) => [o.id, o])))
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!profileTarget) { setDoctorLogs([]); return }
@@ -95,7 +102,7 @@ export default function ManageDoctorsPage() {
                           {[d.first_name, d.last_name].filter(Boolean).join(' ') || '—'}
                         </td>
                         <td className="py-2.5 pr-3 font-body text-stone">{d.email}</td>
-                        <td className="py-2.5 pr-3 text-xs text-stone">{d.org_id ?? '—'}</td>
+                        <td className="py-2.5 pr-3 text-xs text-stone">{d.org_id ? (orgMap[d.org_id]?.name ?? d.org_id) : '—'}</td>
                         <td className="py-2.5 pr-3">
                           <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-violet-soft text-violet-muted">
                             {d.patient_count} pts
@@ -147,7 +154,9 @@ export default function ManageDoctorsPage() {
                   </div>
                   <div>
                     <p className="text-[11px] text-greige uppercase tracking-wider">Org</p>
-                    <p className="text-charcoal-deep font-medium">{profileTarget.org_id ?? '—'}</p>
+                    <p className="text-charcoal-deep font-medium">
+                      {profileTarget.org_id ? (orgMap[profileTarget.org_id]?.name ?? profileTarget.org_id) : '—'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[11px] text-greige uppercase tracking-wider">Patients</p>

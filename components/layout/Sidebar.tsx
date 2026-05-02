@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
   Activity, Globe, WifiOff, Settings, LogOut, ChevronDown, ChevronRight,
@@ -102,14 +102,17 @@ function AdminNavItem({ item, pathname, onClose, depth = 0 }: { item: SidebarIte
 /* ── Main Sidebar ──────────────────────────────────────────────────────────── */
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { user, logout } = useAuth()
   const { profiles, activeProfile, switchProfile, canSwitchProfile } = useProfile()
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false)
 
   async function handleLogout() {
+    // logout() already performs window.location.replace('/login') so that
+    // every cached query, in-memory state, and pending fetch from the
+    // previous session is dropped. Calling router.push here on top of
+    // that caused a double navigation (the same login redirect firing
+    // twice from the sidebar dropdown).
     await logout()
-    router.push('/login')
   }
 
   if (!user) return null
@@ -122,7 +125,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
         {/* Logo */}
         <div className="px-5 py-4 border-b border-sand-light">
-          <Link href="/admin" onClick={onClose} className="flex items-center gap-2.5">
+          <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-gold-soft" />
             </div>
@@ -131,7 +134,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 Glimmora<span className="text-gold-deep italic">Care</span>
               </h1>
               <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-                Super Admin Console
+                Admin Console
               </p>
             </div>
           </Link>
@@ -276,10 +279,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                   // page is /admin, so retarget the Dashboard item there. Skips
                   // the /dashboard → /admin redirect and lets the active-state
                   // highlight match the URL.
-                  const targetHref =
-                    item.href === '/dashboard' && user.role === 'super_admin'
-                      ? '/admin'
-                      : item.href
+                  const targetHref = item.href
                   const isActive = pathname === targetHref || pathname.startsWith(targetHref + '/')
                   return (
                     <Link
@@ -306,24 +306,24 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         })}
       </nav>
 
-      {/* User profile */}
-      <div className="p-3 border-t border-sand-light">
-        <div className="bg-ivory-warm/60 rounded-xl mx-1 mb-1 mt-1">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-parchment/70 transition-colors cursor-default">
+      {/* User profile + Logout */}
+      <div className="p-3 border-t border-sand-light space-y-1">
+        <div className="bg-ivory-warm/60 rounded-xl mx-1">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-default">
             <Avatar name={user.name} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
               <p className="text-[10px] font-body text-greige capitalize">{ROLES[user.role as Role]?.label}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 text-greige hover:text-[#B91C1C] hover:bg-error-soft/10 rounded-md transition-all duration-200"
-              title="Sign out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-body font-medium text-stone hover:text-coral-muted hover:bg-coral-soft/40 border border-transparent hover:border-coral-DEFAULT/30 transition-all duration-200"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Logout</span>
+        </button>
       </div>
     </div>
   )

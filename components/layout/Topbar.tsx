@@ -70,8 +70,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   async function handleLogout() {
     setShowUserMenu(false)
+    // logout() in AuthContext does window.location.replace('/login') itself.
+    // Calling router.push here as well caused a duplicate navigation that
+    // showed the same redirect/toast twice — a known "multiple same issues
+    // triggered" symptom on the profile dropdown.
     await logout()
-    router.push('/login')
   }
 
   // Load real notifications and poll every 60s.
@@ -181,6 +184,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     }
     router.push(`/vault/search?q=${encodeURIComponent(q)}`)
   }
+
+  // Clear search when navigating to a new route (Bug 16)
+  useEffect(() => {
+    setSearchQuery('')
+    setShowSearchDropdown(false)
+  }, [pathname])
 
   // Refresh on dropdown open
   useEffect(() => {
@@ -430,6 +439,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
             aria-label="Open account menu"
+            title="Account menu — Profile, Settings, Logout"
             className={cn(
               'flex items-center gap-2 bg-ivory-warm border border-sand-light rounded-xl px-2.5 py-1.5 transition-all duration-200',
               showUserMenu

@@ -519,38 +519,30 @@ function DoctorView({ userName }: { userName: string }) {
 // ─── Admin view ───────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { href: '/vault',                 icon: Shield,    label: 'Health Vault',     sub: 'Browse organisation records', color: C.teal   },
-  { href: '/admin/manage-team',     icon: Users,     label: 'Manage Team',      sub: 'Doctors and team members',    color: C.ocean  },
-  { href: '/admin/doctor-management', icon: UserPlus, label: 'Doctor Management', sub: 'Assign, share, consents',  color: C.violet },
-  { href: '/admin/logs',            icon: FileText,  label: 'Audit Logs',       sub: 'Org activity history',        color: C.amber  },
+  { href: '/admin/manage-team',       icon: Users,     label: 'Manage Team',       sub: 'Doctors and team members',  color: C.ocean  },
+  { href: '/admin/doctor-management', icon: UserPlus,  label: 'Doctor Management', sub: 'Assign, share, consents',   color: C.violet },
+  { href: '/organization',            icon: Building2, label: 'Organisation',       sub: 'Org details and directory', color: C.teal   },
+  { href: '/admin/logs',              icon: FileText,  label: 'Audit Logs',         sub: 'Org activity history',      color: C.amber  },
 ]
 
 function AdminView({ userName }: { userName: string }) {
   const [stats, setStats]   = useState<AdminStatsOut | null>(null)
-  const [records, setRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
-    Promise.all([
-      adminApi.getStats().catch(() => null),
-      intakeApi.getRecords().catch(() => [] as HealthRecord[]),
-    ]).then(([s, r]) => {
-      setStats(s)
-      setRecords(r)
-    }).finally(() => setLoading(false))
+    adminApi.getStats().catch(() => null).then(setStats).finally(() => setLoading(false))
   }, [])
 
   const totalPatients = stats?.total_patients ?? 0
-  const totalRecords  = records.length
 
   return (
     <div className="space-y-5">
       <WelcomeBanner name={userName} role="Administrator" chips={[
-        { label: 'Patients',  value: String(totalPatients), color: C.ocean.bg },
-        { label: 'Records',   value: String(totalRecords),  color: C.teal.bg },
-        { label: 'Doctors',   value: String(stats?.total_doctors ?? '—'), color: C.violet.bg },
-        { label: 'Orgs',      value: String(stats?.total_organizations ?? '—'), color: C.emerald.bg },
+        { label: 'Patients (org)', value: String(totalPatients), color: C.ocean.bg },
+        { label: 'Doctors (org)',  value: String(stats?.total_doctors ?? '—'), color: C.violet.bg },
+        { label: 'Assignments',    value: String(stats?.total_assignments ?? '—'), color: C.teal.bg },
+        { label: 'New (30d)',      value: String(stats?.new_users_last_30_days ?? '—'), color: C.emerald.bg },
       ]} />
 
       {loading ? (
@@ -558,12 +550,12 @@ function AdminView({ userName }: { userName: string }) {
           {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Users}       label="Total Patients"      value={totalPatients}               accent={C.ocean} />
-          <StatCard icon={FileText}    label="Health Records"      value={totalRecords}                accent={C.teal} />
-          <StatCard icon={Users}       label="Total Doctors"       value={stats?.total_doctors ?? '—'} accent={C.violet} />
-          <StatCard icon={CheckCircle} label="New Users (30d)"     value={stats?.new_users_last_30_days ?? '—'} accent={C.emerald} />
-          <StatCard icon={Upload}      label="Monthly Uploads"     value={318}                          accent={C.amber} />
+        // Org-scoped — backend `/admin/stats` returns counts limited to this admin's organisation.
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={Users}       label="Patients in your org"   value={totalPatients}                          accent={C.ocean} />
+          <StatCard icon={Users}       label="Doctors in your org"    value={stats?.total_doctors ?? '—'}            accent={C.violet} />
+          <StatCard icon={FileText}    label="Active assignments"     value={stats?.total_assignments ?? '—'}        accent={C.teal} />
+          <StatCard icon={CheckCircle} label="New users (30d)"        value={stats?.new_users_last_30_days ?? '—'}   accent={C.emerald} />
         </div>
       )}
 
@@ -652,7 +644,7 @@ function SuperAdminView({ userName }: { userName: string }) {
     setCreateError(null)
     setCreateMsg(null)
     try {
-      await adminApi.createOrg(orgName.trim())
+      await adminApi.createOrg({ name: orgName.trim() })
       setCreateMsg(`Organisation "${orgName.trim()}" created.`)
       setOrgName('')
       // Refresh orgs list
