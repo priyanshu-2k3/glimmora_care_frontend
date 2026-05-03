@@ -25,21 +25,27 @@ type IdMaps = {
   orgs:  Record<string, AdminOrgItem>
 }
 
-function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
-  if (!ref) return { kind: null, id: '' }
-  const m = ref.match(/^(user|org):(.+)$/)
-  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
-  return { kind: null, id: ref }
+function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
+  if (!ref) return []
+  return ref.split(' ').map(part => {
+    const m = part.match(/^(user|org):(.+)$/)
+    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    return { kind: null, id: part }
+  })
 }
 
 function resolveName(refValue: string | null | undefined, maps: IdMaps): string | null {
   if (!refValue) return null
-  const { kind, id } = parseRef(refValue)
-  const u = (kind === 'user' || kind === null) ? maps.users[id] : undefined
-  const o = (kind === 'org'  || kind === null) ? maps.orgs[id]  : undefined
-  if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-  if (o) return o.name
-  return null
+  const refs = parseRefs(refValue)
+  const names = refs.map(({ kind, id }) => {
+    const u = (kind === 'user' || kind === null) ? maps.users[id] : undefined
+    const o = (kind === 'org'  || kind === null) ? maps.orgs[id]  : undefined
+    if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+    if (o) return o.name
+    return id // fallback to raw id if not found
+  }).filter(Boolean)
+  
+  return names.length > 0 ? names.join(' · ') : refValue
 }
 
 interface StatCardProps {
@@ -93,18 +99,21 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/doctor-management"  color="#D97706" />
+        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/patients"           color="#D97706" />
         <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
         <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
-        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 318}                                   href="/admin/logs"               color="#0D9488" />
-        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 7}                                     href="/admin/manage-team"        color="#7C3AED" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 0}                                     href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 0}                                     href="/admin/manage-team"        color="#7C3AED" />
       </div>
 
       {/* Flagged Audit Events strip */}
       <div className="bg-white border border-sand-light rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+          </div>
+          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {[

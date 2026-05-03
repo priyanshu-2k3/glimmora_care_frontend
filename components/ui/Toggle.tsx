@@ -33,10 +33,10 @@ export function Toggle({ checked, onChange, label, disabled, size = 'md' }: Togg
       >
         <span
           className={cn(
-            'absolute left-0.5 inline-block rounded-full bg-white shadow ring-1 transition-transform duration-200',
+            'absolute left-0.5 inline-block rounded-full bg-white shadow ring-1 transform transition-transform duration-200',
             s.thumb,
             checked ? 'ring-emerald-DEFAULT/30' : 'ring-charcoal-deep/10',
-            checked && s.translate
+            checked ? s.translate : 'translate-x-0'
           )}
         />
       </div>

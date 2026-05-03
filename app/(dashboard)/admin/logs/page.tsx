@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardList, Search, AlertCircle, Download, AlertTriangle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ClipboardList, Search, AlertCircle, Download, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -12,27 +13,43 @@ import { Pagination } from '@/components/ui/Pagination'
 import { adminApi, type AuditLogOut, type AdminUserOut, type AdminOrgItem } from '@/lib/api'
 
 // Friendly label resolution for "user:abc…" / "org:abc…" refs.
-function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
-  if (!ref) return { kind: null, id: '' }
-  const m = ref.match(/^(user|org):(.+)$/)
-  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
-  return { kind: null, id: ref }
+function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
+  if (!ref) return []
+  return ref.split(' ').map(part => {
+    const m = part.match(/^(user|org):(.+)$/)
+    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    return { kind: null, id: part }
+  })
 }
 
 function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | undefined; users: Record<string, AdminUserOut>; orgs: Record<string, AdminOrgItem> }) {
-  const { kind, id } = parseRef(refValue)
   if (!refValue) return null
-  // Backend stores bare ObjectIds (kind === null) — try both maps
-  const u = (kind === 'user' || kind === null) ? users[id] : undefined
-  const o = (kind === 'org'  || kind === null) ? orgs[id]  : undefined
-  if (u) {
-    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-    return <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
-  }
-  if (o) {
-    return <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
-  }
-  return <span className="text-greige italic">Unknown</span>
+  const refs = parseRefs(refValue)
+  const nodes = refs.map(({ kind, id }, idx) => {
+    const u = (kind === 'user' || kind === null) ? users[id] : undefined
+    const o = (kind === 'org'  || kind === null) ? orgs[id]  : undefined
+    if (u) {
+      const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+      return <span key={idx} className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
+    }
+    if (o) {
+      return <span key={idx} className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
+    }
+    // Show the raw ref value (truncated) rather than a blank "Unknown" label
+    const display = id.length > 24 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id
+    return <span key={idx} className="text-greige font-mono text-[11px]" title={id}>{display}</span>
+  })
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {nodes.map((node, i) => (
+        <span key={i} className="flex items-center gap-2">
+          {i > 0 && <span className="text-sand-light">·</span>}
+          {node}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
@@ -52,6 +69,7 @@ function formatDateTime(ts: string) {
 }
 
 export default function AdminLogsPage() {
+  const router = useRouter()
   const PAGE_SIZE = 25
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [search, setSearch] = useState('')
@@ -118,6 +136,14 @@ export default function AdminLogsPage() {
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm font-body text-greige hover:text-charcoal-deep transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">

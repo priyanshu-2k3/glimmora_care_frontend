@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, Lock, Check, AlertCircle } from 'lucide-react'
+import { Shield, Lock, Check, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -17,6 +17,9 @@ export function SecuritySettings() {
   const [pwSuccess, setPwSuccess] = useState(false)
   const [pwError, setPwError] = useState<string | null>(null)
   const [twoFa, setTwoFa] = useState(false)
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNext, setShowNext] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   async function handlePasswordChange(e?: React.FormEvent) {
     if (e) e.preventDefault()
@@ -59,9 +62,9 @@ export function SecuritySettings() {
             </div>
           )}
           <form onSubmit={handlePasswordChange} className="space-y-3">
-            <Input label="Current Password" type="password" placeholder="••••••••" value={pwForm.current} onChange={(e) => { setPwForm((p) => ({ ...p, current: e.target.value })); setPwError(null) }} disabled={isDemo} />
-            <Input label="New Password" type="password" placeholder="••••••••" value={pwForm.next} onChange={(e) => { setPwForm((p) => ({ ...p, next: e.target.value })); setPwError(null) }} disabled={isDemo} />
-            <Input label="Confirm New Password" type="password" placeholder="••••••••" value={pwForm.confirm} onChange={(e) => { setPwForm((p) => ({ ...p, confirm: e.target.value })); setPwError(null) }} disabled={isDemo} />
+            <Input label="Current Password" type={showCurrent ? 'text' : 'password'} placeholder="••••••••" value={pwForm.current} onChange={(e) => { setPwForm((p) => ({ ...p, current: e.target.value })); setPwError(null) }} disabled={isDemo} rightIcon={<button type="button" onClick={() => setShowCurrent((s) => !s)} className="text-greige hover:text-charcoal-deep transition-colors">{showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>} />
+            <Input label="New Password" type={showNext ? 'text' : 'password'} placeholder="••••••••" value={pwForm.next} onChange={(e) => { setPwForm((p) => ({ ...p, next: e.target.value })); setPwError(null) }} disabled={isDemo} rightIcon={<button type="button" onClick={() => setShowNext((s) => !s)} className="text-greige hover:text-charcoal-deep transition-colors">{showNext ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>} />
+            <Input label="Confirm New Password" type={showConfirm ? 'text' : 'password'} placeholder="••••••••" value={pwForm.confirm} onChange={(e) => { setPwForm((p) => ({ ...p, confirm: e.target.value })); setPwError(null) }} disabled={isDemo} rightIcon={<button type="button" onClick={() => setShowConfirm((s) => !s)} className="text-greige hover:text-charcoal-deep transition-colors">{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>} />
             {!isDemo && (
               <Button type="submit" variant="outline" className="mt-3" isLoading={pwSaving}>
                 Update Password

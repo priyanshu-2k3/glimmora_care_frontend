@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Check, Trash2, Loader2, X } from 'lucide-react'
+import { Bell, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Check, Trash2, Loader2, X, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -197,10 +197,15 @@ export default function NotificationsPage() {
             {notifications.map((notif) => {
               const meta = TYPE_META[notif.type] ?? TYPE_META.info
               const Icon = meta.icon
+              const isNavigable = !!notif.actionHref
               return (
                 <div
                   key={notif.id}
-                  className={cn('flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer hover:bg-ivory-warm', !notif.isRead && 'bg-gold-whisper/30')}
+                  className={cn(
+                    'flex items-start gap-4 px-5 py-4 transition-colors',
+                    isNavigable ? 'cursor-pointer hover:bg-ivory-warm' : 'cursor-default',
+                    !notif.isRead && 'bg-gold-whisper/30'
+                  )}
                   onClick={() => {
                     handleMarkRead(notif.id)
                     if (notif.actionHref) router.push(notif.actionHref)
@@ -217,10 +222,12 @@ export default function NotificationsPage() {
                     <p className="text-xs text-greige font-body leading-relaxed">{notif.message}</p>
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-[11px] text-greige font-body">{timeAgo(notif.timestamp)}</span>
-                      {notif.actionLabel && notif.actionHref && (
-                        <Link href={notif.actionHref} className="text-[11px] text-gold-deep font-body hover:underline">
-                          {notif.actionLabel} →
+                      {notif.actionLabel && notif.actionHref ? (
+                        <Link href={notif.actionHref} onClick={(e) => e.stopPropagation()} className="text-[11px] text-gold-deep font-body hover:underline flex items-center gap-0.5">
+                          {notif.actionLabel} <ChevronRight className="w-2.5 h-2.5" />
                         </Link>
+                      ) : (
+                        <span className="text-[11px] text-greige/60 font-body italic">Info only</span>
                       )}
                     </div>
                   </div>
@@ -228,6 +235,7 @@ export default function NotificationsPage() {
                     onClick={(e) => { e.stopPropagation(); handleDismiss(notif.id) }}
                     disabled={actingId === notif.id}
                     className="p-1 text-greige hover:text-charcoal-deep rounded transition-colors shrink-0"
+                    title="Dismiss"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

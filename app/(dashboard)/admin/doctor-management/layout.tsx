@@ -4,8 +4,8 @@ const items = [
   { label: "Roster", href: "/admin/doctor-management" },
   { label: "Assign", href: "/admin/doctor-management/assign" },
   { label: "Reassign", href: "/admin/doctor-management/reassign" },
-  { label: "Share Access", href: "/admin/doctor-management/share" },
-  { label: "Consent Override", href: "/admin/doctor-management/consent" },
+  { label: "Share Consent", href: "/admin/doctor-management/share" },
+  { label: "Consent Management", href: "/admin/doctor-management/consent" },
 ];
 
 export default function DoctorManagementLayout({ children }: { children: React.ReactNode }) {

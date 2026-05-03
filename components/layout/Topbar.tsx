@@ -447,12 +447,14 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 : 'hover:border-gold-soft/40 hover:bg-champagne/20',
             )}
           >
-            <Avatar name={user.name} size="sm" />
-            <div className="hidden sm:block leading-tight text-left">
-              <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
-              <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+            <div className="flex items-center gap-2 pointer-events-none">
+              <Avatar name={user.name} size="sm" />
+              <div className="hidden sm:block leading-tight text-left">
+                <p className="text-xs font-body font-semibold text-charcoal-deep">{user.name.split(' ')[0]}</p>
+                <p className="text-[10px] font-body text-greige">{ROLES[user.role as Role]?.label}</p>
+              </div>
+              <ChevronDown className={cn('w-3.5 h-3.5 text-greige transition-transform', showUserMenu && 'rotate-180')} />
             </div>
-            <ChevronDown className={cn('w-3.5 h-3.5 text-greige transition-transform', showUserMenu && 'rotate-180')} />
           </button>
 
           {showUserMenu && (

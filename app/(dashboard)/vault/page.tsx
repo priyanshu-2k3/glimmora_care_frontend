@@ -97,7 +97,27 @@ export default function VaultPage() {
 
   if (!user) return null
 
-  const canViewAll = user.role === 'doctor' || user.role === 'admin' || user.role === 'super_admin'
+  // Admin / super_admin do not have direct patient health record access —
+  // that is restricted to doctors assigned to the patient.
+  if (user.role === 'admin' || user.role === 'super_admin') {
+    return (
+      <div className="max-w-2xl mx-auto py-20 text-center space-y-4 animate-fade-in">
+        <Shield className="w-12 h-12 text-greige mx-auto" />
+        <h2 className="font-display text-2xl text-charcoal-deep tracking-tight">Access Restricted</h2>
+        <p className="text-sm text-stone font-body">
+          Health Vault is accessible to doctors and patients only. Admin accounts manage users and organisations — not individual health records.
+        </p>
+        <Link href="/dashboard">
+          <Button variant="outline" className="mt-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  const canViewAll = user.role === 'doctor'
   const isDoctor = user.role === 'doctor'
   const isPatient = user.role === 'patient'
   const pageTitle = isDoctor ? 'Patient Vault' : 'Health Vault'
