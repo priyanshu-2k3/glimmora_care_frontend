@@ -1027,6 +1027,13 @@ export const intakeApi = {
   getRecord: (id: string) =>
     apiFetch<HealthRecord>(`/intake/records/${id}`),
 
+  /** Update metadata (title, date, source, type, notes) of an existing record */
+  updateRecordMetadata: (recordId: string, data: Partial<{ title: string; date: string; source: string; type: string; notes: string }>) =>
+    apiFetch<{ recordId: string; message: string }>(`/intake/records/${recordId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   /** Share a record with another user by email */
   shareRecord: (recordId: string, email: string, scope: string[]) =>
     apiFetch<unknown>(`/intake/records/${recordId}/share`, {
