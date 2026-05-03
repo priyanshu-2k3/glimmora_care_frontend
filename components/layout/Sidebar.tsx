@@ -41,7 +41,7 @@ const DEFAULT_NAV_SECTIONS = [
   { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor', '/assign-doctor'] },
   { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access'] },
   { label: 'ORGANISATION', hrefs: ['/organization'] },
-  { label: 'MANAGEMENT', hrefs: ['/admin/users', '/admin/doctors', '/admin/patients', '/manage-users'] },
+  { label: 'MANAGEMENT', hrefs: ['/admin', '/admin/users', '/admin/doctors', '/admin/patients', '/manage-users'] },
   { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },
   { label: 'SYSTEM', hrefs: ['/logs', '/notifications', '/settings'] },
 ]
@@ -187,7 +187,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
       {/* Logo */}
       <div className="px-5 py-4 border-b border-sand-light">
-        <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
+        <Link href={user.role === 'super_admin' ? '/admin' : '/dashboard'} onClick={onClose} className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
             <Sparkles className="w-4 h-4 text-gold-soft" />
           </div>
@@ -275,16 +275,11 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               <div className="space-y-0.5">
                 {sectionItems.map((item) => {
                   const Icon = ICONS[item.icon]
-                  // Super admin lands on /admin (their platform hub).
-                  // Retarget the Dashboard nav item to /admin so clicking it goes
-                  // directly there, and isActive highlights correctly at that URL.
-                  const isSuperAdmin = user.role === 'super_admin'
-                  const targetHref = isSuperAdmin && item.href === '/dashboard' ? '/admin' : item.href
+                  const targetHref = item.href
                   const isActive =
                     pathname === targetHref ||
-                    pathname.startsWith(targetHref + '/') ||
-                    // /admin/* sub-routes should also keep Dashboard highlighted
-                    (targetHref === '/admin' && pathname.startsWith('/admin'))
+                    (targetHref !== '/admin' && pathname.startsWith(targetHref + '/'))
+
                   return (
                     <Link
                       key={item.href}

@@ -13,29 +13,43 @@ import { Pagination } from '@/components/ui/Pagination'
 import { adminApi, type AuditLogOut, type AdminUserOut, type AdminOrgItem } from '@/lib/api'
 
 // Friendly label resolution for "user:abc…" / "org:abc…" refs.
-function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
-  if (!ref) return { kind: null, id: '' }
-  const m = ref.match(/^(user|org):(.+)$/)
-  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
-  return { kind: null, id: ref }
+function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
+  if (!ref) return []
+  return ref.split(' ').map(part => {
+    const m = part.match(/^(user|org):(.+)$/)
+    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    return { kind: null, id: part }
+  })
 }
 
 function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | undefined; users: Record<string, AdminUserOut>; orgs: Record<string, AdminOrgItem> }) {
-  const { kind, id } = parseRef(refValue)
   if (!refValue) return null
-  // Backend stores bare ObjectIds (kind === null) — try both maps
-  const u = (kind === 'user' || kind === null) ? users[id] : undefined
-  const o = (kind === 'org'  || kind === null) ? orgs[id]  : undefined
-  if (u) {
-    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-    return <span className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
-  }
-  if (o) {
-    return <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
-  }
-  // Show the raw ref value (truncated) rather than a blank "Unknown" label
-  const display = refValue.length > 24 ? `${refValue.slice(0, 8)}…${refValue.slice(-6)}` : refValue
-  return <span className="text-greige font-mono text-[11px]" title={refValue}>{display}</span>
+  const refs = parseRefs(refValue)
+  const nodes = refs.map(({ kind, id }, idx) => {
+    const u = (kind === 'user' || kind === null) ? users[id] : undefined
+    const o = (kind === 'org'  || kind === null) ? orgs[id]  : undefined
+    if (u) {
+      const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+      return <span key={idx} className="text-charcoal-deep">User: <span className="font-medium">{name}</span></span>
+    }
+    if (o) {
+      return <span key={idx} className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
+    }
+    // Show the raw ref value (truncated) rather than a blank "Unknown" label
+    const display = id.length > 24 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id
+    return <span key={idx} className="text-greige font-mono text-[11px]" title={id}>{display}</span>
+  })
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      {nodes.map((node, i) => (
+        <span key={i} className="flex items-center gap-2">
+          {i > 0 && <span className="text-sand-light">·</span>}
+          {node}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {

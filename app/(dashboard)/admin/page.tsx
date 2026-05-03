@@ -25,21 +25,27 @@ type IdMaps = {
   orgs:  Record<string, AdminOrgItem>
 }
 
-function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
-  if (!ref) return { kind: null, id: '' }
-  const m = ref.match(/^(user|org):(.+)$/)
-  if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
-  return { kind: null, id: ref }
+function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
+  if (!ref) return []
+  return ref.split(' ').map(part => {
+    const m = part.match(/^(user|org):(.+)$/)
+    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    return { kind: null, id: part }
+  })
 }
 
 function resolveName(refValue: string | null | undefined, maps: IdMaps): string | null {
   if (!refValue) return null
-  const { kind, id } = parseRef(refValue)
-  const u = (kind === 'user' || kind === null) ? maps.users[id] : undefined
-  const o = (kind === 'org'  || kind === null) ? maps.orgs[id]  : undefined
-  if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-  if (o) return o.name
-  return null
+  const refs = parseRefs(refValue)
+  const names = refs.map(({ kind, id }) => {
+    const u = (kind === 'user' || kind === null) ? maps.users[id] : undefined
+    const o = (kind === 'org'  || kind === null) ? maps.orgs[id]  : undefined
+    if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+    if (o) return o.name
+    return id // fallback to raw id if not found
+  }).filter(Boolean)
+  
+  return names.length > 0 ? names.join(' · ') : refValue
 }
 
 interface StatCardProps {

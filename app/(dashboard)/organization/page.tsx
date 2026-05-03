@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
-import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem } from '@/lib/api'
+import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem, type DoctorOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
@@ -58,9 +58,9 @@ function AdminOrgView() {
 
   useEffect(() => {
     if (!org) return
-    orgApi.listDoctors().then((d) => setDoctorCount(d.length)).catch(() => {})
-    orgApi.listPatients().then((p) => setPatientCount(p.length)).catch(() => {})
-    orgApi.listOrgAdmins().then(setAdmins).catch(() => {})
+    orgApi.listDoctors().then((d) => setDoctorCount(d.length)).catch(() => { })
+    orgApi.listPatients().then((p) => setPatientCount(p.length)).catch(() => { })
+    orgApi.listOrgAdmins().then(setAdmins).catch(() => { })
   }, [org?.id])
 
   async function handleAddAdmin(e: React.FormEvent) {
@@ -656,9 +656,9 @@ function SuperAdminOrgView() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Orgs',      value: orgs.length },
-          { label: 'Total Doctors',   value: orgs.reduce((s, o) => s + o.doctor_count, 0) },
-          { label: 'Total Patients',  value: orgs.reduce((s, o) => s + o.patient_count, 0) },
+          { label: 'Total Orgs', value: orgs.length },
+          { label: 'Total Doctors', value: orgs.reduce((s, o) => s + o.doctor_count, 0) },
+          { label: 'Total Patients', value: orgs.reduce((s, o) => s + o.patient_count, 0) },
         ].map((s) => (
           <Card key={s.label} className="p-4">
             <p className="font-display text-2xl text-charcoal-deep">{s.value}</p>
@@ -829,10 +829,10 @@ function SuperAdminOrgView() {
                   {expanded === org.id && (
                     <div className="pt-3 border-t border-sand-light grid grid-cols-2 gap-x-6 gap-y-2">
                       {[
-                        { label: 'Org ID',   value: org.id },
-                        { label: 'Phone',    value: org.phone ?? 'Not set' },
-                        { label: 'Website',  value: org.website ?? 'Not set' },
-                        { label: 'Created',  value: org.created_at ? new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                        { label: 'Org ID', value: org.id },
+                        { label: 'Phone', value: org.phone ?? 'Not set' },
+                        { label: 'Website', value: org.website ?? 'Not set' },
+                        { label: 'Created', value: org.created_at ? new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
                       ].map(({ label, value }) => (
                         <div key={label} className="flex flex-col">
                           <span className="text-xs text-greige">{label}</span>
@@ -856,16 +856,19 @@ function DoctorOrgView() {
   const router = useRouter()
   const [org, setOrg] = useState<{ org_id: string; org_name: string } | null>(null)
   const [patients, setPatients] = useState<PatientOut[]>([])
+  const [colleagues, setColleagues] = useState<DoctorOut[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       orgApi.getDoctorOrg(),
       orgApi.getDoctorPatients(),
-    ]).then(([orgData, patientData]) => {
+      orgApi.listDoctorsForConsent(),
+    ]).then(([orgData, patientData, docs]) => {
       setOrg(orgData)
       setPatients(patientData)
-    }).catch(() => {}).finally(() => setLoading(false))
+      setColleagues(docs)
+    }).catch(() => { }).finally(() => setLoading(false))
   }, [])
 
   if (loading) {
@@ -904,25 +907,27 @@ function DoctorOrgView() {
         </CardHeader>
         <CardContent>
           <div className="divide-y divide-sand-light">
-            {[
-              { id: 'col_001', name: 'Dr. Anjali Verma',   specialty: 'Endocrinology' },
-              { id: 'col_002', name: 'Dr. Rajeev Iyer',    specialty: 'Cardiology' },
-              { id: 'col_003', name: 'Dr. Meera Krishnan', specialty: 'General Medicine' },
-              { id: 'col_004', name: 'Dr. Suresh Patel',   specialty: 'Diabetology' },
-            ].map((c) => (
-              <div key={c.id} className="flex items-center gap-3 py-3">
-                <div className="w-9 h-9 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0">
-                  <Stethoscope className="w-4 h-4 text-gold-deep" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-body font-semibold text-charcoal-deep">{c.name}</p>
-                  <p className="text-xs text-greige">{c.specialty}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => alert(`Message ${c.name} (mock)`)}>
-                  Message
-                </Button>
-              </div>
-            ))}
+            {colleagues.length === 0 ? (
+              <p className="text-sm text-greige font-body py-4 text-center">No colleagues found.</p>
+            ) : (
+              colleagues.map((c) => {
+                const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Doctor'
+                return (
+                  <div key={c.user_id} className="flex items-center gap-3 py-3">
+                    <div className="w-9 h-9 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0">
+                      <Stethoscope className="w-4 h-4 text-gold-deep" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-body font-semibold text-charcoal-deep">{name}</p>
+                      {c.email && <p className="text-xs text-greige">{c.email}</p>}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => alert(`Message ${name} (mock)`)}>
+                      Message
+                    </Button>
+                  </div>
+                )
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1105,47 +1110,47 @@ function DeleteOrgModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleDelete} className="space-y-3">
-          <div className="bg-error-soft/40 border border-[#DC2626]/20 rounded-xl p-3 space-y-1">
-            <p className="text-xs font-body text-charcoal-deep">
-              <span className="font-semibold">{org.doctor_count}</span> doctor(s) ·{' '}
-              <span className="font-semibold">{org.patient_count}</span> patient assignment(s) linked.
-            </p>
-            {hasLinked && (
-              <p className="text-xs text-[#B91C1C] font-body">
-                Reassign them first, or check "Force detach" to clear their org links and downgrade admins to patients.
+            <div className="bg-error-soft/40 border border-[#DC2626]/20 rounded-xl p-3 space-y-1">
+              <p className="text-xs font-body text-charcoal-deep">
+                <span className="font-semibold">{org.doctor_count}</span> doctor(s) ·{' '}
+                <span className="font-semibold">{org.patient_count}</span> patient assignment(s) linked.
               </p>
-            )}
-          </div>
-
-          {hasLinked && (
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} className="mt-0.5" />
-              <span className="text-xs font-body text-charcoal-deep">
-                Force detach all linked users and delete anyway.
-              </span>
-            </label>
-          )}
-
-          <Input
-            label={`Type "${org.name}" to confirm`}
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-          />
-
-          {error && (
-            <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
-              <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
-              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
+              {hasLinked && (
+                <p className="text-xs text-[#B91C1C] font-body">
+                  Reassign them first, or check "Force detach" to clear their org links and downgrade admins to patients.
+                </p>
+              )}
             </div>
-          )}
 
-          <div className="flex gap-2 justify-end pt-1">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button type="submit" variant="danger" size="sm" isLoading={deleting} disabled={!canDelete}>
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete{force ? ' (forced)' : ''}
-            </Button>
-          </div>
+            {hasLinked && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} className="mt-0.5" />
+                <span className="text-xs font-body text-charcoal-deep">
+                  Force detach all linked users and delete anyway.
+                </span>
+              </label>
+            )}
+
+            <Input
+              label={`Type "${org.name}" to confirm`}
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+            />
+
+            {error && (
+              <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
+                <p className="text-xs font-body text-[#B91C1C]">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+              <Button type="submit" variant="danger" size="sm" isLoading={deleting} disabled={!canDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete{force ? ' (forced)' : ''}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

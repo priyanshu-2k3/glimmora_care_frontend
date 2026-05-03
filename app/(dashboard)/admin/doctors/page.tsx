@@ -16,12 +16,34 @@ export default function ManageDoctorsPage() {
   const [doctorLogs, setDoctorLogs] = useState<AuditLogOut[]>([])
   const [doctorLogsLoading, setDoctorLogsLoading] = useState(false)
   const [orgMap, setOrgMap] = useState<Record<string, AdminOrgItem>>({})
+  const [userMap, setUserMap] = useState<Record<string, any>>({})
 
   useEffect(() => {
-    adminApi.listAllOrgs('').then((orgs) => {
+    Promise.all([
+      adminApi.listAllOrgs(''),
+      adminApi.listUsers('')
+    ]).then(([orgs, users]) => {
       setOrgMap(Object.fromEntries(orgs.map((o) => [o.id, o])))
+      setUserMap(Object.fromEntries(users.map((u) => [u.id, u])))
     }).catch(() => {})
   }, [])
+
+  function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
+    if (!ref) return { kind: null, id: '' }
+    const m = ref.match(/^(user|org):(.+)$/)
+    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    return { kind: null, id: ref }
+  }
+
+  function resolveName(refValue: string | null | undefined): string | null {
+    if (!refValue) return null
+    const { kind, id } = parseRef(refValue)
+    const u = (kind === 'user' || kind === null) ? userMap[id] : undefined
+    const o = (kind === 'org'  || kind === null) ? orgMap[id]  : undefined
+    if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+    if (o) return o.name
+    return null
+  }
 
   useEffect(() => {
     if (!profileTarget) { setDoctorLogs([]); return }
@@ -70,7 +92,7 @@ export default function ManageDoctorsPage() {
       <div className="space-y-6 animate-fade-in">
         <div>
           <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
-            <Stethoscope className="w-5 h-5 text-gold-soft" /> Manage Doctors
+            <Stethoscope className="w-5 h-5 text-gold-soft" /> Doctor Management
           </h1>
           <p className="text-sm lg:text-[15px] text-stone font-body mt-1">
             Doctors across the platform. Super admin sees all; org admin sees their organisation only.
@@ -186,12 +208,23 @@ export default function ManageDoctorsPage() {
                     ) : doctorLogs.length === 0 ? (
                       <p className="text-xs text-greige italic">No recent activity for this doctor.</p>
                     ) : (
-                      doctorLogs.map((e) => (
-                        <div key={e.id} className="flex items-start gap-2 text-xs">
-                          <span className="text-greige w-28 shrink-0">{formatDate(e.timestamp)}</span>
-                          <span className="text-stone">{e.action}{e.detail ? ` — ${e.detail}` : ''}</span>
-                        </div>
-                      ))
+                      doctorLogs.map((e) => {
+                        const byName = resolveName(e.performed_by)
+                        const onName = resolveName(e.target)
+                        return (
+                          <div key={e.id} className="flex items-start gap-2 text-xs">
+                            <span className="text-greige w-28 shrink-0">{formatDate(e.timestamp)}</span>
+                            <div className="flex-1 min-w-0 text-stone">
+                              <p className="font-medium text-charcoal-deep">{e.action}</p>
+                              <div className="text-xs text-greige flex flex-wrap gap-x-2 mt-0.5">
+                                {byName && <span>By: <span className="text-stone">{byName}</span></span>}
+                                {onName && <span>Target: <span className="text-stone">{onName}</span></span>}
+                                {(!byName && !onName && e.detail) && <span>{e.detail}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
                     )}
                   </div>
                 </div>

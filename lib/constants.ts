@@ -202,7 +202,7 @@ export const NAV_ITEMS = [
   },
   {
     href: '/admin/doctors',
-    label: 'Doctors',
+    label: 'Doctor Management',
     icon: 'Stethoscope',
     roles: ['super_admin'] as Role[],
   },
