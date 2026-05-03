@@ -869,7 +869,7 @@ function PatientConsentView() {
           { label: 'Consent Requests', href: '/consent/requests', icon: Clock    },
           { label: 'Active Consents',  href: '/consent/active',   icon: Shield   },
           { label: 'Consent History',  href: '/consent/history',  icon: History  },
-          { label: 'Access Logs',      href: '/logs',              icon: AlertCircle },
+          { label: 'Access Logs',      href: '/logs?from=consent', icon: AlertCircle },
         ].map((item) => (
           <Link key={item.label} href={item.href}>
             <Card className="p-4 flex items-center gap-3 hover:border-gold-soft transition-all">

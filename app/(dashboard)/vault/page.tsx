@@ -202,12 +202,33 @@ export default function VaultPage() {
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
         <div className="mb-6">
           <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
-            <Link href="/vault" className="hover:text-gold-deep transition-colors flex items-center gap-1">
-              <ArrowLeft className="w-3 h-3" />
-              Patient Vault
-            </Link>
+            <span>Health Data</span>
+            <ChevronRight className="w-3 h-3" />
+            <Link href="/vault" className="hover:text-gold-deep transition-colors">Vault</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-gold-deep">{patient?.name ?? selectedPatientId}</span>
+          </div>
+
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <Link
+                href="/vault"
+                className="inline-flex items-center gap-1.5 text-xs text-greige hover:text-charcoal-deep transition-colors font-body mb-3"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Vault
+              </Link>
+              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Vault — {patient?.name ?? selectedPatientId}</h1>
+              <p className="text-sm text-stone font-body mt-1.5">
+                {patient?.age ? `${patient.age}y` : ''}{patient?.age && patient?.district ? ' · ' : ''}{patient?.district ?? ''}
+              </p>
+            </div>
+            <Link href={`/intake?patient=${selectedPatientId}`} className="shrink-0 mt-8">
+              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
+                <Upload className="w-4 h-4" />
+                Upload Record
+              </Button>
+            </Link>
           </div>
 
           {/* Prominent patient picker for doctor */}
@@ -226,21 +247,6 @@ export default function VaultPage() {
               </select>
             </div>
           )}
-
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Vault — {patient?.name ?? selectedPatientId}</h1>
-              <p className="text-sm text-stone font-body mt-1.5">
-                {patient?.age ? `${patient.age}y` : ''}{patient?.age && patient?.district ? ' · ' : ''}{patient?.district ?? ''}
-              </p>
-            </div>
-            <Link href={`/intake?patient=${selectedPatientId}`} className="shrink-0">
-              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
-                <Upload className="w-4 h-4" />
-                Upload Record
-              </Button>
-            </Link>
-          </div>
         </div>
 
         {isDemo && (
