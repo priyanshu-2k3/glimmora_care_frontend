@@ -830,6 +830,8 @@ export interface AdminStatsOut {
   total_organizations: number
   total_assignments: number
   new_users_last_30_days: number
+  monthly_uploads: number
+  pending_invites: number
 }
 
 export interface AuditLogOut {
@@ -1147,6 +1149,13 @@ export const consentApi = {
     }),
 
   getHistory: () => apiFetch<ConsentRequest[]>('/consent/history'),
+
+  /** Doctor: list all pending outgoing requests sent by self */
+  getMyPending: () => apiFetch<ConsentRequest[]>('/consent/requests/my-pending'),
+
+  /** Doctor: cancel a specific pending outgoing request */
+  cancelRequest: (id: string) =>
+    apiFetch<ConsentRequest>(`/consent/requests/${id}/cancel`, { method: 'DELETE' }),
 
   /** Patient: proactively grant access to a doctor without a prior request */
   grantDirect: (doctor_email: string, scope: string[], message?: string, expires_at?: string) =>

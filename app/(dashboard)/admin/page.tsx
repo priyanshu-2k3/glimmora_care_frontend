@@ -102,8 +102,8 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
         <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/patients"           color="#D97706" />
         <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
         <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
-        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : 0}                                     href="/admin/logs"               color="#0D9488" />
-        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : 0}                                     href="/admin/manage-team"        color="#7C3AED" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : (stats?.monthly_uploads ?? 0)}        href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : (stats?.pending_invites ?? 0)}        href="/admin/manage-team"        color="#7C3AED" />
       </div>
 
       {/* Flagged Audit Events strip */}
@@ -418,12 +418,20 @@ export default function AdminDashboardPage() {
       adminApi.getAuditLogs({ limit: 4 }).catch(() => []),
       adminApi.listUsers().catch(() => [] as AdminUserOut[]),
       adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
-    ]).then(([s, l, users, orgs]) => {
+      adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
+      adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
+    ]).then(([s, l, users, orgs, doctors, patients]) => {
       if (!active) return
       setStats(s)
       setLogs(Array.isArray(l) ? l : [])
       const userMap: Record<string, AdminUserOut> = {}
       users.forEach((u) => { userMap[u.id] = u })
+      doctors.forEach((d) => {
+        if (!userMap[d.id]) userMap[d.id] = { id: d.id, email: d.email, first_name: d.first_name ?? '', last_name: d.last_name ?? '', role: 'doctor', is_active: true, email_verified: true, organization: d.org_id ?? null, location: null, created_at: null }
+      })
+      patients.forEach((p) => {
+        if (!userMap[p.id]) userMap[p.id] = { id: p.id, email: p.email, first_name: p.first_name ?? '', last_name: p.last_name ?? '', role: 'patient', is_active: true, email_verified: true, organization: null, location: null, created_at: null }
+      })
       const orgMap: Record<string, AdminOrgItem> = {}
       orgs.forEach((o) => { orgMap[o.id] = o })
       setIdMaps({ users: userMap, orgs: orgMap })
