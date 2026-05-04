@@ -3,7 +3,8 @@
 import { use, useEffect, useState } from 'react'
 import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-import { intakeApi, consentApi, getAccessToken, type ConsentRequest } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
+import { intakeApi, consentApi, getAccessToken, type ConsentRequest, orgApi } from '@/lib/api'
 import type { HealthRecord, MarkerOut } from '@/types/intake'
 import type { HealthMarker, HealthRecord as MockHealthRecord } from '@/types/health'
 import { MOCK_PATIENTS } from '@/data/patients'
@@ -12,6 +13,7 @@ import { MarkerExtractionForm } from '@/components/intake/MarkerExtractionForm'
 import { AuditTrailViewer } from '@/components/vault/AuditTrailViewer'
 import { ConsentManager, type ConsentEntry } from '@/components/vault/ConsentManager'
 import { EncryptionBadge } from '@/components/vault/EncryptionBadge'
+import { EditMetadataModal } from '@/components/vault/EditMetadataModal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
@@ -80,6 +82,8 @@ function getFileType(url: string, filename?: string | null): 'pdf' | 'image' | '
 
 export default function VaultRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { user } = useAuth()
+  const isDoctor = user?.role === 'doctor'
   const [record, setRecord] = useState<HealthRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -87,6 +91,8 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [activeConsents, setActiveConsents] = useState<ConsentRequest[]>([])
   const [fileUrl, setFileUrl] = useState<{ url: string; filename?: string | null } | null>(null)
   const [actionToast, setActionToast] = useState<string | null>(null)
+  const [isEditingMetadata, setIsEditingMetadata] = useState(false)
+  const [patientName, setPatientName] = useState<string | null>(null)
 
   function fireToast(text: string) {
     setActionToast(text)
@@ -107,6 +113,20 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!record?.patientId || !getAccessToken() || !user) return
+    const canViewAll = user.role === 'doctor' || user.role === 'admin' || user.role === 'super_admin'
+    if (!canViewAll) return
+
+    const fetchPatients = user.role === 'doctor' ? orgApi.getDoctorPatients() : orgApi.listPatients()
+    fetchPatients.then((patients) => {
+      const p = patients.find(pat => pat.patient_id === record.patientId)
+      if (p) {
+        setPatientName(`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email)
+      }
+    }).catch(() => {})
+  }, [record?.patientId, user])
 
   useEffect(() => {
     if (!id) return
@@ -189,6 +209,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   )
 
   const patient = MOCK_PATIENTS.find((p) => p.id === record.patientId)
+  const displayPatientName = patientName ?? patient?.name ?? record.patientId
   const auditEntries: never[] = []
 
   const TABS = [
@@ -205,6 +226,14 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
           <span>Health Data</span>
           <ChevronRight className="w-3 h-3" />
           <Link href="/vault" className="hover:text-gold-deep transition-colors">Vault</Link>
+          {displayPatientName && (
+            <>
+              <ChevronRight className="w-3 h-3" />
+              <Link href={`/vault?patient=${record.patientId}`} className="hover:text-gold-deep transition-colors">
+                {displayPatientName}
+              </Link>
+            </>
+          )}
           <ChevronRight className="w-3 h-3" />
           <span className="text-gold-deep truncate max-w-[160px]">{record.title}</span>
         </div>
@@ -212,7 +241,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
         <div className="flex items-start justify-between gap-4">
           <div>
             <Link
-              href="/vault"
+              href={record.patientId ? `/vault?patient=${record.patientId}` : "/vault"}
               className="inline-flex items-center gap-1.5 text-xs text-greige hover:text-charcoal-deep transition-colors font-body mb-3"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -224,7 +253,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
             <p className="text-sm text-stone font-body mt-1.5">
               {RECORD_TYPE_LABELS[record.type]}
               {` · ${record.source}`}
-              {patient && ` · ${patient.name}`}
+              {displayPatientName && ` · ${displayPatientName}`}
             </p>
           </div>
           <div className="shrink-0 hidden sm:flex flex-col gap-2 mt-6">
@@ -232,7 +261,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
               <Download className="w-4 h-4" />
               Export CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={() => fireToast('Edit metadata — coming soon (mock)')}>
+            <Button variant="outline" size="sm" onClick={() => setIsEditingMetadata(true)}>
               <Edit2 className="w-4 h-4" />
               Edit metadata
             </Button>
@@ -484,6 +513,18 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
           )}
         </Tabs>
       </div>
+
+      {isEditingMetadata && record && (
+        <EditMetadataModal
+          record={record}
+          onClose={() => setIsEditingMetadata(false)}
+          onSave={async (data) => {
+            await intakeApi.updateRecordMetadata(id, data)
+            setRecord({ ...record, ...data })
+            fireToast('Metadata updated successfully')
+          }}
+        />
+      )}
     </div>
   )
 }

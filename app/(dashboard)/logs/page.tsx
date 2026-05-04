@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut, AdminUserOut, AdminOrgItem } from '@/lib/api'
@@ -124,9 +126,11 @@ function FilterPills({ label, options, value, onChange }: FilterPillsProps) {
 
 export default function LogsPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const PAGE_SIZE = 20
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const fromConsent = searchParams.get('from') === 'consent'
 
   // Shared
   const [rows, setRows]     = useState<LogRow[]>([])
@@ -212,8 +216,20 @@ export default function LogsPage() {
       ])
         .then(([trail, sysLogs]) => {
           const merged: LogRow[] = [...trail.map(fromTrail), ...sysLogs.map(fromAdminLog)]
-          merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
-          setRows(merged)
+          // Deduplicate by id, and also by action+timestamp(minute)+detail to prevent logical duplicates
+          const seen = new Set<string>()
+          const uniqueRows = merged.filter((row) => {
+            // Truncate timestamp to YYYY-MM-DDTHH:mm to group events happening in the same minute
+            // This matches the UI display which only shows down to the minute.
+            const minuteTimestamp = row.timestamp.substring(0, 16)
+            const compositeKey = `${row.action}|${minuteTimestamp}|${row.detail}`
+            if (seen.has(row.id) || seen.has(compositeKey)) return false
+            seen.add(row.id)
+            seen.add(compositeKey)
+            return true
+          })
+          uniqueRows.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+          setRows(uniqueRows)
         })
         .finally(() => setLoading(false))
     }
@@ -267,6 +283,19 @@ export default function LogsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
+        {fromConsent && (
+          <div className="mb-4">
+            <Link
+              href="/consent"
+              aria-label="Back to Consent Management"
+              title="Back to Consent Management"
+              className="inline-flex items-center gap-1.5 px-2 py-1.5 text-greige hover:text-charcoal-deep hover:bg-parchment rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-body font-medium">Back to Consent</span>
+            </Link>
+          </div>
+        )}
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Audit Logs</h1>
         <p className="text-sm text-greige font-body mt-1">
           {isAdmin ? 'Full system audit trail — all user actions' : 'Immutable record of all activity on your health data'}
@@ -385,7 +414,7 @@ export default function LogsPage() {
         </div>
       )}
 
-      <Tabs tabs={TABS}>
+      <Tabs tabs={TABS} defaultTab={fromConsent ? 'access' : undefined}>
         {(activeTab) => {
           const list = activeTab === 'activity' ? pageSlice : pageSlice.filter((r) => ACCESS_ACTIONS.has(r.action))
           const tabTotal = activeTab === 'activity' ? displayRows.length : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action)).length
