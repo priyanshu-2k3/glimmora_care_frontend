@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination } from '@/components/ui/Pagination'
-import { adminApi, type AuditLogOut, type AdminUserOut, type AdminOrgItem } from '@/lib/api'
+import { adminApi, type AuditLogOut, type AdminUserOut, type AdminOrgItem, type AdminDoctorOut, type AdminPatientOut } from '@/lib/api'
 
 // Friendly label resolution for "user:abc…" / "org:abc…" refs.
 function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
@@ -95,9 +95,18 @@ export default function AdminLogsPage() {
     Promise.all([
       adminApi.listUsers('').catch(() => [] as AdminUserOut[]),
       adminApi.listAllOrgs('').catch(() => [] as AdminOrgItem[]),
-    ]).then(([u, o]) => {
+      adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
+      adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
+    ]).then(([u, o, doctors, patients]) => {
       if (!active) return
-      setUsers(Object.fromEntries(u.map((x) => [x.id, x])))
+      const userMap: Record<string, AdminUserOut> = Object.fromEntries(u.map((x) => [x.id, x]))
+      doctors.forEach((d) => {
+        if (!userMap[d.id]) userMap[d.id] = { id: d.id, email: d.email, first_name: d.first_name ?? '', last_name: d.last_name ?? '', role: 'doctor', is_active: true, email_verified: true, organization: d.org_id ?? null, location: null, created_at: null }
+      })
+      patients.forEach((p) => {
+        if (!userMap[p.id]) userMap[p.id] = { id: p.id, email: p.email, first_name: p.first_name ?? '', last_name: p.last_name ?? '', role: 'patient', is_active: true, email_verified: true, organization: null, location: null, created_at: null }
+      })
+      setUsers(userMap)
       setOrgs(Object.fromEntries(o.map((x) => [x.id, x])))
     })
     return () => { active = false }

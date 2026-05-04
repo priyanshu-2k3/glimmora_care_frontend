@@ -561,9 +561,12 @@ function AdminView({ userName }: { userName: string }) {
 
       {/* Flagged Audit Events strip */}
       <div className="bg-white border border-sand-light rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+          </div>
+          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {[

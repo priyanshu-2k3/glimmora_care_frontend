@@ -163,9 +163,18 @@ export default function LogsPage() {
     Promise.all([
       adminApi.listUsers('').catch(() => [] as AdminUserOut[]),
       adminApi.listAllOrgs('').catch(() => [] as AdminOrgItem[]),
-    ]).then(([u, o]) => {
+      adminApi.listDoctors().catch(() => [] as import('@/lib/api').AdminDoctorOut[]),
+      adminApi.listPatients().catch(() => [] as import('@/lib/api').AdminPatientOut[]),
+    ]).then(([u, o, doctors, patients]) => {
       if (!alive) return
-      setUsers(Object.fromEntries(u.map((x) => [x.id, x])))
+      const userMap: Record<string, AdminUserOut> = Object.fromEntries(u.map((x) => [x.id, x]))
+      doctors.forEach((d) => {
+        if (!userMap[d.id]) userMap[d.id] = { id: d.id, email: d.email, first_name: d.first_name ?? '', last_name: d.last_name ?? '', role: 'doctor', is_active: true, email_verified: true, organization: d.org_id ?? null, location: null, created_at: null }
+      })
+      patients.forEach((p) => {
+        if (!userMap[p.id]) userMap[p.id] = { id: p.id, email: p.email, first_name: p.first_name ?? '', last_name: p.last_name ?? '', role: 'patient', is_active: true, email_verified: true, organization: null, location: null, created_at: null }
+      })
+      setUsers(userMap)
       setOrgs(Object.fromEntries(o.map((x) => [x.id, x])))
     })
     return () => { alive = false }
@@ -258,9 +267,13 @@ export default function LogsPage() {
   // reset page on patient filters change
   useEffect(() => { setPage(1) }, [actionType, dateFrom, dateTo])
 
-  const totalEvents = rows.length
-  const viewCount   = rows.filter((r) => r.action === 'read' || r.action === 'read_list').length
-  const exportCount = rows.filter((r) => r.action === 'download_url').length
+  const totalEvents  = rows.length
+  const viewCount    = isAdmin
+    ? rows.filter((r) => r.severity === 'warning').length
+    : rows.filter((r) => r.action === 'read' || r.action === 'read_list').length
+  const exportCount  = isAdmin
+    ? rows.filter((r) => r.severity === 'critical').length
+    : rows.filter((r) => r.action === 'download_url').length
 
   const adminActions = [...new Set(rows.map((r) => r.action))].sort()
 
@@ -276,9 +289,9 @@ export default function LogsPage() {
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Events', value: loading ? '—' : totalEvents, icon: Activity },
-          { label: 'Record Views', value: loading ? '—' : viewCount,   icon: Eye      },
-          { label: 'Downloads',    value: loading ? '—' : exportCount,  icon: Download },
+          { label: 'Total Events',                          value: loading ? '—' : totalEvents, icon: Activity },
+          { label: isAdmin ? 'Warnings'    : 'Record Views', value: loading ? '—' : viewCount,   icon: isAdmin ? AlertTriangle : Eye      },
+          { label: isAdmin ? 'Critical'    : 'Downloads',    value: loading ? '—' : exportCount,  icon: isAdmin ? Shield        : Download },
         ].map((s) => (
           <Card key={s.label} className="p-4 text-center">
             <s.icon className="w-4 h-4 text-gold-soft mx-auto mb-1.5" />

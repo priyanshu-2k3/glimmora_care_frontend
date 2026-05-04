@@ -326,6 +326,8 @@ function DoctorConsentView() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>([...ALL_SCOPES])
   const [reqLoading, setReqLoading] = useState(false)
   const [reqMsg, setReqMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -353,17 +355,46 @@ function DoctorConsentView() {
 
   async function handleRequestAccess() {
     if (!reqPatientEmail || selectedScopes.length === 0) return
+    if (!reqReason.trim()) {
+      setReqMsg({ ok: false, text: 'Please provide a reason for the request.' })
+      return
+    }
     setReqLoading(true)
     setReqMsg(null)
+    setPendingRequestId(null)
     try {
-      await consentApi.request(reqPatientEmail, selectedScopes, reqReason || undefined)
+      await consentApi.request(reqPatientEmail, selectedScopes, reqReason.trim())
       setReqMsg({ ok: true, text: 'Request sent. The patient will be notified.' })
       setReqPatientEmail(''); setReqReason('')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send request'
       setReqMsg({ ok: false, text: msg })
+      // If a pending request already exists, fetch its ID so we can offer a cancel button
+      if (msg.toLowerCase().includes('pending')) {
+        consentApi.getMyPending().then((pending) => {
+          const match = pending.find((r) => {
+            const email = r.patient_email ?? ''
+            return email === reqPatientEmail || r.patient_id === reqPatientEmail
+          })
+          if (match) setPendingRequestId(match.id)
+        }).catch(() => {})
+      }
     } finally {
       setReqLoading(false)
+    }
+  }
+
+  async function handleCancelPending() {
+    if (!pendingRequestId) return
+    setCancelLoading(true)
+    try {
+      await consentApi.cancelRequest(pendingRequestId)
+      setPendingRequestId(null)
+      setReqMsg({ ok: true, text: 'Previous request cancelled. You can now send a new one.' })
+    } catch (e: unknown) {
+      setReqMsg({ ok: false, text: e instanceof Error ? e.message : 'Failed to cancel request.' })
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -438,14 +469,26 @@ function DoctorConsentView() {
           <textarea
             value={reqReason}
             onChange={(e) => setReqReason(e.target.value)}
-            placeholder="Reason for request (optional — helps the patient decide)…"
+            placeholder="Reason for request (required — helps the patient decide)…"
             rows={2}
             className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
           />
           {reqMsg && (
-            <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
-              {reqMsg.text}
-            </p>
+            <div>
+              <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
+                {reqMsg.text}
+              </p>
+              {pendingRequestId && !reqMsg.ok && (
+                <button
+                  type="button"
+                  onClick={handleCancelPending}
+                  disabled={cancelLoading}
+                  className="mt-1 text-xs font-body text-gold-deep hover:text-gold-muted underline transition-colors disabled:opacity-50"
+                >
+                  {cancelLoading ? 'Cancelling…' : 'Cancel existing request and send a new one →'}
+                </button>
+              )}
+            </div>
           )}
           <Button
             size="sm"
