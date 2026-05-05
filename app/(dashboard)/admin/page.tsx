@@ -28,8 +28,11 @@ type IdMaps = {
 function parseRefs(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
   if (!ref) return []
   return ref.split(' ').map(part => {
-    const m = part.match(/^(user|org):(.+)$/)
-    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
+    const m = part.match(/^(user|org|patient|doctor|admin):(.+)$/)
+    if (m) {
+      const kind = (m[1] === 'org') ? 'org' : 'user'
+      return { kind, id: m[2] }
+    }
     return { kind: null, id: part }
   })
 }
@@ -80,6 +83,16 @@ const SEVERITY_DOT: Record<string, string> = {
   info: 'bg-success-DEFAULT',
 }
 
+// ── Module-level cache so navigating away and back doesn't re-fetch ───────────
+let _cache: {
+  stats: AdminStatsOut | null
+  logs: AuditLogOut[]
+  idMaps: IdMaps
+  patients: AdminPatientOut[]
+  doctors: AdminDoctorOut[]
+  orgs: AdminOrgItem[]
+} | null = null
+
 // ── Org-scoped admin view ──────────────────────────────────────────────────────
 
 function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
@@ -99,30 +112,41 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/patients"           color="#D97706" />
-        <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
-        <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
-        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : (stats?.monthly_uploads ?? 0)}        href="/admin/logs"               color="#0D9488" />
-        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : (stats?.pending_invites ?? 0)}        href="/admin/manage-team"        color="#7C3AED" />
+        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}         href="/admin/patients"           color="#D97706" />
+        <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}          href="/admin/manage-team"        color="#2563EB" />
+        <StatCard icon={ClipboardList} label="Assignments"      value={loading ? '—' : (stats?.total_assignments ?? 0)}      href="/admin/doctor-management"  color="#DC2626" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : (stats?.monthly_uploads ?? 0)}       href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : (stats?.pending_invites ?? 0)}       href="/admin/manage-team"        color="#7C3AED" />
       </div>
 
-      {/* Flagged Audit Events strip */}
+      {/* Recent Audit Events strip — real data from logs prop */}
       <div className="bg-white border border-sand-light rounded-2xl p-4">
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Recent Audit Events</span>
           </div>
-          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
+          <Link href="/admin/logs" className="text-[10px] text-gold-deep font-body hover:underline">View all</Link>
         </div>
         <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Off-hours record export', color: 'bg-warning-soft text-warning-DEFAULT' },
-            { label: 'Repeated consent override', color: 'bg-error-soft text-[#B91C1C]' },
-            { label: 'New admin assigned · 2h ago', color: 'bg-azure-whisper text-sapphire-deep' },
-          ].map((c) => (
-            <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
-          ))}
+          {loading ? (
+            <span className="text-[11px] text-greige font-body italic">Loading…</span>
+          ) : logs.length === 0 ? (
+            <span className="text-[11px] text-greige font-body italic">No recent audit events.</span>
+          ) : (
+            logs.slice(0, 4).map((log) => {
+              const color = log.severity === 'critical'
+                ? 'bg-error-soft text-[#B91C1C]'
+                : log.severity === 'warning'
+                ? 'bg-warning-soft text-warning-DEFAULT'
+                : 'bg-azure-whisper text-sapphire-deep'
+              return (
+                <span key={log.id} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${color}`}>
+                  {log.action}
+                </span>
+              )
+            })
+          )}
         </div>
       </div>
 
@@ -202,31 +226,21 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
 
 // ── Super admin view ───────────────────────────────────────────────────────────
 
-function SuperAdminDashboard({ userName, stats, logs, loading, idMaps }: {
+function SuperAdminDashboard({ userName, stats, logs, loading, idMaps, patients: patientsProp, doctors: doctorsProp, orgs: orgsProp }: {
   userName: string
   stats: AdminStatsOut | null
   logs: AuditLogOut[]
   loading: boolean
   idMaps: IdMaps
+  patients: AdminPatientOut[]
+  doctors: AdminDoctorOut[]
+  orgs: AdminOrgItem[]
 }) {
   const [tab, setTab] = useState<'patients' | 'doctors' | 'orgs'>('patients')
-  const [patients, setPatients] = useState<AdminPatientOut[]>([])
-  const [doctors, setDoctors] = useState<AdminDoctorOut[]>([])
-  const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
-  const [listLoading, setListLoading] = useState(true)
-
-  useEffect(() => {
-    Promise.all([
-      adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
-      adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
-      adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
-    ]).then(([p, d, o]) => {
-      setPatients(p)
-      setDoctors(d)
-      setOrgs(o)
-      setListLoading(false)
-    })
-  }, [])
+  const patients = patientsProp
+  const doctors = doctorsProp
+  const orgs = orgsProp
+  const listLoading = loading
 
   return (
     <div className="space-y-6">
@@ -406,12 +420,16 @@ function SuperAdminDashboard({ userName, stats, logs, loading, idMaps }: {
 
 export default function AdminDashboardPage() {
   const { user } = useAuth()
-  const [stats, setStats] = useState<AdminStatsOut | null>(null)
-  const [logs, setLogs] = useState<AuditLogOut[]>([])
-  const [loading, setLoading] = useState(true)
-  const [idMaps, setIdMaps] = useState<IdMaps>({ users: {}, orgs: {} })
+  const [stats, setStats] = useState<AdminStatsOut | null>(_cache?.stats ?? null)
+  const [logs, setLogs] = useState<AuditLogOut[]>(_cache?.logs ?? [])
+  const [loading, setLoading] = useState(_cache === null)
+  const [idMaps, setIdMaps] = useState<IdMaps>(_cache?.idMaps ?? { users: {}, orgs: {} })
+  const [patients, setPatients] = useState<AdminPatientOut[]>(_cache?.patients ?? [])
+  const [doctors, setDoctors] = useState<AdminDoctorOut[]>(_cache?.doctors ?? [])
+  const [orgs, setOrgs] = useState<AdminOrgItem[]>(_cache?.orgs ?? [])
 
   useEffect(() => {
+    if (_cache !== null) return // already loaded this session
     let active = true
     Promise.all([
       adminApi.getStats().catch(() => null),
@@ -422,8 +440,6 @@ export default function AdminDashboardPage() {
       adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
     ]).then(([s, l, users, orgs, doctors, patients]) => {
       if (!active) return
-      setStats(s)
-      setLogs(Array.isArray(l) ? l : [])
       const userMap: Record<string, AdminUserOut> = {}
       users.forEach((u) => { userMap[u.id] = u })
       doctors.forEach((d) => {
@@ -434,7 +450,15 @@ export default function AdminDashboardPage() {
       })
       const orgMap: Record<string, AdminOrgItem> = {}
       orgs.forEach((o) => { orgMap[o.id] = o })
-      setIdMaps({ users: userMap, orgs: orgMap })
+      const newIdMaps = { users: userMap, orgs: orgMap }
+      const newLogs = Array.isArray(l) ? l : []
+      _cache = { stats: s, logs: newLogs, idMaps: newIdMaps, patients, doctors, orgs }
+      setStats(s)
+      setLogs(newLogs)
+      setIdMaps(newIdMaps)
+      setPatients(patients)
+      setDoctors(doctors)
+      setOrgs(orgs)
       setLoading(false)
     })
     return () => { active = false }
@@ -450,6 +474,9 @@ export default function AdminDashboardPage() {
             logs={logs}
             loading={loading}
             idMaps={idMaps}
+            patients={patients}
+            doctors={doctors}
+            orgs={orgs}
           />
         ) : (
           <AdminDashboard

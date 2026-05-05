@@ -10,10 +10,15 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 
 const SCOPE_LABELS: Record<string, string> = {
-  view_records: 'View records',
-  view_trends: 'View trends',
-  export_summary: 'Export summary',
-  add_records: 'Add records',
+  view_records: 'View Records',
+  view_trends: 'View Trends',
+  view_markers: 'View Markers',
+  view_timeline: 'View Timeline',
+  export_summary: 'Export Summary',
+  export_data: 'Export Data',
+  add_records: 'Add Records',
+  edit_records: 'Edit Records',
+  share_records: 'Share Records',
 }
 
 function daysUntil(iso: string) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, Stethoscope, Loader2, X, FileText } from 'lucide-react'
+import { Search, Stethoscope, X, FileText } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -18,31 +18,60 @@ export default function ManageDoctorsPage() {
   const [orgMap, setOrgMap] = useState<Record<string, AdminOrgItem>>({})
   const [userMap, setUserMap] = useState<Record<string, any>>({})
 
+  // Single combined fetch — doctors + org/user maps all load together so the
+  // table never renders with raw IDs before the name maps arrive.
   useEffect(() => {
+    let active = true
+    setLoading(true)
     Promise.all([
+      adminApi.listDoctors(''),
       adminApi.listAllOrgs(''),
-      adminApi.listUsers('')
-    ]).then(([orgs, users]) => {
+      adminApi.listUsers(''),
+    ]).then(([docs, orgs, users]) => {
+      if (!active) return
+      setDoctors(docs)
       setOrgMap(Object.fromEntries(orgs.map((o) => [o.id, o])))
-      setUserMap(Object.fromEntries(users.map((u) => [u.id, u])))
-    }).catch(() => {})
+      const uMap: Record<string, any> = {}
+      users.forEach((u) => { uMap[u.id] = u })
+      docs.forEach((d) => {
+        if (!uMap[d.id]) uMap[d.id] = { id: d.id, email: d.email, first_name: d.first_name ?? '', last_name: d.last_name ?? '' }
+      })
+      setUserMap(uMap)
+    }).catch(() => {
+      if (active) setDoctors([])
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
-  function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string } {
-    if (!ref) return { kind: null, id: '' }
-    const m = ref.match(/^(user|org):(.+)$/)
-    if (m) return { kind: m[1] as 'user' | 'org', id: m[2] }
-    return { kind: null, id: ref }
+  // Search re-fetch (doctors only — maps stay cached)
+  useEffect(() => {
+    if (search === '') return
+    const t = setTimeout(() => {
+      adminApi.listDoctors(search).then(setDoctors).catch(() => setDoctors([]))
+    }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  function parseRef(ref: string | null | undefined): { kind: 'user' | 'org' | null; id: string }[] {
+    if (!ref) return []
+    return ref.split(' ').map((part) => {
+      const m = part.match(/^(user|org|patient|doctor|admin):(.+)$/)
+      if (m) return { kind: (m[1] === 'org' ? 'org' : 'user') as 'user' | 'org', id: m[2] }
+      return { kind: null as null, id: part }
+    })
   }
 
   function resolveName(refValue: string | null | undefined): string | null {
     if (!refValue) return null
-    const { kind, id } = parseRef(refValue)
-    const u = (kind === 'user' || kind === null) ? userMap[id] : undefined
-    const o = (kind === 'org'  || kind === null) ? orgMap[id]  : undefined
-    if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
-    if (o) return o.name
-    return null
+    const parts = parseRef(refValue)
+    const names = parts.map(({ kind, id }) => {
+      const u = (kind === 'user' || kind === null) ? userMap[id] : undefined
+      const o = (kind === 'org'  || kind === null) ? orgMap[id]  : undefined
+      if (u) return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email
+      if (o) return o.name
+      return null
+    }).filter(Boolean)
+    return names.length > 0 ? names.join(' · ') : null
   }
 
   useEffect(() => {
@@ -52,8 +81,6 @@ export default function ManageDoctorsPage() {
     adminApi.getAuditLogs({ search: profileTarget.email, limit: 100 })
       .then((logs) => {
         if (!active) return
-        // Client-side: keep only entries that involve this doctor's ID or email.
-        // Protects against backends that ignore the search param and return all logs.
         const id = profileTarget.id
         const email = profileTarget.email.toLowerCase()
         const filtered = logs.filter((l) =>
@@ -68,24 +95,6 @@ export default function ManageDoctorsPage() {
       .finally(() => { if (active) setDoctorLogsLoading(false) })
     return () => { active = false }
   }, [profileTarget])
-
-  async function load(s = search) {
-    setLoading(true)
-    try {
-      const data = await adminApi.listDoctors(s)
-      setDoctors(data)
-    } catch {
-      setDoctors([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { load('') }, [])
-  useEffect(() => {
-    const t = setTimeout(() => load(search), 350)
-    return () => clearTimeout(t)
-  }, [search])
 
   return (
     <RoleGuard allowed={['super_admin', 'admin']}>
@@ -113,8 +122,16 @@ export default function ManageDoctorsPage() {
         <Card>
           <CardContent>
             {loading ? (
-              <div className="py-10 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-gold-soft animate-spin" />
+              <div className="space-y-2 py-2">
+                {[1,2,3,4,5].map((i) => (
+                  <div key={i} className="flex items-center gap-4 py-2">
+                    <div className="h-4 bg-sand-light rounded animate-pulse flex-1" />
+                    <div className="h-4 bg-sand-light rounded animate-pulse w-40" />
+                    <div className="h-4 bg-sand-light rounded animate-pulse w-28" />
+                    <div className="h-4 bg-sand-light rounded animate-pulse w-12" />
+                    <div className="h-4 bg-sand-light rounded animate-pulse w-20" />
+                  </div>
+                ))}
               </div>
             ) : doctors.length === 0 ? (
               <p className="text-sm text-greige font-body py-8 text-center">No doctors.</p>
@@ -204,7 +221,14 @@ export default function ManageDoctorsPage() {
                   </p>
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
                     {doctorLogsLoading ? (
-                      <p className="text-xs text-greige italic">Loading activity…</p>
+                      <div className="space-y-2">
+                        {[1,2,3].map((i) => (
+                          <div key={i} className="flex gap-2">
+                            <div className="h-3 w-24 bg-sand-light rounded animate-pulse shrink-0" />
+                            <div className="h-3 bg-sand-light rounded animate-pulse flex-1" />
+                          </div>
+                        ))}
+                      </div>
                     ) : doctorLogs.length === 0 ? (
                       <p className="text-xs text-greige italic">No recent activity for this doctor.</p>
                     ) : (

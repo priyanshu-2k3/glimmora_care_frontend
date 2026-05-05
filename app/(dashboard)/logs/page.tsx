@@ -35,6 +35,27 @@ function getMeta(action: string) {
   return ACTION_META[action] ?? { icon: Activity, label: action, color: 'text-greige', bg: 'bg-parchment' }
 }
 
+function buildDescription(row: LogRow): string {
+  const d = row.detail?.trim() || ''
+  switch (row.action) {
+    case 'upload':         return `A new health record was uploaded${d ? ` — ${d}` : ''}.`
+    case 'confirm':        return `A health record was confirmed${d ? ` — ${d}` : ''}.`
+    case 'manual_entry':   return `A health record was added via manual entry${d ? ` — ${d}` : ''}.`
+    case 'read':           return `A health record was viewed${d ? ` (${d})` : ''}.`
+    case 'read_list':      return `The health records list was accessed${d ? ` (${d})` : ''}.`
+    case 'download_url':   return `A download link was issued for a health record${d ? ` — ${d}` : ''}.`
+    case 'share':          return `Access to health records was shared with a doctor${d ? ` — ${d}` : ''}.`
+    case 'revoke_share':   return `A doctor's access to health records was revoked${d ? ` — reason: ${d}` : ''}.`
+    case 'bulk_import':    return `Multiple health records were imported in bulk${d ? ` — ${d}` : ''}.`
+    case 'assign_patient': return `A patient was assigned to a doctor${d ? ` — ${d}` : ''}.`
+    case 'invite_doctor':  return `A doctor was invited to the organisation${d ? ` — ${d}` : ''}.`
+    case 'update_role':    return `A user's role was updated${d ? ` — ${d}` : ''}.`
+    case 'delete_user':    return `A user account was deleted${d ? ` — ${d}` : ''}.`
+    case 'ai_analysis':    return `AI analysis was performed on health data${d ? ` — ${d}` : ''}.`
+    default:               return d || `Action recorded: ${row.action}.`
+  }
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
@@ -50,44 +71,94 @@ interface LogRow {
   id: string
   action: string
   actor: string
+  target: string | null
+  recordId: string | null
   detail: string
   severity?: string
   timestamp: string
 }
 
 function fromTrail(e: AuditTrailEntry): LogRow {
-  return { id: e.id, action: e.action, actor: '', detail: e.detail, timestamp: e.timestamp }
+  return { id: e.id, action: e.action, actor: '', target: null, recordId: e.record_id ?? null, detail: e.detail, timestamp: e.timestamp }
 }
 function fromAdminLog(e: AuditLogOut): LogRow {
-  return { id: e.id, action: e.action, actor: e.performed_by, detail: e.detail ?? '', severity: e.severity, timestamp: e.timestamp }
+  return { id: e.id, action: e.action, actor: e.performed_by, target: e.target ?? null, recordId: null, detail: e.detail ?? '', severity: e.severity, timestamp: e.timestamp }
 }
 
 function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
+  const [expanded, setExpanded] = useState(false)
   const meta = getMeta(row.action)
   const Icon = meta.icon
+  const description = buildDescription(row)
   return (
     <div className="flex items-start gap-3 py-4 border-b border-sand-light last:border-0">
       <div className={cn('w-9 h-9 rounded-full flex items-center justify-center shrink-0', meta.bg)}>
         <Icon className={cn('w-4 h-4', meta.color)} />
       </div>
       <div className="flex-1 min-w-0">
+        {/* Title row */}
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <p className="text-sm font-body font-medium text-charcoal-deep">{meta.label}</p>
-          {row.severity && <Badge variant="default" className="text-[10px]">{row.severity}</Badge>}
+          {row.severity && row.severity !== 'info' && (
+            <Badge variant={row.severity === 'critical' ? 'error' : row.severity === 'warning' ? 'warning' : 'default'} className="text-[10px] capitalize">{row.severity}</Badge>
+          )}
         </div>
-        <p className="text-xs text-stone font-body leading-relaxed">{row.detail || '—'}</p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
+
+        {/* Human-readable description */}
+        <p className="text-xs text-stone font-body leading-relaxed">{description}</p>
+
+        {/* Affected / actor chips */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
           {row.actor && (
-            <>
-              <User className="w-3 h-3 text-greige" />
-              <span className="text-[11px] text-greige font-body truncate max-w-[200px]">
+            <span className="inline-flex items-center gap-1 text-[11px] text-greige font-body">
+              <User className="w-3 h-3 shrink-0" />
+              <span className="font-medium text-charcoal-warm">By:</span>
+              <span className="truncate max-w-[180px]">
                 <FriendlyRef refValue={row.actor} maps={idMaps} inline />
               </span>
+            </span>
+          )}
+          {row.target && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-greige font-body">
+              <Shield className="w-3 h-3 shrink-0" />
+              <span className="font-medium text-charcoal-warm">Affected:</span>
+              <span className="truncate max-w-[180px]">
+                <FriendlyRef refValue={row.target} maps={idMaps} inline />
+              </span>
+            </span>
+          )}
+          {row.recordId && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-greige font-body">
+              <FileText className="w-3 h-3 shrink-0" />
+              <span className="font-medium text-charcoal-warm">Record:</span>
+              <span className="truncate max-w-[140px]">{row.recordId}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Timestamp + details toggle */}
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <span className="text-[11px] text-greige font-body">{formatDate(row.timestamp)}</span>
+          {row.detail && (
+            <>
               <span className="text-greige">·</span>
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="text-[11px] text-gold-deep font-body hover:underline transition-colors"
+              >
+                {expanded ? 'Hide details' : 'Details'}
+              </button>
             </>
           )}
-          <span className="text-[11px] text-greige font-body">{formatDate(row.timestamp)}</span>
         </div>
+
+        {/* Expandable raw detail */}
+        {expanded && row.detail && (
+          <div className="mt-2 px-3 py-2 bg-parchment border border-sand-light rounded-lg space-y-1">
+            <p className="text-[10px] font-body font-semibold text-greige uppercase tracking-wider">Raw detail</p>
+            <p className="text-[11px] font-body text-stone leading-relaxed break-words">{row.detail}</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -322,24 +393,6 @@ export default function LogsPage() {
             <p className="text-[11px] text-greige font-body">{s.label}</p>
           </Card>
         ))}
-      </div>
-
-      {/* Anomaly highlights */}
-      <div className="bg-white border border-sand-light rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-          <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Anomaly Highlights</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Off-hours login · 02:14 IST', color: 'bg-warning-soft text-warning-DEFAULT' },
-            { label: 'Foreign IP · 185.220.x.x', color: 'bg-error-soft text-[#B91C1C]' },
-            { label: '3× failed 2FA · pat_001', color: 'bg-warning-soft text-warning-DEFAULT' },
-            { label: 'Bulk export · 240 records', color: 'bg-azure-whisper text-sapphire-deep' },
-          ].map((c) => (
-            <span key={c.label} className={cn('text-[11px] font-body font-medium px-2.5 py-1 rounded-full', c.color)}>{c.label}</span>
-          ))}
-        </div>
       </div>
 
       {/* Search */}

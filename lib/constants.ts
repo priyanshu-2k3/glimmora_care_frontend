@@ -21,6 +21,11 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
     description: 'Full system access including agents and governance',
     color: 'bg-noir text-ivory-cream',
   },
+  family_admin: {
+    label: 'Family Admin',
+    description: 'Manage health records and consents on behalf of linked family members',
+    color: 'bg-sapphire-mist text-charcoal-deep',
+  },
 }
 
 /* ── Navigation items ─────────────────────────────────────────────────────────
@@ -28,12 +33,12 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
    ──────────────────────────────────────────────────────────────────────────── */
 
 export const NAV_ITEMS = [
-  /* ── Dashboard (everyone) ─── */
+  /* ── Dashboard (patient + doctor + admin; super_admin uses /admin as their home) ─── */
   {
     href: '/dashboard',
     label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'family_admin'] as Role[],
   },
 
   /* ── Health (patient + doctor only) ─── */
@@ -41,7 +46,7 @@ export const NAV_ITEMS = [
     href: '/vault',
     label: 'Health Vault',
     icon: 'Shield',
-    roles: ['patient', 'doctor'] as Role[],
+    roles: ['patient', 'doctor', 'family_admin'] as Role[],
   },
   {
     href: '/intake',
@@ -70,16 +75,16 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
   {
-    href: '/assign-doctor',
-    label: 'Find a Doctor',
-    icon: 'Stethoscope',
-    roles: ['patient'] as Role[],
-  },
-  {
     href: '/profiles',
     label: 'Dependent Profiles',
     icon: 'UserPlus',
     roles: ['patient'] as Role[],
+  },
+  {
+    href: '/family/members',
+    label: 'Family Members',
+    icon: 'Users',
+    roles: ['family_admin'] as Role[],
   },
   /* ── Organisation (admin/doctor: their own org · super_admin: global org mgmt) ─── */
   {
@@ -94,7 +99,7 @@ export const NAV_ITEMS = [
     href: '/consent',
     label: 'Consent Manager',
     icon: 'FileCheck',
-    roles: ['patient', 'doctor'] as Role[],
+    roles: ['patient', 'doctor', 'family_admin'] as Role[],
   },
   {
     href: '/emergency',
@@ -114,19 +119,19 @@ export const NAV_ITEMS = [
     href: '/logs',
     label: 'Logs',
     icon: 'ClipboardList',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin', 'family_admin'] as Role[],
   },
   {
     href: '/notifications',
     label: 'Notifications',
     icon: 'Bell',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin', 'family_admin'] as Role[],
   },
   {
     href: '/settings',
     label: 'Settings',
     icon: 'Settings',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin', 'super_admin', 'family_admin'] as Role[],
   },
 
   /* ── AI Assistant (patient + doctor) ─── */
@@ -148,9 +153,9 @@ export const NAV_ITEMS = [
   /* ── Admin operational routes ─── */
   {
     href: '/admin',
-    label: 'Admin Panel',
+    label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['super_admin'] as Role[],
+    roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/admin/manage-team',
@@ -223,9 +228,9 @@ export const SEARCHABLE_SUBPAGES = [
   { href: '/family/members',  label: 'Family Members',        roles: ['patient'] as Role[] },
   { href: '/family/invite',   label: 'Invite Family Member',  roles: ['patient'] as Role[] },
   { href: '/family/roles',    label: 'Family Roles & Permissions', roles: ['patient'] as Role[] },
-  { href: '/consent/active',  label: 'Active Consents',       roles: ['patient', 'doctor'] as Role[] },
-  { href: '/consent/requests',label: 'Consent Requests',      roles: ['patient', 'doctor'] as Role[] },
-  { href: '/consent/history', label: 'Consent History',       roles: ['patient', 'doctor'] as Role[] },
+  { href: '/consent/active',  label: 'Active Consents',       roles: ['patient', 'doctor', 'family_admin'] as Role[] },
+  { href: '/consent/requests',label: 'Consent Requests',      roles: ['patient', 'doctor', 'family_admin'] as Role[] },
+  { href: '/consent/history', label: 'Consent History',       roles: ['patient', 'doctor', 'family_admin'] as Role[] },
   { href: '/admin/doctor-management/assign',   label: 'Assign Patient to Doctor',   roles: ['admin', 'super_admin'] as Role[] },
   { href: '/admin/doctor-management/reassign', label: 'Reassign Patient',           roles: ['admin', 'super_admin'] as Role[] },
   { href: '/admin/doctor-management/share',    label: 'Share Consent',              roles: ['admin', 'super_admin'] as Role[] },

@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, consentApi, getAccessToken, type ConsentRequest, orgApi } from '@/lib/api'
@@ -9,6 +9,7 @@ import type { HealthRecord, MarkerOut } from '@/types/intake'
 import type { HealthMarker, HealthRecord as MockHealthRecord } from '@/types/health'
 import { MOCK_PATIENTS } from '@/data/patients'
 import { MOCK_HEALTH_RECORDS } from '@/data/health-records'
+import { MOCK_AUDIT_ENTRIES } from '@/data/audit-trail'
 import { MarkerExtractionForm } from '@/components/intake/MarkerExtractionForm'
 import { AuditTrailViewer } from '@/components/vault/AuditTrailViewer'
 import { ConsentManager, type ConsentEntry } from '@/components/vault/ConsentManager'
@@ -87,6 +88,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   const [record, setRecord] = useState<HealthRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [accessDenied, setAccessDenied] = useState(false)
   const [consents, setConsents] = useState<ConsentEntry[]>([])
   const [activeConsents, setActiveConsents] = useState<ConsentRequest[]>([])
   const [fileUrl, setFileUrl] = useState<{ url: string; filename?: string | null } | null>(null)
@@ -103,21 +105,48 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
     // Demo users have no JWT — show mock data only
     if (!getAccessToken()) {
       const mock = MOCK_HEALTH_RECORDS.find((r) => r.id === id)
-      if (mock) setRecord(adaptMockRecord(mock))
-      else setNotFound(true)
+      if (mock) {
+        // family_admin can only view records belonging to their linked dependents
+        if (user?.role === 'family_admin') {
+          const dependentIds = MOCK_PATIENTS
+            .filter((p) => p.familyAdminId === user.id)
+            .map((p) => p.id)
+          if (!dependentIds.includes(mock.patientId)) {
+            setAccessDenied(true)
+            setIsLoading(false)
+            return
+          }
+        }
+        setRecord(adaptMockRecord(mock))
+      } else {
+        setNotFound(true)
+      }
       setIsLoading(false)
       return
     }
     intakeApi.getRecord(id)
       .then(setRecord)
-      .catch(() => setNotFound(true))
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message.includes('403')) {
+          setAccessDenied(true)
+        } else {
+          setNotFound(true)
+        }
+      })
       .finally(() => setIsLoading(false))
   }, [id])
 
   useEffect(() => {
     if (!record?.patientId || !getAccessToken() || !user) return
-    const canViewAll = user.role === 'doctor' || user.role === 'admin' || user.role === 'super_admin'
+    const canViewAll = user.role === 'doctor' || user.role === 'admin' || user.role === 'super_admin' || user.role === 'family_admin'
     if (!canViewAll) return
+
+    // For family_admin in demo mode, resolve name from mock data
+    if (user.role === 'family_admin' && !getAccessToken()) {
+      const p = MOCK_PATIENTS.find((mp) => mp.id === record.patientId)
+      if (p) setPatientName(p.name)
+      return
+    }
 
     const fetchPatients = user.role === 'doctor' ? orgApi.getDoctorPatients() : orgApi.listPatients()
     fetchPatients.then((patients) => {
@@ -152,11 +181,20 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
   }, [id])
 
   async function handleShare(email: string, scope: string[]) {
-    await intakeApi.shareRecord(id, email, scope)
+    if (user?.role === 'family_admin' && record?.patientId) {
+      await consentApi.ownerGrantDirect(record.patientId, email, scope)
+    } else {
+      await intakeApi.shareRecord(id, email, scope)
+    }
   }
 
   async function handleRevoke(consentId: string) {
-    await intakeApi.revokeConsent(id, consentId)
+    if (user?.role === 'family_admin' && record?.patientId) {
+      const reason = window.prompt('Reason for revoking access:') ?? 'Revoked by family admin'
+      await consentApi.ownerRevoke(consentId, record.patientId, reason)
+    } else {
+      await intakeApi.revokeConsent(id, consentId)
+    }
   }
 
   function handleExport() {
@@ -201,6 +239,17 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
     </div>
   )
 
+  if (accessDenied) return (
+    <div className="max-w-4xl mx-auto text-center py-20 space-y-3">
+      <Shield className="w-12 h-12 text-greige mx-auto" />
+      <p className="font-display text-2xl text-charcoal-deep">Access Denied</p>
+      <p className="text-sm text-stone font-body mt-2">You do not have consent to view this record. Please request access from the patient.</p>
+      <Link href="/consent" className="inline-flex items-center gap-1.5 text-sm text-gold-deep hover:underline font-body mt-2">
+        Manage Consent →
+      </Link>
+    </div>
+  )
+
   if (notFound || !record) return (
     <div className="max-w-4xl mx-auto text-center py-20">
       <p className="font-display text-2xl text-charcoal-deep">Record not found</p>
@@ -210,7 +259,9 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
 
   const patient = MOCK_PATIENTS.find((p) => p.id === record.patientId)
   const displayPatientName = patientName ?? patient?.name ?? record.patientId
-  const auditEntries: never[] = []
+  const auditEntries = MOCK_AUDIT_ENTRIES.filter((e) => e.resourceId === id || e.patientId === record.patientId)
+  const canExport = !isDoctor || activeConsents.some((c) => c.scope.includes('export_summary'))
+  const canEditMetadata = !isDoctor
 
   const TABS = [
     { id: 'markers',  label: 'Health Markers', count: record.markers.length },
@@ -257,18 +308,37 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
           <div className="shrink-0 hidden sm:flex flex-col gap-2 mt-6">
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsEditingMetadata(true)}>
-              <Edit2 className="w-4 h-4" />
-              Edit metadata
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => fireToast('Re-OCR requested (mock)')}>
-              <RefreshCw className="w-4 h-4" />
-              Request re-OCR
-            </Button>
+            {canExport ? (
+              fileUrl ? (
+                <a
+                  href={fileUrl.url}
+                  download={fileUrl.filename ?? undefined}
+                  className="inline-flex items-center gap-2 text-sm font-body font-medium border border-sand-light rounded-xl px-3 py-2 hover:border-gold-soft/60 hover:bg-ivory-warm transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </a>
+              ) : (
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </Button>
+              )
+            ) : (
+              <div
+                className="inline-flex items-center gap-2 text-sm font-body text-greige border border-sand-light rounded-xl px-3 py-2 cursor-not-allowed opacity-60"
+                title="Your consent scope does not include data export"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </div>
+            )}
+            {canEditMetadata && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditingMetadata(true)}>
+                <Edit2 className="w-4 h-4" />
+                Edit metadata
+              </Button>
+            )}
           </div>
         </div>
         {actionToast && (
@@ -441,7 +511,9 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
                         Access Consent Management
                       </h2>
                       <p className="text-xs text-greige font-body mt-0.5">
-                        Control who can view this patient&apos;s health records
+                        {user?.role === 'family_admin'
+                          ? `Managing access on behalf of ${patientName ?? 'dependent'}`
+                          : 'Control who can view this patient\'s health records'}
                       </p>
                     </div>
 

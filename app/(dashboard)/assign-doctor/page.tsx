@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Stethoscope, Send, Building2, MapPin, Clock, CheckCircle, X } from 'lucide-react'
+import { Search, Send, Building2, MapPin, Clock, CheckCircle, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -13,27 +13,26 @@ import { Avatar } from '@/components/ui/Avatar'
 interface MockDoctor {
   id: string
   name: string
-  specialty: string
   org: string
   location: string
   rating: number
 }
 
 const MOCK_DIRECTORY: MockDoctor[] = [
-  { id: 'd_001', name: 'Dr. Anjali Verma',     specialty: 'Endocrinology',    org: 'Sunrise Health Clinic',     location: 'Mumbai',    rating: 4.9 },
-  { id: 'd_002', name: 'Dr. Rajeev Iyer',      specialty: 'Cardiology',       org: 'Apollo Speciality',         location: 'Bengaluru', rating: 4.8 },
-  { id: 'd_003', name: 'Dr. Meera Krishnan',   specialty: 'General Medicine', org: 'Sunrise Health Clinic',     location: 'Mumbai',    rating: 4.7 },
-  { id: 'd_004', name: 'Dr. Suresh Patel',     specialty: 'Diabetology',      org: 'Wellness Hub',              location: 'Ahmedabad', rating: 4.6 },
-  { id: 'd_005', name: 'Dr. Pooja Reddy',      specialty: 'Gynecology',       org: 'Apollo Speciality',         location: 'Hyderabad', rating: 4.9 },
-  { id: 'd_006', name: 'Dr. Arjun Singh',      specialty: 'Orthopedics',      org: 'Wellness Hub',              location: 'Delhi',     rating: 4.5 },
-  { id: 'd_007', name: 'Dr. Kavita Joshi',     specialty: 'Pediatrics',       org: 'Sunrise Health Clinic',     location: 'Pune',      rating: 4.8 },
-  { id: 'd_008', name: 'Dr. Naveen Kumar',     specialty: 'Nephrology',       org: 'Apollo Speciality',         location: 'Chennai',   rating: 4.7 },
-  { id: 'd_009', name: 'Dr. Lakshmi Menon',    specialty: 'Dermatology',      org: 'Wellness Hub',              location: 'Kochi',     rating: 4.6 },
+  { id: 'd_001', name: 'Dr. Anjali Verma',     org: 'Sunrise Health Clinic',     location: 'Mumbai',    rating: 4.9 },
+  { id: 'd_002', name: 'Dr. Rajeev Iyer',      org: 'Apollo Speciality',         location: 'Bengaluru', rating: 4.8 },
+  { id: 'd_003', name: 'Dr. Meera Krishnan',   org: 'Sunrise Health Clinic',     location: 'Mumbai',    rating: 4.7 },
+  { id: 'd_004', name: 'Dr. Suresh Patel',     org: 'Wellness Hub',              location: 'Ahmedabad', rating: 4.6 },
+  { id: 'd_005', name: 'Dr. Pooja Reddy',      org: 'Apollo Speciality',         location: 'Hyderabad', rating: 4.9 },
+  { id: 'd_006', name: 'Dr. Arjun Singh',      org: 'Wellness Hub',              location: 'Delhi',     rating: 4.5 },
+  { id: 'd_007', name: 'Dr. Kavita Joshi',     org: 'Sunrise Health Clinic',     location: 'Pune',      rating: 4.8 },
+  { id: 'd_008', name: 'Dr. Naveen Kumar',     org: 'Apollo Speciality',         location: 'Chennai',   rating: 4.7 },
+  { id: 'd_009', name: 'Dr. Lakshmi Menon',    org: 'Wellness Hub',              location: 'Kochi',     rating: 4.6 },
 ]
 
 const HISTORY_MOCK = [
-  { id: 'h_001', name: 'Dr. Vikram Bose',  specialty: 'General Medicine', date: '2025-08-12', outcome: 'completed' as const },
-  { id: 'h_002', name: 'Dr. Neha Sharma',  specialty: 'Cardiology',        date: '2024-11-03', outcome: 'revoked'   as const },
+  { id: 'h_001', name: 'Dr. Vikram Bose',  date: '2025-08-12', outcome: 'completed' as const },
+  { id: 'h_002', name: 'Dr. Neha Sharma',  date: '2024-11-03', outcome: 'revoked'   as const },
 ]
 
 export default function AssignDoctorPage() {
@@ -55,7 +54,6 @@ export default function AssignDoctorPage() {
     if (!q) return MOCK_DIRECTORY
     return MOCK_DIRECTORY.filter((d) =>
       d.name.toLowerCase().includes(q) ||
-      d.specialty.toLowerCase().includes(q) ||
       d.org.toLowerCase().includes(q) ||
       d.location.toLowerCase().includes(q),
     )
@@ -117,7 +115,6 @@ export default function AssignDoctorPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-body font-semibold text-charcoal-deep">{d.name}</p>
-                      <Badge variant="info"><Stethoscope className="w-3 h-3" /> {d.specialty}</Badge>
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-greige font-body">
                       <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {d.org}</span>
@@ -158,7 +155,7 @@ export default function AssignDoctorPage() {
                 <Clock className="w-4 h-4 text-warning-DEFAULT shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-body font-medium text-charcoal-deep">{d.name}</p>
-                  <p className="text-xs text-greige">{d.specialty} · {d.org}</p>
+                  <p className="text-xs text-greige">{d.org}</p>
                 </div>
                 <Badge variant="warning">Pending</Badge>
                 <button
@@ -185,7 +182,7 @@ export default function AssignDoctorPage() {
               <Avatar name={h.name} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-body font-medium text-charcoal-deep">{h.name}</p>
-                <p className="text-xs text-greige">{h.specialty} · {h.date}</p>
+                <p className="text-xs text-greige">{h.date}</p>
               </div>
               <Badge variant={h.outcome === 'completed' ? 'success' : 'default'}>
                 {h.outcome}

@@ -59,10 +59,11 @@ export function backendRoleToFrontend(backendRole: string): Role {
 
 export function frontendRoleToBackend(role: Role): string {
   const map: Record<Role, string> = {
-    patient:    'patient',
-    doctor:     'doctor',
-    admin:      'admin',
-    super_admin: 'super_admin',
+    patient:      'patient',
+    doctor:       'doctor',
+    admin:        'admin',
+    super_admin:  'super_admin',
+    family_admin: 'family_admin',
   }
   return map[role]
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink, Download, Share2, Archive } from 'lucide-react'
+import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink, Download } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -80,19 +80,12 @@ export default function VaultPage() {
   const [page, setPage] = useState(1)
   const [realPatientList, setRealPatientList] = useState<PatientOut[]>([])
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set())
-  const [bulkToast, setBulkToast] = useState<string | null>(null)
-
   function toggleRecordSelect(id: string) {
     setSelectedRecordIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
-  }
-  function showBulkToast(action: string) {
-    setBulkToast(`${action} ${selectedRecordIds.size} record${selectedRecordIds.size !== 1 ? 's' : ''} (mock)`)
-    setTimeout(() => setBulkToast(null), 2200)
-    setSelectedRecordIds(new Set())
   }
 
   if (!user) return null
@@ -120,7 +113,8 @@ export default function VaultPage() {
   const canViewAll = user.role === 'doctor'
   const isDoctor = user.role === 'doctor'
   const isPatient = user.role === 'patient'
-  const pageTitle = isDoctor ? 'Patient Vault' : 'Health Vault'
+  const isFamilyAdmin = user.role === 'family_admin'
+  const pageTitle = isDoctor ? 'Patient Vault' : isFamilyAdmin ? 'Family Vault' : 'Health Vault'
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
@@ -130,8 +124,20 @@ export default function VaultPage() {
     // Demo users have no JWT — show mock data only
     if (!getAccessToken()) {
       const mockRecords = MOCK_HEALTH_RECORDS.map(adaptMockRecord)
-      const filtered = isPatient ? mockRecords.filter((r) => r.patientId === 'pat_001') : mockRecords
-      setRecords(filtered)
+      if (isFamilyAdmin) {
+        // Show only records for dependents linked to this family admin
+        const dependentIds = MOCK_PATIENTS
+          .filter((p) => (p as { familyAdminId?: string }).familyAdminId === user.id)
+          .map((p) => p.id)
+        const familyRecords = MOCK_HEALTH_RECORDS
+          .filter((r) => dependentIds.includes(r.patientId))
+          .map(adaptMockRecord)
+        setRecords(familyRecords)
+      } else if (isPatient) {
+        setRecords(mockRecords.filter((r) => r.patientId === 'pat_001'))
+      } else {
+        setRecords(mockRecords)
+      }
       setIsDemo(true)
       setIsLoading(false)
       return
@@ -145,7 +151,7 @@ export default function VaultPage() {
         setFetchError(err instanceof Error ? err.message : 'Failed to load records')
       })
       .finally(() => setIsLoading(false))
-  }, [isPatient])
+  }, [isPatient, isFamilyAdmin, user.id])
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
@@ -164,9 +170,15 @@ export default function VaultPage() {
   }
 
   // Derive unique patients from real records (for doctor/admin card view).
-  // Skip records with no patientId — they would collide on a null Map key
-  // and produce duplicate React keys downstream.
+  // Skip records with no patientId — they would collide on a null Map key.
   const patientMap = new Map<string, { name: string; consented: number; total: number; district?: string; age?: number }>()
+
+  // Seed patientMap from the real patient list first so patients with 0 records still appear
+  for (const p of realPatientList) {
+    const displayName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id
+    patientMap.set(p.patient_id, { name: displayName, consented: 0, total: 0 })
+  }
+
   for (const rec of records) {
     if (!rec.patientId) continue
     const prev = patientMap.get(rec.patientId) ?? { name: rec.patientId, consented: 0, total: 0 }
@@ -301,7 +313,13 @@ export default function VaultPage() {
                             <ExternalLink className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <Badge variant={record.consentStatus === 'granted' ? 'success' : 'warning'}>
+                        <Badge variant={
+                          record.consentStatus === 'granted'
+                            ? 'success'
+                            : record.consentStatus === 'revoked'
+                            ? 'error'
+                            : 'warning'
+                        }>
                           {RECORD_TYPE_LABELS[record.type] ?? record.type}
                         </Badge>
                       </div>
@@ -322,6 +340,256 @@ export default function VaultPage() {
                 </Link>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  /* ── Family Admin: dependent record view (from dependent card click) ── */
+  if (isFamilyAdmin && selectedPatientId) {
+    const dependents = MOCK_PATIENTS.filter(
+      (p) => (p as { familyAdminId?: string }).familyAdminId === user.id
+    )
+    const dependent = dependents.find((p) => p.id === selectedPatientId)
+    const dependentRecords = filteredRecords.filter((r) => r.patientId === selectedPatientId)
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+            <span>Health Data</span>
+            <ChevronRight className="w-3 h-3" />
+            <Link href="/vault" className="hover:text-gold-deep transition-colors">Family Vault</Link>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-gold-deep">{dependent?.name ?? selectedPatientId}</span>
+          </div>
+
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <Link
+                href="/vault"
+                className="inline-flex items-center gap-1.5 text-xs text-greige hover:text-charcoal-deep transition-colors font-body mb-3"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Family Vault
+              </Link>
+              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">
+                Vault — {dependent?.name ?? selectedPatientId}
+              </h1>
+              <p className="text-sm text-stone font-body mt-1.5">
+                {dependent?.age ? `Age ${dependent.age}` : ''}
+                {dependent?.age && dependent?.district ? ' · ' : ''}
+                {dependent?.district ?? ''}
+              </p>
+            </div>
+            <Link href={`/intake?patient=${selectedPatientId}`} className="shrink-0 mt-8">
+              <Button className="bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-sm hover:opacity-90 border-0">
+                <Upload className="w-4 h-4" />
+                Upload Record
+              </Button>
+            </Link>
+          </div>
+
+          {/* Dependent picker for family admin */}
+          {dependents.length > 1 && (
+            <div className="bg-white border border-sand-light rounded-2xl p-3 shadow-sm mb-4 flex items-center gap-3">
+              <User className="w-4 h-4 text-gold-deep shrink-0" />
+              <label className="text-xs font-body font-semibold text-charcoal-deep shrink-0">Dependent:</label>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => { window.location.href = `/vault?patient=${e.target.value}` }}
+                className="flex-1 bg-ivory-warm border border-sand-light rounded-lg px-3 py-2 text-sm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft"
+              >
+                {dependents.map((dep) => (
+                  <option key={dep.id} value={dep.id}>
+                    {dep.name} ({records.filter((r) => r.patientId === dep.id).length} record{records.filter((r) => r.patientId === dep.id).length !== 1 ? 's' : ''})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {isDemo && (
+          <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-2xl p-3 text-xs text-warning-DEFAULT font-body">
+            Demo mode — showing sample data
+          </div>
+        )}
+
+        <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm">
+          <Input
+            placeholder="Search records..."
+            leftIcon={<Search className="w-4 h-4" />}
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+          />
+        </div>
+
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border border-sand-light rounded-2xl p-4 animate-pulse">
+                <div className="h-4 bg-sand-light rounded w-1/3 mb-2" />
+                <div className="h-3 bg-sand-light rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && dependentRecords.length === 0 && (
+          <EmptyState icon={FileText} title="No records" description="No health records found for this dependent." />
+        )}
+
+        {!isLoading && dependentRecords.length > 0 && (
+          <div className="space-y-3">
+            {dependentRecords.map((record, i) => (
+              <div key={record.id ?? `rec-${i}`} className="relative">
+                <Link href={`/vault/${record.id}`}>
+                  <div className="bg-white border border-sand-light rounded-2xl p-4 hover:border-gold-soft/60 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body font-semibold text-charcoal-deep text-sm truncate">{record.title}</p>
+                        <p className="text-xs text-greige font-body mt-0.5">{record.source} · {record.date}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {record.fileSize && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); openFile(record.id) }}
+                            title="View original file"
+                            className="p-1.5 rounded-lg text-greige hover:text-sapphire-deep hover:bg-azure-whisper transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <Badge variant={
+                          record.consentStatus === 'granted'
+                            ? 'success'
+                            : record.consentStatus === 'revoked'
+                            ? 'error'
+                            : 'warning'
+                        }>
+                          {RECORD_TYPE_LABELS[record.type] ?? record.type}
+                        </Badge>
+                      </div>
+                    </div>
+                    {record.markers.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {record.markers.slice(0, 4).map((m, mi) => (
+                          <span key={m.id ?? `${record.id ?? i}-m-${mi}`} className={cn('text-[10px] font-body px-2 py-0.5 rounded-full', m.isAbnormal ? 'bg-error-soft text-[#B91C1C]' : 'bg-parchment text-stone')}>
+                            {m.name}: {m.value} {m.unit}
+                          </span>
+                        ))}
+                        {record.markers.length > 4 && (
+                          <span className="text-[10px] text-greige font-body px-2 py-0.5">+{record.markers.length - 4} more</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  /* ── Family Admin: dependent card list ── */
+  if (isFamilyAdmin) {
+    const dependents = MOCK_PATIENTS.filter(
+      (p) => (p as { familyAdminId?: string }).familyAdminId === user.id
+    )
+    const dependentEntries = dependents.filter((dep) => {
+      if (!search) return true
+      return dep.name.toLowerCase().includes(search.toLowerCase())
+    })
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 text-greige text-xs font-body mb-3">
+            <span>Health Data</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-gold-deep">Family Vault</span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="font-display text-4xl text-charcoal-deep tracking-tight leading-tight">Family Vault</h1>
+              <p className="text-sm text-stone font-body mt-1.5">
+                Health records for your linked family members
+              </p>
+            </div>
+            <Badge variant="dark" className="shrink-0 self-center">
+              {dependentEntries.length} Dependent{dependentEntries.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+        </div>
+
+        {isDemo && (
+          <div className="bg-warning-soft border border-warning-DEFAULT/20 rounded-2xl p-3 text-xs text-warning-DEFAULT font-body">
+            Demo mode — showing sample data
+          </div>
+        )}
+
+        <div className="bg-white border border-sand-light rounded-2xl p-4 shadow-sm mb-4">
+          <Input
+            placeholder="Search dependents by name..."
+            leftIcon={<Search className="w-4 h-4" />}
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+          />
+        </div>
+
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white border border-sand-light rounded-2xl p-4 animate-pulse">
+                <div className="h-4 bg-sand-light rounded w-1/3 mb-2" />
+                <div className="h-3 bg-sand-light rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && dependentEntries.length === 0 && (
+          <EmptyState
+            icon={User}
+            title="No dependents found"
+            description="No family members are linked to your account yet."
+          />
+        )}
+
+        {!isLoading && dependentEntries.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {dependentEntries.map((dep) => {
+              const depRecordCount = records.filter((r) => r.patientId === dep.id).length
+              return (
+                <Link key={dep.id} href={`/vault?patient=${dep.id}`}>
+                  <div className="bg-gradient-to-br from-white to-ivory-warm border border-sand-light rounded-2xl p-5 hover:border-gold-soft/60 hover:shadow-md transition-all duration-300 cursor-pointer">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold-deep to-gold-soft flex items-center justify-center text-ivory-cream font-display text-lg shrink-0">
+                        {dep.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <Badge variant="success" className="shrink-0">
+                        Dependent
+                      </Badge>
+                    </div>
+                    <p className="font-body font-semibold text-charcoal-deep text-sm">{dep.name}</p>
+                    {(dep.age || dep.district) && (
+                      <p className="text-xs text-greige font-body mt-0.5">
+                        {dep.age ? `Age ${dep.age}` : ''}{dep.age && dep.district ? ' · ' : ''}{dep.district ?? ''}
+                      </p>
+                    )}
+                    <div className="mt-3 pt-3 border-t border-sand-light flex items-center justify-between">
+                      <span className="text-[11px] text-greige font-body">{depRecordCount} record{depRecordCount !== 1 ? 's' : ''}</span>
+                      <span className="text-[11px] text-gold-deep font-body font-medium">View records →</span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
@@ -512,24 +780,26 @@ export default function VaultPage() {
                   {selectedRecordIds.size} selected
                 </span>
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Downloaded')}>
+                  <Button size="sm" variant="outline" onClick={async () => {
+                    for (const rid of selectedRecordIds) {
+                      try {
+                        const { url, filename } = await intakeApi.getFileUrl(rid)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = filename ?? ''
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                      } catch { /* no file attached */ }
+                    }
+                    setSelectedRecordIds(new Set())
+                  }}>
                     <Download className="w-3.5 h-3.5" /> Download
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Shared')}>
-                    <Share2 className="w-3.5 h-3.5" /> Share
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Archived')}>
-                    <Archive className="w-3.5 h-3.5" /> Archive
                   </Button>
                   <button onClick={() => setSelectedRecordIds(new Set())} className="text-xs text-greige hover:text-charcoal-deep font-body px-2">
                     Clear
                   </button>
                 </div>
-              </div>
-            )}
-            {bulkToast && (
-              <div className="bg-success-soft border border-success-DEFAULT/30 rounded-2xl p-3 text-xs text-success-DEFAULT font-body">
-                {bulkToast}
               </div>
             )}
             {pageSlice.map((rec, ri) => {
@@ -542,7 +812,7 @@ export default function VaultPage() {
                     checked={isSelected}
                     onChange={(e) => { e.stopPropagation(); toggleRecordSelect(rec.id) }}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-4 left-4 z-10 w-4 h-4 cursor-pointer accent-gold-deep"
+                    className="absolute top-1/2 -translate-y-1/2 left-4 z-10 w-4 h-4 cursor-pointer accent-gold-deep"
                     aria-label="Select record"
                   />
                   <Link href={`/vault/${rec.id}`}>

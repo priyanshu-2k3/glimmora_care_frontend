@@ -3,7 +3,7 @@
 import {
   Upload, Shield, Activity, Users,
   AlertTriangle, CheckCircle, FileText, ArrowUpRight, ShieldAlert,
-  Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail,
+  Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail, User,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -13,9 +13,10 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
 import { useAuth } from '@/context/AuthContext'
-import { intakeApi, orgApi, adminApi, getAccessToken } from '@/lib/api'
+import { MOCK_PATIENTS } from '@/data/patients'
+import { intakeApi, orgApi, adminApi, familyApi, getAccessToken } from '@/lib/api'
 import type { HealthRecord } from '@/types/intake'
-import type { PatientOut, AdminStatsOut, AdminPatientOut, AdminDoctorOut, AdminOrgItem } from '@/lib/api'
+import type { PatientOut, AdminStatsOut, AdminPatientOut, AdminDoctorOut, AdminOrgItem, AuditLogOut } from '@/lib/api'
 import { formatDate, cn } from '@/lib/utils'
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
@@ -31,6 +32,15 @@ const C = {
 }
 
 const AVATAR_COLORS = ['#2563EB', '#0D9488', '#7C3AED', '#DC2626', '#059669', '#D97706']
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const h = Math.floor(diff / 3600000)
+  const d = Math.floor(diff / 86400000)
+  if (d > 0) return `${d}d ago`
+  if (h > 0) return `${h}h ago`
+  return 'Just now'
+}
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
@@ -157,6 +167,8 @@ function SkeletonCard() {
 function PatientView({ userName }: { userName: string }) {
   const [records, setRecords] = useState<HealthRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [familyMemberCount, setFamilyMemberCount] = useState<number | null>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
@@ -165,6 +177,14 @@ function PatientView({ userName }: { userName: string }) {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const familyId = user?.familyId
+    if (!familyId) { setFamilyMemberCount(0); return }
+    familyApi.getMembers(familyId)
+      .then((members) => setFamilyMemberCount(members.length))
+      .catch(() => setFamilyMemberCount(0))
+  }, [user?.familyId])
 
   const abnormal = records.flatMap((r) => r.markers.filter((m) => m.isAbnormal))
 
@@ -299,12 +319,16 @@ function PatientView({ userName }: { userName: string }) {
                 <Heart className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-body font-bold text-charcoal-deep leading-none">4</p>
+                <p className="text-2xl font-body font-bold text-charcoal-deep leading-none">{familyMemberCount ?? 0}</p>
                 <p className="text-[11px] text-greige">members</p>
               </div>
             </div>
             <p className="text-xs text-stone font-body leading-relaxed">
-              <span className="font-semibold text-charcoal-deep">Last activity:</span> Sneha uploaded a lab report 2 days ago.
+              {familyMemberCount === null
+                ? 'Loading…'
+                : familyMemberCount === 0
+                  ? 'No family members yet.'
+                  : `${familyMemberCount} member${familyMemberCount !== 1 ? 's' : ''} in your family group.`}
             </p>
           </div>
         </Panel>
@@ -313,20 +337,8 @@ function PatientView({ userName }: { userName: string }) {
           <PanelHeader title="Upcoming reminders" sub="Screenings & medications" action={
             <Bell className="w-3.5 h-3.5 text-greige" />
           } />
-          <div className="px-5 pb-5 space-y-2">
-            {[
-              { label: 'Annual lipid panel screening',  when: 'In 2 weeks',  color: C.amber  },
-              { label: 'Vitamin D supplement refill',   when: 'In 5 days',   color: C.ocean  },
-              { label: 'HbA1c re-test',                 when: 'In 3 months', color: C.violet },
-            ].map((r) => (
-              <div key={r.label} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-ivory-cream transition-colors">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color.bg }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-body font-medium text-charcoal-deep truncate">{r.label}</p>
-                </div>
-                <span className="text-[10px] font-body text-greige shrink-0">{r.when}</span>
-              </div>
-            ))}
+          <div className="px-5 pb-5">
+            <p className="text-xs text-greige font-body py-4 text-center">No upcoming reminders. Check back soon.</p>
           </div>
         </Panel>
       </div>
@@ -528,10 +540,17 @@ const QUICK_ACTIONS = [
 function AdminView({ userName }: { userName: string }) {
   const [stats, setStats]   = useState<AdminStatsOut | null>(null)
   const [loading, setLoading] = useState(true)
+  const [recentLogs, setRecentLogs] = useState<AuditLogOut[]>([])
 
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
-    adminApi.getStats().catch(() => null).then(setStats).finally(() => setLoading(false))
+    Promise.all([
+      adminApi.getStats().catch(() => null),
+      adminApi.getAuditLogs({ limit: 3 }).catch(() => [] as AuditLogOut[]),
+    ]).then(([s, logs]) => {
+      setStats(s)
+      setRecentLogs(logs)
+    }).finally(() => setLoading(false))
   }, [])
 
   const totalPatients = stats?.total_patients ?? 0
@@ -566,16 +585,22 @@ function AdminView({ userName }: { userName: string }) {
             <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
             <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
           </div>
-          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Off-hours export · 03:42', color: 'bg-warning-soft text-warning-DEFAULT' },
-            { label: 'Bulk consent override', color: 'bg-error-soft text-[#B91C1C]' },
-            { label: 'New role escalation', color: 'bg-azure-whisper text-sapphire-deep' },
-          ].map((c) => (
-            <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
-          ))}
+          {recentLogs.length === 0 ? (
+            <span className="text-[11px] font-body font-medium px-2.5 py-1 rounded-full bg-azure-whisper text-sapphire-deep">No recent flagged events</span>
+          ) : (
+            recentLogs.map((log) => {
+              const color = log.severity === 'critical'
+                ? 'bg-error-soft text-[#B91C1C]'
+                : log.severity === 'warning'
+                  ? 'bg-warning-soft text-warning-DEFAULT'
+                  : 'bg-azure-whisper text-sapphire-deep'
+              return (
+                <span key={log.id} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${color}`}>{log.action}</span>
+              )
+            })
+          )}
         </div>
       </div>
 
@@ -616,6 +641,7 @@ function SuperAdminView({ userName }: { userName: string }) {
   const [patients, setPatients] = useState<AdminPatientOut[]>([])
   const [doctors, setDoctors] = useState<AdminDoctorOut[]>([])
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditLogOut[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'patients' | 'doctors' | 'orgs'>('patients')
 
@@ -632,11 +658,13 @@ function SuperAdminView({ userName }: { userName: string }) {
       adminApi.listPatients().catch(() => [] as AdminPatientOut[]),
       adminApi.listDoctors().catch(() => [] as AdminDoctorOut[]),
       adminApi.listAllOrgs().catch(() => [] as AdminOrgItem[]),
-    ]).then(([s, p, d, o]) => {
+      adminApi.getAuditLogs({ limit: 4 }).catch(() => [] as AuditLogOut[]),
+    ]).then(([s, p, d, o, logs]) => {
       setStats(s)
       setPatients(p)
       setDoctors(d)
       setOrgs(o)
+      setAuditLogs(logs)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -677,7 +705,7 @@ function SuperAdminView({ userName }: { userName: string }) {
           <StatCard icon={Users}       label="Total Patients"     value={stats?.total_patients ?? '—'}           accent={C.ocean} />
           <StatCard icon={Users}       label="Total Doctors"      value={stats?.total_doctors ?? '—'}            accent={C.violet} />
           <StatCard icon={Building2}   label="Organisations"      value={stats?.total_organizations ?? '—'}      accent={C.teal} />
-          <StatCard icon={UserPlus}    label="Total Assignments"  value={142}                                     accent={C.amber} />
+          <StatCard icon={UserPlus}    label="Total Assignments"  value={stats?.total_assignments ?? '—'}        accent={C.amber} />
           <StatCard icon={CheckCircle} label="New Users (30d)"    value={stats?.new_users_last_30_days ?? '—'}   accent={C.emerald} />
         </div>
       )}
@@ -687,39 +715,50 @@ function SuperAdminView({ userName }: { userName: string }) {
         <Panel>
           <PanelHeader title="Platform Alerts" sub="Recent critical audit events" />
           <div className="px-5 pb-5 space-y-2">
-            {[
-              { icon: AlertTriangle, color: C.coral, label: 'Failed bulk delete · 14 records', time: '2m ago' },
-              { icon: ShieldAlert,   color: C.amber, label: 'Suspicious foreign IP · super_admin', time: '34m ago' },
-              { icon: Mail,          color: C.violet, label: 'Bounced invite emails · 3', time: '2h ago' },
-              { icon: AlertTriangle, color: C.coral, label: 'Off-hours OTP retries · 5×', time: '6h ago' },
-            ].map((a) => (
-              <div key={a.label} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: a.color.soft }}>
-                  <a.icon className="w-3.5 h-3.5" style={{ color: a.color.bg }} />
-                </div>
-                <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{a.label}</p>
-                <span className="text-[10px] text-greige shrink-0">{a.time}</span>
-              </div>
-            ))}
+            {auditLogs.length === 0 ? (
+              <p className="text-xs text-greige font-body py-4 text-center">No recent alerts.</p>
+            ) : (
+              auditLogs.map((log) => {
+                const Icon = log.severity === 'critical' ? AlertTriangle : log.severity === 'warning' ? ShieldAlert : Bell
+                const color = log.severity === 'critical' ? C.coral : log.severity === 'warning' ? C.amber : C.violet
+                return (
+                  <div key={log.id} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: color.soft }}>
+                      <Icon className="w-3.5 h-3.5" style={{ color: color.bg }} />
+                    </div>
+                    <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{log.action}</p>
+                    <span className="text-[10px] text-greige shrink-0">{timeAgo(log.timestamp)}</span>
+                  </div>
+                )
+              })
+            )}
           </div>
         </Panel>
 
         <Panel>
           <PanelHeader title="Recent Provisioning" sub="Org / admin assignment activity" />
           <div className="px-5 pb-5 space-y-2">
-            {[
-              { icon: Building2, color: C.teal,   label: 'New org "Sunrise Health" created', time: '12m ago' },
-              { icon: UserPlus,  color: C.ocean,  label: 'Admin assigned to "Lotus Clinic"', time: '1h ago' },
-              { icon: UserPlus,  color: C.violet, label: '6 doctors invited to "Aster Med"', time: '4h ago' },
-            ].map((a) => (
-              <div key={a.label} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: a.color.soft }}>
-                  <a.icon className="w-3.5 h-3.5" style={{ color: a.color.bg }} />
-                </div>
-                <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{a.label}</p>
-                <span className="text-[10px] text-greige shrink-0">{a.time}</span>
-              </div>
-            ))}
+            {(() => {
+              const provKeywords = /org|admin|assign|doctor|invite/i
+              const provLogs = auditLogs.filter((log) => provKeywords.test(log.action)).slice(0, 3)
+              if (provLogs.length === 0) {
+                return <p className="text-xs text-greige font-body py-4 text-center">No recent provisioning events.</p>
+              }
+              return provLogs.map((log) => {
+                const isOrg = /org/i.test(log.action)
+                const Icon = isOrg ? Building2 : UserPlus
+                const color = isOrg ? C.teal : C.ocean
+                return (
+                  <div key={log.id} className="flex items-center gap-3 py-2 border-b border-sand-light last:border-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: color.soft }}>
+                      <Icon className="w-3.5 h-3.5" style={{ color: color.bg }} />
+                    </div>
+                    <p className="text-xs font-body text-charcoal-deep flex-1 min-w-0 truncate">{log.action}</p>
+                    <span className="text-[10px] text-greige shrink-0">{timeAgo(log.timestamp)}</span>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </Panel>
       </div>
@@ -852,6 +891,140 @@ function SuperAdminView({ userName }: { userName: string }) {
   )
 }
 
+// ─── Family Admin view ────────────────────────────────────────────────────────
+
+function FamilyAdminView({ userName, userId }: { userName: string; userId: string }) {
+  const dependents = MOCK_PATIENTS.filter(
+    (p) => (p as { familyAdminId?: string }).familyAdminId === userId
+  )
+
+  return (
+    <div className="space-y-5">
+      <WelcomeBanner name={userName} role="Family Admin" chips={[
+        { label: 'Dependents', value: String(dependents.length), color: C.gold.bg },
+        { label: 'Records',    value: String(dependents.reduce((sum, d) => sum + d.recordCount, 0)), color: C.ocean.bg },
+      ]} />
+
+      {/* Family Health Overview header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-body font-semibold text-charcoal-deep">Family Health Overview</p>
+          <p className="text-[11px] text-greige mt-0.5">Manage health records and consents for your family members</p>
+        </div>
+        <Link href="/vault">
+          <div className="flex items-center gap-1.5 text-xs font-body font-medium px-3 py-1.5 rounded-xl border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all" style={{ color: C.gold.text }}>
+            View All Records
+            <ArrowUpRight className="w-3 h-3" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Dependent cards */}
+      {dependents.length === 0 ? (
+        <Panel>
+          <div className="px-5 py-10 text-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: C.gold.soft }}>
+              <User className="w-6 h-6" style={{ color: C.gold.text }} />
+            </div>
+            <p className="text-sm font-body font-semibold text-charcoal-deep">No dependents linked</p>
+            <p className="text-xs text-greige mt-1">Contact your administrator to link family members.</p>
+          </div>
+        </Panel>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {dependents.map((dep, i) => (
+            <Panel key={dep.id}>
+              <div className="p-5">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-body font-bold text-white shrink-0"
+                    style={{ background: [C.gold.bg, C.ocean.bg, C.teal.bg, C.violet.bg][i % 4] }}>
+                    {dep.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-body font-semibold text-charcoal-deep">{dep.name}</p>
+                    <p className="text-[11px] text-greige">
+                      {dep.age ? `Age ${dep.age}` : ''}
+                      {dep.age && dep.district ? ' · ' : ''}
+                      {dep.district ?? ''}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-body font-semibold px-2.5 py-1 rounded-full shrink-0"
+                    style={{ background: C.gold.soft, color: C.gold.text }}>
+                    Dependent
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-ivory-cream border border-sand-light rounded-xl p-3">
+                    <p className="text-xs font-body font-bold text-charcoal-deep">{dep.recordCount}</p>
+                    <p className="text-[10px] text-greige mt-0.5">Records</p>
+                  </div>
+                  <div className="bg-ivory-cream border border-sand-light rounded-xl p-3">
+                    <p className="text-xs font-body font-bold text-charcoal-deep">
+                      {dep.lastVisit ? new Date(dep.lastVisit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
+                    </p>
+                    <p className="text-[10px] text-greige mt-0.5">Last Visit</p>
+                  </div>
+                </div>
+
+                {/* Data completeness bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] text-greige font-body">Data completeness</p>
+                    <p className="text-[10px] font-body font-semibold text-charcoal-deep">{dep.dataCompleteness}%</p>
+                  </div>
+                  <div className="h-1.5 bg-sand-light rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${dep.dataCompleteness}%`, background: dep.dataCompleteness >= 80 ? C.emerald.bg : dep.dataCompleteness >= 50 ? C.amber.bg : C.coral.bg }} />
+                  </div>
+                </div>
+
+                {/* Quick links */}
+                <div className="flex gap-2 flex-wrap">
+                  <Link href={`/vault?patient=${dep.id}`}>
+                    <div className="flex items-center gap-1 text-[10px] font-body font-semibold px-2.5 py-1.5 rounded-lg border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all text-charcoal-deep">
+                      <FileText className="w-3 h-3" />
+                      Records
+                    </div>
+                  </Link>
+                  <Link href="/consent">
+                    <div className="flex items-center gap-1 text-[10px] font-body font-semibold px-2.5 py-1.5 rounded-lg border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all text-charcoal-deep">
+                      <Shield className="w-3 h-3" />
+                      Consent
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <Panel>
+        <PanelHeader title="Quick Actions" sub="Family management shortcuts" action={<ListChecks className="w-3.5 h-3.5 text-greige" />} />
+        <div className="px-5 pb-5 space-y-2">
+          {[
+            { label: 'View Family Records',   href: '/vault',           color: C.gold,    icon: FileText },
+            { label: 'Manage Consent',         href: '/consent',         color: C.ocean,   icon: Shield },
+            { label: 'Family Members',         href: '/family/members',  color: C.violet,  icon: Users },
+          ].map((action) => (
+            <Link key={action.label} href={action.href}>
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-sand-light hover:border-gold-soft/50 hover:bg-ivory-cream transition-all group">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: action.color.soft }}>
+                  <action.icon className="w-4 h-4" style={{ color: action.color.text }} />
+                </div>
+                <p className="flex-1 text-xs font-body font-medium text-charcoal-deep">{action.label}</p>
+                <ArrowUpRight className="w-3.5 h-3.5 text-greige group-hover:text-gold-deep transition-colors" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -868,9 +1041,10 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in">
-      {user.role === 'patient'     && <PatientView userName={user.name} />}
-      {user.role === 'doctor'      && <DoctorView  userName={user.name} />}
-      {user.role === 'admin'       && <AdminView userName={user.name} />}
+      {user.role === 'patient'      && <PatientView userName={user.name} />}
+      {user.role === 'doctor'       && <DoctorView  userName={user.name} />}
+      {user.role === 'admin'        && <AdminView userName={user.name} />}
+      {user.role === 'family_admin' && <FamilyAdminView userName={user.name} userId={user.id} />}
     </div>
   )
 }

@@ -22,6 +22,7 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
     '/assistants',
     '/notifications',
     '/settings',
+    '/my-doctor',
   ],
 
   [UserRole.DOCTOR]: [
@@ -62,6 +63,16 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
     '/assistants',
     '/admin',
     '/manage-users',
+    '/notifications',
+    '/settings',
+  ],
+
+  [UserRole.FAMILY_ADMIN]: [
+    '/dashboard',
+    '/vault',
+    '/consent',
+    '/family',
+    '/assistants',
     '/notifications',
     '/settings',
   ],
