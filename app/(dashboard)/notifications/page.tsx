@@ -11,6 +11,47 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { familyApi, notificationApi, getAccessToken, ApiError, type IncomingInvite, type NotificationOut } from '@/lib/api'
 
+// Derive the correct frontend route from notification type + user role.
+// Routes are validated against ROLE_ROUTES in config/role-permissions.ts.
+function resolveHref(notif: NotificationOut, role: string | undefined): string | null {
+  switch (notif.type) {
+    case 'alert':
+      // /twin: patient only. /intelligence: doctor + super_admin only (admin lacks it).
+      if (role === 'patient') return '/twin'
+      if (role === 'doctor' || role === 'super_admin') return '/intelligence'
+      return '/dashboard'
+
+    case 'consent':
+      // /vault: patient + doctor. Admins use doctor-management console.
+      if (role === 'patient' || role === 'doctor') return '/vault'
+      if (role === 'admin' || role === 'super_admin') return '/admin/doctor-management'
+      return '/dashboard'
+
+    case 'sync':
+      // /offline is a demo-only route not in ROLE_ROUTES for any real role.
+      return '/dashboard'
+
+    case 'agent':
+      // /agents is super_admin only — admin does NOT have it.
+      if (role === 'super_admin') return '/agents'
+      if (role === 'admin') return '/admin'
+      return '/dashboard'
+
+    case 'family':
+      // /family: patient + super_admin only.
+      if (role === 'patient' || role === 'super_admin') return '/family'
+      return '/dashboard'
+
+    case 'info':
+      // Trust backend href only if it's a valid path this role can reach.
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
+      return '/dashboard'
+
+    default:
+      return null
+  }
+}
+
 const TYPE_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   alert:   { icon: AlertTriangle, color: 'text-[#B91C1C]',      bg: 'bg-error-soft' },
   info:    { icon: Info,          color: 'text-stone',               bg: 'bg-ivory-warm' },
@@ -197,7 +238,8 @@ export default function NotificationsPage() {
             {notifications.map((notif) => {
               const meta = TYPE_META[notif.type] ?? TYPE_META.info
               const Icon = meta.icon
-              const isNavigable = !!notif.actionHref
+              const href = resolveHref(notif, user?.role)
+              const isNavigable = !!href
               return (
                 <div
                   key={notif.id}
@@ -208,7 +250,7 @@ export default function NotificationsPage() {
                   )}
                   onClick={() => {
                     handleMarkRead(notif.id)
-                    if (notif.actionHref) router.push(notif.actionHref)
+                    if (href) router.push(href)
                   }}
                 >
                   <div className={cn('w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5', meta.bg)}>
@@ -222,8 +264,8 @@ export default function NotificationsPage() {
                     <p className="text-xs text-greige font-body leading-relaxed">{notif.message}</p>
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-[11px] text-greige font-body">{timeAgo(notif.timestamp)}</span>
-                      {notif.actionLabel && notif.actionHref ? (
-                        <Link href={notif.actionHref} onClick={(e) => e.stopPropagation()} className="text-[11px] text-gold-deep font-body hover:underline flex items-center gap-0.5">
+                      {notif.actionLabel && href ? (
+                        <Link href={href} onClick={(e) => e.stopPropagation()} className="text-[11px] text-gold-deep font-body hover:underline flex items-center gap-0.5">
                           {notif.actionLabel} <ChevronRight className="w-2.5 h-2.5" />
                         </Link>
                       ) : (

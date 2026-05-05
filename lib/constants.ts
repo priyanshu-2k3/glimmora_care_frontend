@@ -28,12 +28,12 @@ export const ROLES: Record<Role, { label: string; description: string; color: st
    ──────────────────────────────────────────────────────────────────────────── */
 
 export const NAV_ITEMS = [
-  /* ── Dashboard (everyone) ─── */
+  /* ── Dashboard (patient + doctor + admin; super_admin uses /admin as their home) ─── */
   {
     href: '/dashboard',
     label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['patient', 'doctor', 'admin', 'super_admin'] as Role[],
+    roles: ['patient', 'doctor', 'admin'] as Role[],
   },
 
   /* ── Health (patient + doctor only) ─── */
@@ -148,9 +148,9 @@ export const NAV_ITEMS = [
   /* ── Admin operational routes ─── */
   {
     href: '/admin',
-    label: 'Admin Panel',
+    label: 'Dashboard',
     icon: 'LayoutDashboard',
-    roles: ['super_admin'] as Role[],
+    roles: ['admin', 'super_admin'] as Role[],
   },
   {
     href: '/admin/manage-team',
