@@ -16,34 +16,34 @@ import { familyApi, notificationApi, getAccessToken, ApiError, type IncomingInvi
 function resolveHref(notif: NotificationOut, role: string | undefined): string | null {
   switch (notif.type) {
     case 'alert':
-      // /twin: patient only. /intelligence: doctor + super_admin only (admin lacks it).
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
       if (role === 'patient') return '/twin'
       if (role === 'doctor' || role === 'super_admin') return '/intelligence'
       return '/dashboard'
 
     case 'consent':
-      // /vault: patient + doctor. Admins use doctor-management console.
-      if (role === 'patient' || role === 'doctor') return '/vault'
-      if (role === 'admin' || role === 'super_admin') return '/admin/doctor-management'
-      return '/dashboard'
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
+      if (role === 'patient') return '/consent/requests'
+      if (role === 'doctor') return '/consent/active'
+      if (role === 'admin' || role === 'super_admin') return '/admin/doctor-management/consent'
+      return '/consent'
 
     case 'sync':
-      // /offline is a demo-only route not in ROLE_ROUTES for any real role.
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
       return '/dashboard'
 
     case 'agent':
-      // /agents is super_admin only — admin does NOT have it.
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
       if (role === 'super_admin') return '/agents'
       if (role === 'admin') return '/admin'
       return '/dashboard'
 
     case 'family':
-      // /family: patient + super_admin only.
+      if (notif.actionHref?.startsWith('/')) return notif.actionHref
       if (role === 'patient' || role === 'super_admin') return '/family'
       return '/dashboard'
 
     case 'info':
-      // Trust backend href only if it's a valid path this role can reach.
       if (notif.actionHref?.startsWith('/')) return notif.actionHref
       return '/dashboard'
 
