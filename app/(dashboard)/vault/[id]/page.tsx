@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, FileText, ChevronRight, Shield, Info, Edit2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, consentApi, getAccessToken, type ConsentRequest, orgApi } from '@/lib/api'
@@ -257,17 +257,24 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
           <div className="shrink-0 hidden sm:flex flex-col gap-2 mt-6">
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
+            {fileUrl ? (
+              <a
+                href={fileUrl.url}
+                download={fileUrl.filename ?? undefined}
+                className="inline-flex items-center gap-2 text-sm font-body font-medium border border-sand-light rounded-xl px-3 py-2 hover:border-gold-soft/60 hover:bg-ivory-warm transition-all"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setIsEditingMetadata(true)}>
               <Edit2 className="w-4 h-4" />
               Edit metadata
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => fireToast('Re-OCR requested (mock)')}>
-              <RefreshCw className="w-4 h-4" />
-              Request re-OCR
             </Button>
           </div>
         </div>

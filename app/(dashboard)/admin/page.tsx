@@ -112,30 +112,41 @@ function AdminDashboard({ userName, stats, logs, loading, idMaps }: {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}          href="/admin/patients"           color="#D97706" />
-        <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}           href="/admin/manage-team"        color="#2563EB" />
-        <StatCard icon={AlertTriangle} label="New Users (30d)"  value={loading ? '—' : (stats?.new_users_last_30_days ?? 0)}  href="/admin/logs"               color="#DC2626" />
-        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : (stats?.monthly_uploads ?? 0)}        href="/admin/logs"               color="#0D9488" />
-        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : (stats?.pending_invites ?? 0)}        href="/admin/manage-team"        color="#7C3AED" />
+        <StatCard icon={FileCheck}    label="Patients"          value={loading ? '—' : (stats?.total_patients ?? 0)}         href="/admin/patients"           color="#D97706" />
+        <StatCard icon={UserCheck}    label="Doctors"           value={loading ? '—' : (stats?.total_doctors ?? 0)}          href="/admin/manage-team"        color="#2563EB" />
+        <StatCard icon={ClipboardList} label="Assignments"      value={loading ? '—' : (stats?.total_assignments ?? 0)}      href="/admin/doctor-management"  color="#DC2626" />
+        <StatCard icon={Upload}        label="Monthly Uploads"  value={loading ? '—' : (stats?.monthly_uploads ?? 0)}       href="/admin/logs"               color="#0D9488" />
+        <StatCard icon={Mail}          label="Pending Invites"  value={loading ? '—' : (stats?.pending_invites ?? 0)}       href="/admin/manage-team"        color="#7C3AED" />
       </div>
 
-      {/* Flagged Audit Events strip */}
+      {/* Recent Audit Events strip — real data from logs prop */}
       <div className="bg-white border border-sand-light rounded-2xl p-4">
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 text-warning-DEFAULT" />
-            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Flagged Audit Events</span>
+            <span className="text-xs font-body font-semibold text-charcoal-deep uppercase tracking-wider">Recent Audit Events</span>
           </div>
-          <span className="text-[10px] text-greige font-body italic">Sample indicators — see Audit Logs for real data</span>
+          <Link href="/admin/logs" className="text-[10px] text-gold-deep font-body hover:underline">View all</Link>
         </div>
         <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Off-hours record export', color: 'bg-warning-soft text-warning-DEFAULT' },
-            { label: 'Repeated consent override', color: 'bg-error-soft text-[#B91C1C]' },
-            { label: 'New admin assigned · 2h ago', color: 'bg-azure-whisper text-sapphire-deep' },
-          ].map((c) => (
-            <span key={c.label} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${c.color}`}>{c.label}</span>
-          ))}
+          {loading ? (
+            <span className="text-[11px] text-greige font-body italic">Loading…</span>
+          ) : logs.length === 0 ? (
+            <span className="text-[11px] text-greige font-body italic">No recent audit events.</span>
+          ) : (
+            logs.slice(0, 4).map((log) => {
+              const color = log.severity === 'critical'
+                ? 'bg-error-soft text-[#B91C1C]'
+                : log.severity === 'warning'
+                ? 'bg-warning-soft text-warning-DEFAULT'
+                : 'bg-azure-whisper text-sapphire-deep'
+              return (
+                <span key={log.id} className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${color}`}>
+                  {log.action}
+                </span>
+              )
+            })
+          )}
         </div>
       </div>
 
