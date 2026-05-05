@@ -335,7 +335,18 @@ export default function LogsPage() {
 
   // Patient/doctor: client-side filter
   const patientFiltered = rows.filter((r) => {
-    if (search && !r.action.toLowerCase().includes(search.toLowerCase()) && !r.detail.toLowerCase().includes(search.toLowerCase())) return false
+    if (search) {
+      const q = search.toLowerCase()
+      const label = getMeta(r.action).label.toLowerCase()
+      const matches =
+        r.action.toLowerCase().includes(q) ||
+        label.includes(q) ||
+        r.detail.toLowerCase().includes(q) ||
+        (r.actor  ?? '').toLowerCase().includes(q) ||
+        (r.target ?? '').toLowerCase().includes(q) ||
+        (r.recordId ?? '').toLowerCase().includes(q)
+      if (!matches) return false
+    }
     if (actionType !== 'all') {
       if (actionType === 'uploads'  && !['upload', 'confirm', 'manual_entry', 'bulk_import'].includes(r.action)) return false
       if (actionType === 'views'    && !['read', 'read_list'].includes(r.action)) return false
@@ -482,8 +493,10 @@ export default function LogsPage() {
 
       <Tabs tabs={TABS} defaultTab={fromConsent ? 'access' : undefined}>
         {(activeTab) => {
-          const list = activeTab === 'activity' ? pageSlice : pageSlice.filter((r) => ACCESS_ACTIONS.has(r.action))
-          const tabTotal = activeTab === 'activity' ? displayRows.length : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action)).length
+          const tabRows = activeTab === 'activity' ? displayRows : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action))
+          const tabTotal = tabRows.length
+          const tabTotalPages = Math.ceil(tabTotal / PAGE_SIZE)
+          const list = tabRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
           return (
             <Card>
               <CardHeader>
@@ -492,7 +505,7 @@ export default function LogsPage() {
                 </CardTitle>
                 <CardDescription>
                   {activeTab === 'activity'
-                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${totalPages > 1 ? ` · page ${page} of ${totalPages}` : ''}`
+                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${tabTotalPages > 1 ? ` · page ${page} of ${tabTotalPages}` : ''}`
                     : `${tabTotal} access event${tabTotal !== 1 ? 's' : ''} — who viewed your data`}
                 </CardDescription>
               </CardHeader>
@@ -518,9 +531,9 @@ export default function LogsPage() {
                   list.map((row) => <LogEntry key={row.id} row={row} idMaps={idMaps} />)
                 )}
               </CardContent>
-              {activeTab === 'activity' && totalPages > 1 && (
+              {tabTotalPages > 1 && (
                 <div className="px-5 pb-4">
-                  <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                  <Pagination page={page} totalPages={tabTotalPages} onPageChange={setPage} />
                 </div>
               )}
             </Card>
