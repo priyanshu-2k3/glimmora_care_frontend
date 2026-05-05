@@ -135,8 +135,8 @@ export default function ActiveConsentsPage() {
                   )}
 
                   <Button
-                    variant="danger"
-                    className="w-full bg-error/70 hover:bg-error-DEFAULT border-error/70"
+                    variant="outline"
+                    className="w-full bg-white text-[#B91C1C] border-[#B91C1C] hover:bg-[#B91C1C] hover:text-white transition-colors duration-200"
                     onClick={() => setRevokeId(consent.id)}
                   >
                     <Trash2 className="w-4 h-4" />

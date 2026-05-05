@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Toggle } from '@/components/ui/Toggle'
+import { cn } from '@/lib/utils'
 
 export function SecuritySettings() {
   const { user } = useAuth()
@@ -75,19 +76,72 @@ export function SecuritySettings() {
 
         {/* 2FA toggle */}
         <div className="pt-4 border-t border-sand-light">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-body font-medium text-charcoal-deep flex items-center gap-2">
-                <Lock className="w-4 h-4 text-gold-soft" />
-                Two-Factor Authentication
-              </p>
-              <p className="text-xs text-greige mt-0.5">Add extra security via OTP on login</p>
+          <div
+            className={cn(
+              'rounded-2xl border p-4 transition-colors',
+              twoFa
+                ? 'bg-emerald-soft/40 border-emerald-DEFAULT/30'
+                : 'bg-ivory-warm border-sand-light',
+            )}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                    twoFa ? 'bg-emerald-DEFAULT text-charcoal-deep' : 'bg-parchment text-greige',
+                  )}
+                >
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-body font-semibold text-charcoal-deep">Two-Factor Authentication</p>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
+                        twoFa
+                          ? 'bg-emerald-DEFAULT text-charcoal-deep border-emerald-DEFAULT'
+                          : 'bg-stone/10 text-stone border-stone/30',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          twoFa ? 'bg-charcoal-deep' : 'bg-stone/60',
+                        )}
+                      />
+                      {twoFa ? 'On' : 'Off'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone font-body mt-1">
+                    {twoFa
+                      ? 'Enabled via authenticator. You\'ll be prompted for an OTP on every login.'
+                      : 'Add a second login step for extra account security.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <Toggle checked={twoFa} onChange={setTwoFa} disabled={isDemo} />
+                {!twoFa && !isDemo && (
+                  <button
+                    className="text-[11px] text-gold-deep hover:text-gold-muted font-body font-semibold whitespace-nowrap transition-colors"
+                    onClick={() => {/* TODO: navigate to 2FA setup */}}
+                  >
+                    Set up 2FA →
+                  </button>
+                )}
+                {twoFa && !isDemo && (
+                  <button
+                    className="text-[11px] text-greige hover:text-coral-muted font-body whitespace-nowrap transition-colors"
+                    onClick={() => {/* TODO: navigate to 2FA setup */}}
+                  >
+                    Reconfigure
+                  </button>
+                )}
+              </div>
             </div>
-            <Toggle checked={twoFa} onChange={setTwoFa} disabled={isDemo} />
           </div>
-          {twoFa && (
-            <p className="text-xs text-success-DEFAULT font-body mt-2">2FA is enabled. Use your authenticator app for login codes.</p>
-          )}
         </div>
       </CardContent>
     </Card>

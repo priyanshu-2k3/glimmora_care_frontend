@@ -225,16 +225,10 @@ export default function LogsPage() {
       ])
         .then(([trail, sysLogs]) => {
           const merged: LogRow[] = [...trail.map(fromTrail), ...sysLogs.map(fromAdminLog)]
-          // Deduplicate by id, and also by action+timestamp(minute)+detail to prevent logical duplicates
           const seen = new Set<string>()
           const uniqueRows = merged.filter((row) => {
-            // Truncate timestamp to YYYY-MM-DDTHH:mm to group events happening in the same minute
-            // This matches the UI display which only shows down to the minute.
-            const minuteTimestamp = row.timestamp.substring(0, 16)
-            const compositeKey = `${row.action}|${minuteTimestamp}|${row.detail}`
-            if (seen.has(row.id) || seen.has(compositeKey)) return false
+            if (seen.has(row.id)) return false
             seen.add(row.id)
-            seen.add(compositeKey)
             return true
           })
           uniqueRows.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))

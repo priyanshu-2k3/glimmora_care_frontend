@@ -519,10 +519,10 @@ function DoctorView({ userName }: { userName: string }) {
 // ─── Admin view ───────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { href: '/admin/manage-team',       icon: Users,     label: 'Manage Team',       sub: 'Doctors and team members',  color: C.ocean  },
-  { href: '/admin/doctor-management', icon: UserPlus,  label: 'Doctor Management', sub: 'Assign, share, consents',   color: C.violet },
-  { href: '/organization',            icon: Building2, label: 'Organisation',       sub: 'Org details and directory', color: C.teal   },
-  { href: '/admin/logs',              icon: FileText,  label: 'Audit Logs',         sub: 'Org activity history',      color: C.amber  },
+  { href: '/admin/manage-team?from=dashboard',       icon: Users,     label: 'Manage Team',       sub: 'Doctors and team members',  color: C.ocean  },
+  { href: '/admin/doctor-management?from=dashboard', icon: UserPlus,  label: 'Doctor Management', sub: 'Assign, share, consents',   color: C.violet },
+  { href: '/organization?from=dashboard',            icon: Building2, label: 'Organisation',       sub: 'Org details and directory', color: C.teal   },
+  { href: '/admin/logs?from=dashboard',              icon: FileText,  label: 'Audit Logs',         sub: 'Org activity history',      color: C.amber  },
 ]
 
 function AdminView({ userName }: { userName: string }) {
@@ -605,10 +605,10 @@ function AdminView({ userName }: { userName: string }) {
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 
 const SUPER_ADMIN_QUICK_ACTIONS = [
-  { href: '/admin/users',         icon: Shield,        label: 'Manage Users',    sub: 'Roles & permissions',     color: C.violet },
-  { href: '/organization',        icon: Building2,     label: 'Organisations',   sub: 'Platform-wide list',      color: C.ocean  },
-  { href: '/agents',              icon: Activity,      label: 'Agents',          sub: 'Autonomous agent fleet',  color: C.emerald },
-  { href: '/population',          icon: Globe,         label: 'Population',      sub: 'Aggregate intelligence',  color: C.teal   },
+  { href: '/admin/users?from=dashboard',         icon: Shield,        label: 'Manage Users',    sub: 'Roles & permissions',     color: C.violet },
+  { href: '/organization?from=dashboard',        icon: Building2,     label: 'Organisations',   sub: 'Platform-wide list',      color: C.ocean  },
+  { href: '/agents?from=dashboard',              icon: Activity,      label: 'Agents',          sub: 'Autonomous agent fleet',  color: C.emerald },
+  { href: '/population?from=dashboard',          icon: Globe,         label: 'Population',      sub: 'Aggregate intelligence',  color: C.teal   },
 ]
 
 function SuperAdminView({ userName }: { userName: string }) {

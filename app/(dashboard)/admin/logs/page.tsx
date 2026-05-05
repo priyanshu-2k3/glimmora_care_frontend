@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ClipboardList, Search, AlertCircle, Download, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { ClipboardList, Search, AlertCircle, Download, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { RoleGuard } from '@/components/auth/RoleGuard'
+import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -69,7 +69,6 @@ function formatDateTime(ts: string) {
 }
 
 export default function AdminLogsPage() {
-  const router = useRouter()
   const PAGE_SIZE = 25
   const [logs, setLogs] = useState<AuditLogOut[]>([])
   const [search, setSearch] = useState('')
@@ -145,14 +144,7 @@ export default function AdminLogsPage() {
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm font-body text-greige hover:text-charcoal-deep transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+        <DashboardBackLink />
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">

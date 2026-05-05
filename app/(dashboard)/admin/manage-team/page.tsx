@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Users, Search, UserPlus, Mail, Check, AlertCircle, Pencil, Trash2, RotateCcw } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
+import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -192,6 +193,7 @@ export default function ManageTeamPage() {
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <DashboardBackLink />
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-body text-2xl font-bold text-charcoal-deep flex items-center gap-2">

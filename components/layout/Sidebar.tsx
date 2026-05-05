@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -55,20 +55,43 @@ function AdminNavItem({ item, pathname, onClose, depth = 0 }: { item: SidebarIte
   const isActive = pathname === item.href || (item.children && pathname.startsWith(item.href + '/'))
   const hasChildren = item.children && item.children.length > 0
 
+  useEffect(() => {
+    if (!hasChildren) return
+    setExpanded(
+      pathname === item.href || pathname.startsWith(item.href + '/') ||
+      item.children!.some((c) => pathname === c.href || pathname.startsWith(c.href + '/'))
+    )
+  }, [hasChildren, item.children, item.href, pathname])
+
   if (hasChildren) {
     return (
       <div>
-        <button
-          onClick={() => setExpanded(!expanded)}
+        <div
           className={cn(
-            'w-full flex items-center gap-3 py-2 rounded-lg text-sm font-body font-medium transition-all duration-200 group',
-            isActive ? 'bg-gold-whisper border-l-2 border-gold-deep text-charcoal-deep pl-2 pr-3' : 'text-stone hover:text-charcoal-deep hover:bg-parchment/70 px-3'
+            'w-full flex items-center gap-3 rounded-lg text-sm font-body font-medium transition-all duration-200 group',
+            isActive ? 'bg-gold-whisper border-l-2 border-gold-deep text-charcoal-deep' : 'text-stone hover:text-charcoal-deep hover:bg-parchment/70'
           )}
         >
-          {Icon && <Icon className={cn('w-4 h-4 shrink-0 transition-colors', isActive ? 'text-gold-deep' : 'text-greige group-hover:text-stone')} />}
-          <span className="flex-1 text-left">{item.label}</span>
-          <ChevronRight className={cn('w-3.5 h-3.5 text-greige transition-transform duration-200', expanded && 'rotate-90')} />
-        </button>
+          <Link
+            href={item.href}
+            onClick={onClose}
+            className={cn(
+              'flex-1 flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-200',
+              isActive ? 'text-charcoal-deep' : 'text-stone hover:text-charcoal-deep'
+            )}
+          >
+            {Icon && <Icon className={cn('w-4 h-4 shrink-0 transition-colors', isActive ? 'text-gold-deep' : 'text-greige group-hover:text-stone')} />}
+            <span className="flex-1 text-left">{item.label}</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center justify-center px-3"
+            aria-label={expanded ? 'Collapse submenu' : 'Expand submenu'}
+          >
+            <ChevronRight className={cn('w-3.5 h-3.5 text-greige transition-transform duration-200', expanded && 'rotate-90')} />
+          </button>
+        </div>
         {expanded && (
           <div className="ml-4 mt-0.5 space-y-0.5 border-l border-sand-light/50 pl-2">
             {item.children!.map((child) => (
