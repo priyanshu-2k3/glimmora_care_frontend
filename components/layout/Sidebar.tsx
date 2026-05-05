@@ -125,7 +125,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     return (
       <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
         {/* Logo */}
-        <div className="px-5 py-4 border-b border-sand-light">
+        <div className="px-5 py-[18px] border-b border-sand-light">
           <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-gold-soft" />

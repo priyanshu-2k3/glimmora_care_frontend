@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink, Download, Share2, Archive } from 'lucide-react'
+import { Search, Shield, FileText, AlertTriangle, CheckCircle, Upload, User, ChevronRight, ArrowLeft, ExternalLink, Download } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -80,19 +80,12 @@ export default function VaultPage() {
   const [page, setPage] = useState(1)
   const [realPatientList, setRealPatientList] = useState<PatientOut[]>([])
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set())
-  const [bulkToast, setBulkToast] = useState<string | null>(null)
-
   function toggleRecordSelect(id: string) {
     setSelectedRecordIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
-  }
-  function showBulkToast(action: string) {
-    setBulkToast(`${action} ${selectedRecordIds.size} record${selectedRecordIds.size !== 1 ? 's' : ''} (mock)`)
-    setTimeout(() => setBulkToast(null), 2200)
-    setSelectedRecordIds(new Set())
   }
 
   if (!user) return null
@@ -506,24 +499,26 @@ export default function VaultPage() {
                   {selectedRecordIds.size} selected
                 </span>
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Downloaded')}>
+                  <Button size="sm" variant="outline" onClick={async () => {
+                    for (const rid of selectedRecordIds) {
+                      try {
+                        const { url, filename } = await intakeApi.getFileUrl(rid)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = filename ?? ''
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                      } catch { /* no file attached */ }
+                    }
+                    setSelectedRecordIds(new Set())
+                  }}>
                     <Download className="w-3.5 h-3.5" /> Download
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Shared')}>
-                    <Share2 className="w-3.5 h-3.5" /> Share
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => showBulkToast('Archived')}>
-                    <Archive className="w-3.5 h-3.5" /> Archive
                   </Button>
                   <button onClick={() => setSelectedRecordIds(new Set())} className="text-xs text-greige hover:text-charcoal-deep font-body px-2">
                     Clear
                   </button>
                 </div>
-              </div>
-            )}
-            {bulkToast && (
-              <div className="bg-success-soft border border-success-DEFAULT/30 rounded-2xl p-3 text-xs text-success-DEFAULT font-body">
-                {bulkToast}
               </div>
             )}
             {pageSlice.map((rec, ri) => {
@@ -536,7 +531,7 @@ export default function VaultPage() {
                     checked={isSelected}
                     onChange={(e) => { e.stopPropagation(); toggleRecordSelect(rec.id) }}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-4 left-4 z-10 w-4 h-4 cursor-pointer accent-gold-deep"
+                    className="absolute top-1/2 -translate-y-1/2 left-4 z-10 w-4 h-4 cursor-pointer accent-gold-deep"
                     aria-label="Select record"
                   />
                   <Link href={`/vault/${rec.id}`}>

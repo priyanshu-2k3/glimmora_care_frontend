@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
+import { ADMIN_SIDEBAR_SECTIONS } from '@/config/sidebar-config'
 import { Avatar } from '@/components/ui/Avatar'
 import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -56,10 +57,22 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchWrapRef = useRef<HTMLDivElement>(null)
 
-  const currentNav = NAV_ITEMS.find(
-    (item) => pathname === item.href || pathname.startsWith(item.href + '/')
-  )
-  const pageTitle = currentNav?.label || 'Dashboard'
+  // Search all known nav sources; pick the longest (most specific) href match
+  type NavCandidate = { href: string; label: string }
+  const allCandidates: NavCandidate[] = [
+    ...NAV_ITEMS.map((i) => ({ href: i.href, label: i.label })),
+    ...ADMIN_SIDEBAR_SECTIONS.flatMap((s) =>
+      s.items.flatMap((i) => [
+        { href: i.href, label: i.label },
+        ...(i.children ?? []).map((c) => ({ href: c.href, label: c.label })),
+      ])
+    ),
+  ]
+  const currentNav = allCandidates
+    .filter((c) => pathname === c.href || pathname.startsWith(c.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)[0]
+
+  const pageTitle = currentNav?.label ?? 'Dashboard'
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   // Role-aware destinations brought in from main: super-admin lands on the
@@ -231,7 +244,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   if (!user) return null
 
   return (
-    <header className="h-14 bg-white/95 backdrop-blur-sm border-b border-sand-light/60 shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex items-center px-5 gap-4 sticky top-0 z-10">
+    <header className="min-h-[72px] bg-white/95 backdrop-blur-sm border-b border-sand-light/60 shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex items-center px-5 gap-4 sticky top-0 z-10">
       {/* Mobile menu */}
       <button
         onClick={onMenuClick}
@@ -245,7 +258,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-body text-greige hidden md:block">GlimmoraCare</span>
           <ChevronRight className="w-3.5 h-3.5 text-greige/50 hidden md:block" />
-          <h2 className="text-sm font-body font-semibold text-charcoal-deep leading-none truncate">{pageTitle}</h2>
+          <h2 className="text-sm font-body font-semibold text-charcoal-deep leading-normal truncate">{pageTitle}</h2>
         </div>
       </div>
 
