@@ -13,6 +13,7 @@ import { formatConfidence } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { orgApi, getAccessToken } from '@/lib/api'
 import type { PatientOut } from '@/lib/api'
+import { MOCK_PATIENTS } from '@/data/patients'
 import type { Role } from '@/types/auth'
 
 const PERSONA_CONFIG: Record<Persona, { label: string; description: string; color: string; starterPrompts: string[] }> = {
@@ -43,10 +44,11 @@ const PERSONA_CONFIG: Record<Persona, { label: string; description: string; colo
 }
 
 const ROLE_TO_PERSONA: Record<Role, Persona> = {
-  patient:    'patient',
-  doctor:     'doctor',
-  admin:      'admin',
-  super_admin: 'super_admin',
+  patient:      'patient',
+  doctor:       'doctor',
+  admin:        'admin',
+  super_admin:  'super_admin',
+  family_admin: 'patient',
 }
 
 function TypingIndicator() {
@@ -76,23 +78,41 @@ export default function AssistantsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string>('')
 
   const needsPatientPicker =
-    activePersona === 'doctor' || activePersona === 'admin'
+    activePersona === 'doctor' || activePersona === 'admin' || role === 'family_admin'
 
   useEffect(() => {
-    if (!needsPatientPicker || !getAccessToken()) return
+    if (!needsPatientPicker) return
+
+    // Demo mode (no JWT): load mock dependents for family_admin
+    if (!getAccessToken()) {
+      if (role === 'family_admin') {
+        const dependents = MOCK_PATIENTS
+          .filter((p) => p.familyAdminId === user?.id)
+          .map((p) => ({
+            patient_id: p.id,
+            first_name: p.name.split(' ')[0],
+            last_name: p.name.split(' ').slice(1).join(' '),
+            email: null,
+            assigned_doctor_id: null,
+            assigned_doctor_name: null,
+          } as PatientOut))
+        setPatients(dependents)
+      }
+      return
+    }
+
     setPatientsLoading(true)
-    const fetch = activePersona === 'doctor'
-      ? orgApi.getDoctorPatients()
-      : orgApi.listPatients()
+    const fetch = role === 'family_admin'
+      ? orgApi.listPatients()
+      : activePersona === 'doctor'
+        ? orgApi.getDoctorPatients()
+        : orgApi.listPatients()
     fetch
-      .then((list) => {
-        setPatients(list)
-        // Do NOT auto-select a patient — the doctor must pick one explicitly.
-      })
+      .then((list) => { setPatients(list) })
       .catch(() => {})
       .finally(() => setPatientsLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePersona, needsPatientPicker])
+  }, [activePersona, needsPatientPicker, role])
 
   const {
     messages, isTyping, sendMessage, clearMessages,
@@ -332,7 +352,7 @@ export default function AssistantsPage() {
                     showHint ? 'opacity-100' : 'opacity-0',
                   )}
                 >
-                  Select patient
+                  {role === 'family_admin' ? 'Select dependent' : 'Select patient'}
                   <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-charcoal-deep" />
                 </div>
 
@@ -340,7 +360,7 @@ export default function AssistantsPage() {
                 {showPatientPicker && (
                   <div className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-sand-light rounded-xl shadow-xl z-30 overflow-hidden">
                     <div className="px-3 py-2 border-b border-sand-light flex items-center justify-between">
-                      <p className="text-[11px] font-body font-semibold text-charcoal-deep uppercase tracking-wide">Select patient</p>
+                      <p className="text-[11px] font-body font-semibold text-charcoal-deep uppercase tracking-wide">{role === 'family_admin' ? 'Select dependent' : 'Select patient'}</p>
                       <button
                         type="button"
                         onClick={() => setShowPatientPicker(false)}
