@@ -10,4 +10,5 @@ export enum UserRole {
   DOCTOR = 'doctor',
   ADMIN = 'admin',
   SUPER_ADMIN = 'super_admin',
+  FAMILY_ADMIN = 'family_admin',
 }
