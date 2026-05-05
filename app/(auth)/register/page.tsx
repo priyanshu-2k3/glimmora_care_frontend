@@ -79,6 +79,9 @@ export default function RegisterPage() {
     else if (!/[A-Z]/.test(owner.password)) errs.password = 'Must include uppercase letter'
     else if (!/\d/.test(owner.password)) errs.password = 'Must include a number'
     if (owner.confirmPassword !== owner.password) errs.confirmPassword = 'Passwords do not match'
+    if (owner.role === 'doctor' && !owner.organization.trim()) {
+      errs.organization = 'Organization is required for doctors'
+    }
     return errs
   }
 
@@ -225,16 +228,32 @@ export default function RegisterPage() {
                 label="Role"
                 options={ROLE_OPTIONS}
                 value={owner.role}
-                onChange={(e) => setOwner((p) => ({ ...p, role: e.target.value as Role }))}
+                onChange={(e) => {
+                  const nextRole = e.target.value as Role
+                  setOwner((p) => ({
+                    ...p,
+                    role: nextRole,
+                    // Discard any organization the user typed if they switch back to patient.
+                    organization: nextRole === 'doctor' ? p.organization : '',
+                  }))
+                  if (nextRole !== 'doctor') {
+                    setFieldErrors((p) => ({ ...p, organization: undefined }))
+                  }
+                }}
               />
             </div>
             {(owner.role === 'doctor') && (
               <div className="col-span-2">
                 <Input
-                  label="Organization"
+                  label="Organization *"
                   placeholder="Hospital / NGO / Department"
                   value={owner.organization}
-                  onChange={(e) => setOwner((p) => ({ ...p, organization: e.target.value }))}
+                  onChange={(e) => {
+                    setOwner((p) => ({ ...p, organization: e.target.value }))
+                    setFieldErrors((p) => ({ ...p, organization: undefined }))
+                  }}
+                  required
+                  error={fieldErrors.organization}
                 />
               </div>
             )}

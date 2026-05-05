@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { Fragment, useState, useRef } from 'react'
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -34,6 +34,7 @@ export function BulkImportPanel() {
   const [preview, setPreview] = useState<BulkPreviewResponse | null>(null)
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
+  const [failureReasons, setFailureReasons] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function handleFile(file: File) {
@@ -99,6 +100,7 @@ export function BulkImportPanel() {
       const result = await bulkImportApi.confirm(rows)
       setImportedCount(result.importedCount)
       setFailedCount(result.failedCount)
+      setFailureReasons(result.failureReasons ?? [])
       setPhase('done')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
@@ -112,6 +114,7 @@ export function BulkImportPanel() {
     setPreview(null)
     setError(null)
     setIsLoading(false)
+    setFailureReasons([])
   }
 
   return (
@@ -214,33 +217,46 @@ export function BulkImportPanel() {
               </thead>
               <tbody>
                 {preview.rows.map((row) => (
-                  <tr
-                    key={row.rowIndex}
-                    className="border-b border-sand-light/50 last:border-0 hover:bg-ivory-cream/50 transition-colors"
-                  >
-                    <td className="px-3 py-2 text-greige">{row.rowIndex}</td>
-                    <td className="px-3 py-2 text-charcoal-deep">{row.patientId}</td>
-                    <td className="px-3 py-2 text-stone max-w-[120px] truncate">{row.title}</td>
-                    <td className="px-3 py-2 text-charcoal-deep">{row.markerName}</td>
-                    <td className="px-3 py-2 text-charcoal-deep">{row.value}</td>
-                    <td className="px-3 py-2 text-stone">{row.unit}</td>
-                    <td className="px-3 py-2">
-                      {row.isValid ? (
-                        <span className="flex items-center gap-1 text-success-DEFAULT">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Valid
-                        </span>
-                      ) : (
-                        <span
-                          className="flex items-center gap-1 text-[#B91C1C]"
-                          title={row.error ?? 'Invalid row'}
-                        >
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          Invalid
-                        </span>
+                  <Fragment key={row.rowIndex}>
+                    <tr
+                      className={cn(
+                        'border-b last:border-0 transition-colors',
+                        row.isValid
+                          ? 'border-sand-light/50 hover:bg-ivory-cream/50'
+                          : 'border-transparent bg-error-soft/30'
                       )}
-                    </td>
-                  </tr>
+                    >
+                      <td className="px-3 py-2 text-greige">{row.rowIndex}</td>
+                      <td className="px-3 py-2 text-charcoal-deep">{row.patientId}</td>
+                      <td className="px-3 py-2 text-stone max-w-[120px] truncate">{row.title}</td>
+                      <td className="px-3 py-2 text-charcoal-deep">{row.markerName}</td>
+                      <td className="px-3 py-2 text-charcoal-deep">{row.value}</td>
+                      <td className="px-3 py-2 text-stone">{row.unit}</td>
+                      <td className="px-3 py-2">
+                        {row.isValid ? (
+                          <span className="flex items-center gap-1 text-success-DEFAULT">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Valid
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[#B91C1C] font-semibold">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Invalid
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                    {!row.isValid && (
+                      <tr className="border-b border-sand-light/50 bg-error-soft/30">
+                        <td colSpan={7} className="px-3 pt-0 pb-2.5 text-[11px] text-[#B91C1C] font-body leading-snug">
+                          <span className="inline-flex items-start gap-1.5">
+                            <span className="font-semibold shrink-0">Why invalid:</span>
+                            <span className="break-words">{row.error ?? 'Row could not be validated.'}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -295,6 +311,20 @@ export function BulkImportPanel() {
               )}
             </p>
           </div>
+          {failureReasons.length > 0 && (
+            <div className="w-full bg-error-soft/40 border border-[#DC2626]/30 rounded-xl p-3">
+              <p className="text-xs font-body font-semibold text-[#B91C1C] mb-1.5">
+                Why some rows failed:
+              </p>
+              <ul className="space-y-1">
+                {failureReasons.map((r, i) => (
+                  <li key={i} className="text-[11px] text-[#B91C1C] font-body break-words">
+                    • {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Button variant="outline" onClick={reset}>
             Import Another File
           </Button>

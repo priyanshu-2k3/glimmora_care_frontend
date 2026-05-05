@@ -510,14 +510,14 @@ export default function SettingsPage() {
                                 className={cn(
                                   'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
                                   twofaEnabled
-                                    ? 'bg-emerald-DEFAULT text-white border-emerald-DEFAULT'
+                                    ? 'bg-emerald-DEFAULT text-charcoal-deep border-emerald-DEFAULT'
                                     : 'bg-stone/10 text-stone border-stone/30',
                                 )}
                               >
                                 <span
                                   className={cn(
                                     'w-1.5 h-1.5 rounded-full',
-                                    twofaEnabled ? 'bg-white' : 'bg-stone/60',
+                                    twofaEnabled ? 'bg-charcoal-deep' : 'bg-stone/60',
                                   )}
                                 />
                                 {twofaLoading ? 'Updating…' : twofaEnabled ? 'On' : 'Off'}
@@ -573,24 +573,78 @@ export default function SettingsPage() {
                     {[
                       { label: 'Session Timeout', desc: 'Auto-logout after 30 minutes of inactivity' },
                       { label: 'Login Alerts',    desc: 'Email notification on new login attempts' },
-                    ].map((item) => (
-                      <div key={item.label} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
-                          <p className="text-xs text-greige">{item.desc}</p>
+                    ].map((item) => {
+                      const isEnabled = securityToggles[item.label] ?? true
+                      return (
+                        <div
+                          key={item.label}
+                          className={cn(
+                            'flex items-center justify-between rounded-xl border p-4 transition-colors',
+                            isEnabled
+                              ? 'bg-success-soft/40 border-success-DEFAULT/30'
+                              : 'bg-ivory-warm border-sand-light',
+                          )}
+                        >
+                          <div className="flex-1 mr-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-body font-medium text-charcoal-deep">{item.label}</p>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
+                                  isEnabled
+                                    ? 'bg-success-DEFAULT text-charcoal-deep border-success-DEFAULT'
+                                    : 'bg-stone/10 text-stone border-stone/30',
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'w-1.5 h-1.5 rounded-full',
+                                    isEnabled ? 'bg-charcoal-deep' : 'bg-stone/60',
+                                  )}
+                                />
+                                {isEnabled ? 'On' : 'Off'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-greige">{item.desc}</p>
+                          </div>
+                          <Toggle
+                            checked={isEnabled}
+                            onChange={() => setSecurityToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
+                          />
                         </div>
-                        <Toggle
-                          checked={securityToggles[item.label] ?? true}
-                          onChange={() => setSecurityToggles((prev) => ({ ...prev, [item.label]: !prev[item.label] }))}
-                        />
-                      </div>
-                    ))}
+                      )
+                    })}
 
                     {/* Allow family owner to act on my behalf — patient only */}
                     {user?.role === 'patient' && (
-                      <div className="flex items-center justify-between pt-2 border-t border-sand-light">
+                      <div
+                        className={cn(
+                          'flex items-center justify-between pt-2 border-t border-sand-light rounded-xl border p-4 transition-colors',
+                          allowOwnerActions
+                            ? 'bg-success-soft/40 border-success-DEFAULT/30'
+                            : 'bg-ivory-warm border-sand-light',
+                        )}
+                      >
                         <div className="flex-1 mr-4">
-                          <p className="text-sm font-body font-medium text-charcoal-deep">Allow family owner to act on my behalf</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-body font-medium text-charcoal-deep">Allow family owner to act on my behalf</p>
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-0.5 rounded-full border tracking-widest uppercase',
+                                allowOwnerActions
+                                  ? 'bg-success-DEFAULT text-charcoal-deep border-success-DEFAULT'
+                                  : 'bg-stone/10 text-stone border-stone/30',
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'w-1.5 h-1.5 rounded-full',
+                                  allowOwnerActions ? 'bg-charcoal-deep' : 'bg-stone/60',
+                                )}
+                              />
+                              {allowOwnerActions ? 'On' : 'Off'}
+                            </span>
+                          </div>
                           <p className="text-xs text-greige">Lets the owner of your family group grant/approve consents and trigger emergency access for you.</p>
                         </div>
                         <Toggle
@@ -783,14 +837,14 @@ export default function SettingsPage() {
 
       {/* Logout — always visible regardless of which tab is active (Bug 17) */}
       <div className="pt-2 border-t border-sand-light mt-4">
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={handleLogout}
-          className="flex items-center gap-2 text-sm font-body text-coral-muted hover:text-[#B91C1C] transition-colors py-2"
+          className="w-full border-coral-muted text-coral-muted hover:bg-[#DC2626] hover:text-white hover:border-coral-muted"
         >
           <LogOut className="w-4 h-4" />
           Sign out of your account
-        </button>
+        </Button>
       </div>
     </div>
   )

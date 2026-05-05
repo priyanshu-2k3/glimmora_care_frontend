@@ -91,6 +91,7 @@ export interface BulkConfirmResponse {
   importedCount: number
   failedCount: number
   message: string
+  failureReasons?: string[]
 }
 
 export interface HealthRecord {
