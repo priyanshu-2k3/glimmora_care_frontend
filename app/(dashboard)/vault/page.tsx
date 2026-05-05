@@ -157,9 +157,15 @@ export default function VaultPage() {
   }
 
   // Derive unique patients from real records (for doctor/admin card view).
-  // Skip records with no patientId — they would collide on a null Map key
-  // and produce duplicate React keys downstream.
+  // Skip records with no patientId — they would collide on a null Map key.
   const patientMap = new Map<string, { name: string; consented: number; total: number; district?: string; age?: number }>()
+
+  // Seed patientMap from the real patient list first so patients with 0 records still appear
+  for (const p of realPatientList) {
+    const displayName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || p.patient_id
+    patientMap.set(p.patient_id, { name: displayName, consented: 0, total: 0 })
+  }
+
   for (const rec of records) {
     if (!rec.patientId) continue
     const prev = patientMap.get(rec.patientId) ?? { name: rec.patientId, consented: 0, total: 0 }
