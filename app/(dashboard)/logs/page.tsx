@@ -166,9 +166,11 @@ function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
 
 // ─── Filter bar shared component ─────────────────────────────────────────────
 
+interface FilterOption { value: string; label: string }
+
 interface FilterPillsProps {
   label: string
-  options: string[]
+  options: FilterOption[]
   value: string
   onChange: (v: string) => void
 }
@@ -179,14 +181,14 @@ function FilterPills({ label, options, value, onChange }: FilterPillsProps) {
       <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider shrink-0">{label}:</span>
       {options.map((o) => (
         <button
-          key={o}
-          onClick={() => onChange(o)}
+          key={o.value}
+          onClick={() => onChange(o.value)}
           className={cn(
-            'px-2.5 py-1 rounded-full text-xs font-body transition-all capitalize',
-            value === o ? 'bg-charcoal-deep text-ivory-cream' : 'bg-parchment text-greige hover:text-charcoal-deep'
+            'px-2.5 py-1 rounded-full text-xs font-body transition-all',
+            value === o.value ? 'bg-charcoal-deep text-ivory-cream' : 'bg-parchment text-greige hover:text-charcoal-deep'
           )}
         >
-          {o}
+          {o.label}
         </button>
       ))}
     </div>
@@ -255,17 +257,21 @@ export default function LogsPage() {
     return () => { alive = false }
   }, [isAdmin, user?.id])
 
-  // Admin-specific filters (sent to backend)
-  const [severity, setSeverity]     = useState('all')
+  // Admin-specific filters
+  const [severity, setSeverity]         = useState('all')
   const [actionFilter, setActionFilter] = useState('all')
 
   // Patient/doctor-specific filters (client-side)
   const [actionType, setActionType] = useState('all')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo]     = useState('')
+  const [dateFrom, setDateFrom]     = useState('')
+  const [dateTo, setDateTo]         = useState('')
 
-  // Debounce admin search to avoid hammering the backend
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Use refs so debounce callback always reads the latest filter values
+  const severityRef     = useRef(severity)
+  const actionFilterRef = useRef(actionFilter)
+  const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  severityRef.current     = severity
+  actionFilterRef.current = actionFilter
 
   function reloadAdmin(sev: string, act: string, q: string) {
     setLoading(true)
@@ -282,14 +288,12 @@ export default function LogsPage() {
     .finally(() => setLoading(false))
   }
 
+  // Initial data load
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
     if (isAdmin) {
       reloadAdmin(severity, actionFilter, search)
     } else {
-      // Non-admin roles: combine the per-record intake audit trail with the
-      // role-scoped admin audit log (which the backend now scopes to the
-      // user's own actor/target rows for doctor/patient).
       Promise.all([
         intakeApi.getAuditTrail(500).catch(() => [] as AuditTrailEntry[]),
         adminApi.getAuditLogs({ limit: 500 }).catch(() => [] as AuditLogOut[]),
@@ -298,7 +302,9 @@ export default function LogsPage() {
           const merged: LogRow[] = [...trail.map(fromTrail), ...sysLogs.map(fromAdminLog)]
           const seen = new Set<string>()
           const uniqueRows = merged.filter((row) => {
-            if (seen.has(row.id)) return false
+            const minuteTimestamp = row.timestamp.substring(0, 16)
+            const compositeKey = `${row.action}|${minuteTimestamp}|${row.detail}`
+            if (seen.has(row.id) || seen.has(compositeKey)) return false
             seen.add(row.id)
             return true
           })
@@ -310,7 +316,7 @@ export default function LogsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
-  // Admin: re-fetch when severity or actionFilter changes
+  // Admin: re-fetch when severity or actionFilter changes (use current search via ref)
   useEffect(() => {
     if (!isAdmin) return
     reloadAdmin(severity, actionFilter, search)
@@ -318,35 +324,45 @@ export default function LogsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [severity, actionFilter])
 
-  // Admin: debounced search
+  // Admin: debounced search — reads latest severity/actionFilter from refs
   function handleSearch(q: string) {
     setSearch(q)
     setPage(1)
     if (!isAdmin) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => reloadAdmin(severity, actionFilter, q), 400)
+    debounceRef.current = setTimeout(
+      () => reloadAdmin(severityRef.current, actionFilterRef.current, q),
+      400,
+    )
   }
 
-  // Patient/doctor: client-side filter
+  // Derive exact action pills from data present in rows (patient/doctor only)
+  const availableActions = [...new Set(rows.map((r) => r.action))].sort()
+
+  // Patient/doctor: client-side filtering — search + exact action + date range
   const patientFiltered = rows.filter((r) => {
-    if (search && !r.action.toLowerCase().includes(search.toLowerCase()) && !r.detail.toLowerCase().includes(search.toLowerCase())) return false
-    if (actionType !== 'all') {
-      if (actionType === 'uploads'  && !['upload', 'confirm', 'manual_entry', 'bulk_import'].includes(r.action)) return false
-      if (actionType === 'views'    && !['read', 'read_list'].includes(r.action)) return false
-      if (actionType === 'shares'   && !['share', 'revoke_share'].includes(r.action)) return false
-      if (actionType === 'downloads' && r.action !== 'download_url') return false
+    if (search) {
+      const q = search.toLowerCase()
+      const label = getMeta(r.action).label.toLowerCase()
+      const matches =
+        r.action.toLowerCase().includes(q) ||
+        label.includes(q) ||
+        r.detail.toLowerCase().includes(q) ||
+        (r.actor    ?? '').toLowerCase().includes(q) ||
+        (r.target   ?? '').toLowerCase().includes(q) ||
+        (r.recordId ?? '').toLowerCase().includes(q)
+      if (!matches) return false
     }
+    if (actionType !== 'all' && r.action !== actionType) return false
     if (dateFrom && r.timestamp < dateFrom) return false
     if (dateTo   && r.timestamp > dateTo + 'T23:59:59') return false
     return true
   })
 
   const displayRows = isAdmin ? rows : patientFiltered
-  const totalPages  = Math.ceil(displayRows.length / PAGE_SIZE)
-  const pageSlice   = displayRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  // reset page on patient filters change
-  useEffect(() => { setPage(1) }, [actionType, dateFrom, dateTo])
+  // Reset page whenever any filter, search, or tab changes
+  useEffect(() => { setPage(1) }, [actionType, dateFrom, dateTo, search])
 
   const totalEvents  = rows.length
   const viewCount    = isAdmin
@@ -421,13 +437,13 @@ export default function LogsPage() {
           </div>
           <FilterPills
             label="Severity"
-            options={['all', 'info', 'warning', 'critical']}
+            options={['all', 'info', 'warning', 'critical'].map((s) => ({ value: s, label: s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1) }))}
             value={severity}
             onChange={setSeverity}
           />
           <FilterPills
             label="Action"
-            options={['all', ...adminActions]}
+            options={[{ value: 'all', label: 'All' }, ...adminActions.map((a) => ({ value: a, label: getMeta(a).label }))]}
             value={actionFilter}
             onChange={setActionFilter}
           />
@@ -443,9 +459,12 @@ export default function LogsPage() {
           </div>
           <FilterPills
             label="Type"
-            options={['all', 'uploads', 'views', 'shares', 'downloads']}
+            options={[
+              { value: 'all', label: 'All' },
+              ...availableActions.map((a) => ({ value: a, label: getMeta(a).label })),
+            ]}
             value={actionType}
-            onChange={setActionType}
+            onChange={(v) => { setActionType(v); setPage(1) }}
           />
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider">Date:</span>
@@ -474,10 +493,12 @@ export default function LogsPage() {
         </div>
       )}
 
-      <Tabs tabs={TABS} defaultTab={fromConsent ? 'access' : undefined}>
+      <Tabs tabs={TABS} defaultTab={fromConsent ? 'access' : undefined} onChange={() => setPage(1)}>
         {(activeTab) => {
-          const list = activeTab === 'activity' ? pageSlice : pageSlice.filter((r) => ACCESS_ACTIONS.has(r.action))
-          const tabTotal = activeTab === 'activity' ? displayRows.length : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action)).length
+          const tabRows = activeTab === 'activity' ? displayRows : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action))
+          const tabTotal = tabRows.length
+          const tabTotalPages = Math.ceil(tabTotal / PAGE_SIZE)
+          const list = tabRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
           return (
             <Card>
               <CardHeader>
@@ -486,7 +507,7 @@ export default function LogsPage() {
                 </CardTitle>
                 <CardDescription>
                   {activeTab === 'activity'
-                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${totalPages > 1 ? ` · page ${page} of ${totalPages}` : ''}`
+                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${tabTotalPages > 1 ? ` · page ${page} of ${tabTotalPages}` : ''}`
                     : `${tabTotal} access event${tabTotal !== 1 ? 's' : ''} — who viewed your data`}
                 </CardDescription>
               </CardHeader>
@@ -512,9 +533,9 @@ export default function LogsPage() {
                   list.map((row) => <LogEntry key={row.id} row={row} idMaps={idMaps} />)
                 )}
               </CardContent>
-              {activeTab === 'activity' && totalPages > 1 && (
+              {tabTotalPages > 1 && (
                 <div className="px-5 pb-4">
-                  <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                  <Pagination page={page} totalPages={tabTotalPages} onPageChange={setPage} />
                 </div>
               )}
             </Card>
