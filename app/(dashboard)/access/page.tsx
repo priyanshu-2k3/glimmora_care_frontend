@@ -189,9 +189,17 @@ export default function AccessControlPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {settings.map((s) => (
-            <div key={s.id} className="flex items-center justify-between py-2 border-b border-sand-light last:border-0">
+            <div
+              key={s.id}
+              className={cn(
+                'flex items-center justify-between px-3 py-3 rounded-xl border transition-all duration-200',
+                s.enabled
+                  ? 'bg-success-soft border-success-DEFAULT/30'
+                  : 'bg-transparent border-transparent hover:bg-parchment'
+              )}
+            >
               <div className="flex-1 min-w-0 mr-4">
-                <p className="text-sm font-body font-medium text-charcoal-deep">{s.label}</p>
+                <p className={cn('text-sm font-body font-medium transition-colors', s.enabled ? 'text-charcoal-deep' : 'text-charcoal-warm')}>{s.label}</p>
                 <p className="text-xs text-greige leading-relaxed">{s.desc}</p>
               </div>
               <Toggle checked={s.enabled} onChange={() => toggleSetting(s.id)} />

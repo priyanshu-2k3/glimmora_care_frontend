@@ -306,7 +306,6 @@ export default function LogsPage() {
             const compositeKey = `${row.action}|${minuteTimestamp}|${row.detail}`
             if (seen.has(row.id) || seen.has(compositeKey)) return false
             seen.add(row.id)
-            seen.add(compositeKey)
             return true
           })
           uniqueRows.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))

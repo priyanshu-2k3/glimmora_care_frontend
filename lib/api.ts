@@ -1016,6 +1016,15 @@ export const intakeApi = {
       body: JSON.stringify({ recordId, markers, title, notes, date }),
     }),
 
+  /** Discard a draft record. Deletes both the Mongo row and the underlying
+   *  file, so the same file can be re-uploaded afterwards (the file_hash
+   *  duplicate-guard is keyed off the row's existence). */
+  discardDraft: (recordId: string) =>
+    apiFetch<{ recordId: string; message: string }>(
+      `/intake/records/${recordId}/draft`,
+      { method: 'DELETE' },
+    ),
+
   /** Create a record from manual form entry */
   manual: (data: ManualEntryData) =>
     apiFetch<ManualEntryResponse>('/intake/manual', {

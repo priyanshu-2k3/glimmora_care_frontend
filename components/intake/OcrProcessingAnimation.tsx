@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,35 +14,45 @@ const STAGES = [
   'Analysis complete.',
 ]
 
+const FINAL_STAGE = STAGES.length - 1   // "Analysis complete."
+const HOLD_STAGE  = FINAL_STAGE - 1     // last in-progress stage
+
 interface OcrProcessingAnimationProps {
+  /** True while the real OCR API call is in flight. The animation only
+   *  reaches the "Analysis complete" stage once this flips back to false,
+   *  so the UI never claims completion while the backend is still working. */
   isRunning: boolean
-  onComplete?: () => void
 }
 
-export function OcrProcessingAnimation({ isRunning, onComplete }: OcrProcessingAnimationProps) {
+export function OcrProcessingAnimation({ isRunning }: OcrProcessingAnimationProps) {
   const [currentStage, setCurrentStage] = useState(0)
-  const [done, setDone] = useState(false)
+  const startedRef = useRef(false)
 
+  // While the call is in flight, tick through the in-progress stages on a
+  // timer but never advance past HOLD_STAGE. The final stage is only
+  // reached when the parent flips isRunning off.
   useEffect(() => {
     if (!isRunning) return
+    startedRef.current = true
     setCurrentStage(0)
-    setDone(false)
     let i = 0
     const interval = setInterval(() => {
-      i++
-      if (i >= STAGES.length) {
-        clearInterval(interval)
-        setCurrentStage(STAGES.length - 1)
-        setDone(true)
-        onComplete?.()
-      } else {
-        setCurrentStage(i)
-      }
+      i = Math.min(i + 1, HOLD_STAGE)
+      setCurrentStage(i)
+      if (i === HOLD_STAGE) clearInterval(interval)
     }, 550)
     return () => clearInterval(interval)
-  }, [isRunning, onComplete])
+  }, [isRunning])
 
-  if (!isRunning && !done) return null
+  // Once the real API call resolves, jump to the final "complete" stage.
+  useEffect(() => {
+    if (isRunning || !startedRef.current) return
+    setCurrentStage(FINAL_STAGE)
+  }, [isRunning])
+
+  if (!isRunning && !startedRef.current) return null
+
+  const done = !isRunning && currentStage === FINAL_STAGE
 
   return (
     <div className="bg-white border border-sand-light/60 rounded-xl shadow-sm p-6 space-y-3">
@@ -69,7 +79,6 @@ export function OcrProcessingAnimation({ isRunning, onComplete }: OcrProcessingA
           </div>
         ))}
       </div>
-      {/* Progress bar */}
       <div className="mt-4 bg-parchment rounded-full h-1.5 overflow-hidden">
         <div
           className="h-full bg-gold-soft rounded-full transition-all duration-500"

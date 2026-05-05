@@ -12,6 +12,7 @@ import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrg
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
+import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 
 // ─── Admin view ────────────────────────────────────────────────────────────────
 function AdminOrgView() {
@@ -136,8 +137,11 @@ function AdminOrgView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+        <DashboardBackLink />
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+        </div>
       </div>
     )
   }
@@ -145,6 +149,7 @@ function AdminOrgView() {
   if (showCreate && !org) {
     return (
       <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
+        <DashboardBackLink />
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep">Create Organisation</h1>
           <p className="text-sm text-greige font-body mt-1">Set up your healthcare organisation to start inviting doctors and managing patients.</p>
@@ -185,6 +190,7 @@ function AdminOrgView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <DashboardBackLink />
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-body text-2xl font-bold text-charcoal-deep">{org?.name ?? 'Organisation'}</h1>
@@ -570,8 +576,11 @@ function SuperAdminOrgView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <DashboardBackLink />
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 text-gold-soft animate-spin" />
+        </div>
       </div>
     )
   }
@@ -644,6 +653,8 @@ function SuperAdminOrgView() {
           }}
         />
       )}
+
+      <DashboardBackLink />
 
       <div>
         <h1 className="font-body text-2xl lg:text-3xl font-bold text-charcoal-deep flex items-center gap-2">
