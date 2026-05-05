@@ -63,4 +63,5 @@ export interface Patient {
   lastVisit?: string
   recordCount: number
   dataCompleteness: number // 0-100
+  familyAdminId?: string
 }

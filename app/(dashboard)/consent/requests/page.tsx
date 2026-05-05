@@ -13,8 +13,13 @@ import { cn } from '@/lib/utils'
 const SCOPE_LABELS: Record<string, string> = {
   view_records: 'View health records',
   view_trends: 'View health trends',
+  view_markers: 'View Markers',
+  view_timeline: 'View Timeline',
   export_summary: 'Export summary',
+  export_data: 'Export Data',
   add_records: 'Add records',
+  edit_records: 'Edit Records',
+  share_records: 'Share Records',
 }
 
 function timeAgo(iso: string) {

@@ -3,7 +3,7 @@
 import {
   Upload, Shield, Activity, Users,
   AlertTriangle, CheckCircle, FileText, ArrowUpRight, ShieldAlert,
-  Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail,
+  Building2, Heart, Bell, ListChecks, UserPlus, Globe, Mail, User,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -13,6 +13,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
 import { useAuth } from '@/context/AuthContext'
+import { MOCK_PATIENTS } from '@/data/patients'
 import { intakeApi, orgApi, adminApi, familyApi, getAccessToken } from '@/lib/api'
 import type { HealthRecord } from '@/types/intake'
 import type { PatientOut, AdminStatsOut, AdminPatientOut, AdminDoctorOut, AdminOrgItem, AuditLogOut } from '@/lib/api'
@@ -890,6 +891,140 @@ function SuperAdminView({ userName }: { userName: string }) {
   )
 }
 
+// ─── Family Admin view ────────────────────────────────────────────────────────
+
+function FamilyAdminView({ userName, userId }: { userName: string; userId: string }) {
+  const dependents = MOCK_PATIENTS.filter(
+    (p) => (p as { familyAdminId?: string }).familyAdminId === userId
+  )
+
+  return (
+    <div className="space-y-5">
+      <WelcomeBanner name={userName} role="Family Admin" chips={[
+        { label: 'Dependents', value: String(dependents.length), color: C.gold.bg },
+        { label: 'Records',    value: String(dependents.reduce((sum, d) => sum + d.recordCount, 0)), color: C.ocean.bg },
+      ]} />
+
+      {/* Family Health Overview header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-body font-semibold text-charcoal-deep">Family Health Overview</p>
+          <p className="text-[11px] text-greige mt-0.5">Manage health records and consents for your family members</p>
+        </div>
+        <Link href="/vault">
+          <div className="flex items-center gap-1.5 text-xs font-body font-medium px-3 py-1.5 rounded-xl border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all" style={{ color: C.gold.text }}>
+            View All Records
+            <ArrowUpRight className="w-3 h-3" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Dependent cards */}
+      {dependents.length === 0 ? (
+        <Panel>
+          <div className="px-5 py-10 text-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: C.gold.soft }}>
+              <User className="w-6 h-6" style={{ color: C.gold.text }} />
+            </div>
+            <p className="text-sm font-body font-semibold text-charcoal-deep">No dependents linked</p>
+            <p className="text-xs text-greige mt-1">Contact your administrator to link family members.</p>
+          </div>
+        </Panel>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {dependents.map((dep, i) => (
+            <Panel key={dep.id}>
+              <div className="p-5">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-body font-bold text-white shrink-0"
+                    style={{ background: [C.gold.bg, C.ocean.bg, C.teal.bg, C.violet.bg][i % 4] }}>
+                    {dep.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-body font-semibold text-charcoal-deep">{dep.name}</p>
+                    <p className="text-[11px] text-greige">
+                      {dep.age ? `Age ${dep.age}` : ''}
+                      {dep.age && dep.district ? ' · ' : ''}
+                      {dep.district ?? ''}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-body font-semibold px-2.5 py-1 rounded-full shrink-0"
+                    style={{ background: C.gold.soft, color: C.gold.text }}>
+                    Dependent
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-ivory-cream border border-sand-light rounded-xl p-3">
+                    <p className="text-xs font-body font-bold text-charcoal-deep">{dep.recordCount}</p>
+                    <p className="text-[10px] text-greige mt-0.5">Records</p>
+                  </div>
+                  <div className="bg-ivory-cream border border-sand-light rounded-xl p-3">
+                    <p className="text-xs font-body font-bold text-charcoal-deep">
+                      {dep.lastVisit ? new Date(dep.lastVisit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
+                    </p>
+                    <p className="text-[10px] text-greige mt-0.5">Last Visit</p>
+                  </div>
+                </div>
+
+                {/* Data completeness bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] text-greige font-body">Data completeness</p>
+                    <p className="text-[10px] font-body font-semibold text-charcoal-deep">{dep.dataCompleteness}%</p>
+                  </div>
+                  <div className="h-1.5 bg-sand-light rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${dep.dataCompleteness}%`, background: dep.dataCompleteness >= 80 ? C.emerald.bg : dep.dataCompleteness >= 50 ? C.amber.bg : C.coral.bg }} />
+                  </div>
+                </div>
+
+                {/* Quick links */}
+                <div className="flex gap-2 flex-wrap">
+                  <Link href={`/vault?patient=${dep.id}`}>
+                    <div className="flex items-center gap-1 text-[10px] font-body font-semibold px-2.5 py-1.5 rounded-lg border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all text-charcoal-deep">
+                      <FileText className="w-3 h-3" />
+                      Records
+                    </div>
+                  </Link>
+                  <Link href="/consent">
+                    <div className="flex items-center gap-1 text-[10px] font-body font-semibold px-2.5 py-1.5 rounded-lg border border-sand-light hover:border-gold-soft/60 hover:bg-ivory-cream transition-all text-charcoal-deep">
+                      <Shield className="w-3 h-3" />
+                      Consent
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <Panel>
+        <PanelHeader title="Quick Actions" sub="Family management shortcuts" action={<ListChecks className="w-3.5 h-3.5 text-greige" />} />
+        <div className="px-5 pb-5 space-y-2">
+          {[
+            { label: 'View Family Records',   href: '/vault',           color: C.gold,    icon: FileText },
+            { label: 'Manage Consent',         href: '/consent',         color: C.ocean,   icon: Shield },
+            { label: 'Family Members',         href: '/family/members',  color: C.violet,  icon: Users },
+          ].map((action) => (
+            <Link key={action.label} href={action.href}>
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-sand-light hover:border-gold-soft/50 hover:bg-ivory-cream transition-all group">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: action.color.soft }}>
+                  <action.icon className="w-4 h-4" style={{ color: action.color.text }} />
+                </div>
+                <p className="flex-1 text-xs font-body font-medium text-charcoal-deep">{action.label}</p>
+                <ArrowUpRight className="w-3.5 h-3.5 text-greige group-hover:text-gold-deep transition-colors" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -906,9 +1041,10 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in">
-      {user.role === 'patient'     && <PatientView userName={user.name} />}
-      {user.role === 'doctor'      && <DoctorView  userName={user.name} />}
-      {user.role === 'admin'       && <AdminView userName={user.name} />}
+      {user.role === 'patient'      && <PatientView userName={user.name} />}
+      {user.role === 'doctor'       && <DoctorView  userName={user.name} />}
+      {user.role === 'admin'        && <AdminView userName={user.name} />}
+      {user.role === 'family_admin' && <FamilyAdminView userName={user.name} userId={user.id} />}
     </div>
   )
 }

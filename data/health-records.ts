@@ -152,6 +152,64 @@ export const MOCK_HEALTH_RECORDS: HealthRecord[] = [
       makeMarker('m029', 'Triglycerides', 'Triglycerides', 198, 'mg/dL', 0, 150, 'cardiac', '2024-09-10', 96, 'rising'),
     ],
   },
+  // PAT_001 — Priya Sharma (REVOKED consent — doctor access was revoked)
+  {
+    id: 'rec_008',
+    patientId: 'pat_001',
+    type: 'lab_report',
+    title: 'Lipid Panel — Dec 2024',
+    date: '2024-12-05',
+    source: 'Dr. Lal PathLabs, Mumbai',
+    sourceLab: 'Dr. Lal PathLabs',
+    doctor: 'Dr. Priya Iyer',
+    isEncrypted: true,
+    consentStatus: 'revoked',
+    uploadedBy: 'usr_doctor_002',
+    uploadedAt: '2024-12-06T10:00:00Z',
+    fileSize: '0.8 MB',
+    ocrConfidence: 90,
+    markers: [
+      makeMarker('m030', 'Total Cholesterol', 'Cholesterol', 204, 'mg/dL', 0, 200, 'cardiac', '2024-12-05', 91, 'rising'),
+      makeMarker('m031', 'LDL', 'LDL Cholesterol', 128, 'mg/dL', 0, 100, 'cardiac', '2024-12-05', 89, 'stable'),
+    ],
+  },
+  // PAT_DEP_001 — Arjun Sharma (managed by family_admin; consent PENDING)
+  {
+    id: 'rec_009',
+    patientId: 'pat_dep_001',
+    type: 'lab_report',
+    title: 'Paediatric CBC Panel — Jan 2025',
+    date: '2025-01-10',
+    source: 'Thyrocare, Mumbai',
+    sourceLab: 'Thyrocare',
+    doctor: 'Dr. Arjun Mehta',
+    isEncrypted: true,
+    consentStatus: 'pending',
+    uploadedBy: 'usr_family_001',
+    uploadedAt: '2025-01-11T09:00:00Z',
+    fileSize: '0.6 MB',
+    ocrConfidence: 88,
+    markers: [
+      makeMarker('m032', 'Hemoglobin', 'Hemoglobin', 12.8, 'g/dL', 11.5, 15.5, 'blood', '2025-01-10', 92, 'stable'),
+      makeMarker('m033', 'WBC', 'White Blood Cell Count', 7200, '/μL', 4500, 13500, 'blood', '2025-01-10', 90, 'stable'),
+    ],
+  },
+  // PAT_DEP_001 — Arjun Sharma (second record, consent GRANTED)
+  {
+    id: 'rec_010',
+    patientId: 'pat_dep_001',
+    type: 'vitals',
+    title: 'Growth & BMI Assessment — Feb 2025',
+    date: '2025-02-12',
+    source: 'Self-recorded',
+    isEncrypted: true,
+    consentStatus: 'granted',
+    uploadedBy: 'usr_family_001',
+    uploadedAt: '2025-02-12T11:00:00Z',
+    markers: [
+      makeMarker('m034', 'BMI', 'Body Mass Index', 18.2, 'kg/m²', 14.5, 22.5, 'metabolic', '2025-02-12', 85, 'stable'),
+    ],
+  },
 ]
 
 export function getRecordsByPatient(patientId: string): HealthRecord[] {
@@ -160,4 +218,8 @@ export function getRecordsByPatient(patientId: string): HealthRecord[] {
 
 export function getRecordById(id: string): HealthRecord | undefined {
   return MOCK_HEALTH_RECORDS.find((r) => r.id === id)
+}
+
+export function getRecordsByPatientIds(patientIds: string[]): HealthRecord[] {
+  return MOCK_HEALTH_RECORDS.filter((r) => patientIds.includes(r.patientId))
 }
