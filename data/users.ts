@@ -41,4 +41,15 @@ export const MOCK_USERS: User[] = [
     createdAt: '2023-06-01T08:00:00Z',
     lastLogin: '2025-03-06T09:00:00Z',
   },
+  {
+    id: 'usr_family_001',
+    name: 'Meena Sharma',
+    email: 'meena.sharma@example.com',
+    role: 'family_admin',
+    organization: undefined,
+    location: 'Mumbai, Maharashtra',
+    createdAt: '2024-03-01T08:00:00Z',
+    lastLogin: '2025-03-06T09:00:00Z',
+    familyId: 'fam_001',
+  },
 ]
