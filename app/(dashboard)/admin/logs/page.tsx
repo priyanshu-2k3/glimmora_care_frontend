@@ -218,13 +218,22 @@ export default function AdminLogsPage() {
                         <p className="text-sm font-body font-medium text-charcoal-deep">{log.action}</p>
                         <Badge variant={SEVERITY_VARIANT[log.severity] ?? 'success'} className="capitalize shrink-0">{log.severity}</Badge>
                       </div>
-                      {log.target && (
+                      {(log.target || log.target_name) && (
                         <p className="text-xs text-greige mt-0.5">
-                          Target: <FriendlyRef refValue={log.target} users={users} orgs={orgs} />
+                          Target:{' '}
+                          {log.target_name
+                            ? <span className="text-charcoal-deep font-medium">{log.target_name}</span>
+                            : <FriendlyRef refValue={log.target} users={users} orgs={orgs} />}
                         </p>
                       )}
+                      {log.detail && (
+                        <p className="text-xs text-stone mt-0.5 leading-relaxed">{log.detail}</p>
+                      )}
                       <p className="text-xs text-greige mt-0.5 flex flex-wrap items-center gap-x-1">
-                        By: <FriendlyRef refValue={log.performed_by} users={users} orgs={orgs} />
+                        By:{' '}
+                        {log.actor_name
+                          ? <span className="text-charcoal-deep font-medium">{log.actor_name}{log.actor_role ? ` (${log.actor_role})` : ''}</span>
+                          : <FriendlyRef refValue={log.performed_by} users={users} orgs={orgs} />}
                         <span>· {formatDateTime(log.timestamp)}</span>
                       </p>
                     </div>

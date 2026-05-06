@@ -10,47 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { familyApi, notificationApi, getAccessToken, ApiError, type IncomingInvite, type NotificationOut } from '@/lib/api'
-
-// Derive the correct frontend route from notification type + user role.
-// Routes are validated against ROLE_ROUTES in config/role-permissions.ts.
-function resolveHref(notif: NotificationOut, role: string | undefined): string | null {
-  switch (notif.type) {
-    case 'alert':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      if (role === 'patient') return '/twin'
-      if (role === 'doctor' || role === 'super_admin') return '/intelligence'
-      return '/dashboard'
-
-    case 'consent':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      if (role === 'patient') return '/consent/requests'
-      if (role === 'doctor') return '/consent/active'
-      if (role === 'admin' || role === 'super_admin') return '/admin/doctor-management/consent'
-      return '/consent'
-
-    case 'sync':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      return '/dashboard'
-
-    case 'agent':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      if (role === 'super_admin') return '/agents'
-      if (role === 'admin') return '/admin'
-      return '/dashboard'
-
-    case 'family':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      if (role === 'patient' || role === 'super_admin') return '/family'
-      return '/dashboard'
-
-    case 'info':
-      if (notif.actionHref?.startsWith('/')) return notif.actionHref
-      return '/dashboard'
-
-    default:
-      return null
-  }
-}
+import { resolveHref } from '@/lib/notifications'
 
 const TYPE_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   alert:   { icon: AlertTriangle, color: 'text-[#B91C1C]',      bg: 'bg-error-soft' },
@@ -118,14 +78,20 @@ export default function NotificationsPage() {
     }
   }
 
+  function fireRefresh() {
+    window.dispatchEvent(new CustomEvent('notifications:refresh'))
+  }
+
   async function handleMarkRead(id: string) {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n))
     notificationApi.markRead(id).catch(() => {})
+    fireRefresh()
   }
 
   async function handleMarkAllRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
     notificationApi.markAllRead().catch(() => {})
+    fireRefresh()
   }
 
   async function handleDismiss(id: string) {
@@ -137,6 +103,7 @@ export default function NotificationsPage() {
       setNotifications((prev) => prev.filter((n) => n.id !== id))
     } finally {
       setActingId(null)
+      fireRefresh()
     }
   }
 
