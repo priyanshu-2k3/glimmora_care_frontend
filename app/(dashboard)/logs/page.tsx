@@ -437,7 +437,7 @@ export default function LogsPage() {
   const totalEvents  = rows.length
   const viewCount    = isAdmin
     ? rows.filter((r) => r.severity === 'warning').length
-    : rows.filter((r) => r.action === 'read' || r.action === 'read_list').length
+    : rows.filter((r) => r.action === 'read').length
   const exportCount  = isAdmin
     ? rows.filter((r) => r.severity === 'critical').length
     : rows.filter((r) => r.action === 'download_url').length
@@ -565,7 +565,9 @@ export default function LogsPage() {
 
       <Tabs tabs={TABS} defaultTab={fromConsent ? 'access' : undefined} onChange={() => setPage(1)}>
         {(activeTab) => {
-          const tabRows = activeTab === 'activity' ? displayRows : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action))
+          const tabRows = activeTab === 'activity'
+            ? displayRows.filter((r) => !ACCESS_ACTIONS.has(r.action))
+            : displayRows.filter((r) => ACCESS_ACTIONS.has(r.action))
           const tabTotal = tabRows.length
           const tabTotalPages = Math.ceil(tabTotal / PAGE_SIZE)
           const list = tabRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -573,11 +575,11 @@ export default function LogsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-body text-base">
-                  {activeTab === 'activity' ? 'All Activity' : 'Data Access Events'}
+                  {activeTab === 'activity' ? 'Activity Events' : 'Data Access Events'}
                 </CardTitle>
                 <CardDescription>
                   {activeTab === 'activity'
-                    ? `${tabTotal} event${tabTotal !== 1 ? 's' : ''}${tabTotalPages > 1 ? ` · page ${page} of ${tabTotalPages}` : ''}`
+                    ? `${tabTotal} non-access event${tabTotal !== 1 ? 's' : ''}${tabTotalPages > 1 ? ` · page ${page} of ${tabTotalPages}` : ''}`
                     : `${tabTotal} access event${tabTotal !== 1 ? 's' : ''} — who viewed your data`}
                 </CardDescription>
               </CardHeader>

@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { CheckCircle, XCircle, Clock, Share2, X } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
-import { Toggle } from '@/components/ui/Toggle'
 import { Button } from '@/components/ui/Button'
 import { cn, formatDate } from '@/lib/utils'
+import { intakeApi } from '@/lib/api'
 
 export interface ConsentEntry {
   id: string
@@ -23,17 +23,42 @@ interface ConsentManagerProps {
   onRevoke: (consentId: string) => Promise<void>
 }
 
-export function ConsentManager({ recordId, consents, onShare, onRevoke }: ConsentManagerProps) {
+export function ConsentManager({ consents, onShare, onRevoke }: ConsentManagerProps) {
   const [localConsents, setLocalConsents] = useState<ConsentEntry[]>(consents)
   const [showForm, setShowForm] = useState(false)
   const [email, setEmail] = useState('')
   const [scope, setScope] = useState<string[]>(['view'])
   const [isSharing, setIsSharing] = useState(false)
   const [shareError, setShareError] = useState('')
+  const [emailChecking, setEmailChecking] = useState(false)
   const [revokingId, setRevokingId] = useState<string | null>(null)
 
+  async function handleEmailBlur() {
+    const val = email.trim()
+    if (!val) return
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(val)) {
+      setShareError('Please enter a valid email address.')
+      return
+    }
+    setEmailChecking(true)
+    try {
+      const { registered } = await intakeApi.checkEmailRegistered(val)
+      if (!registered) setShareError('This email is not registered on GlimmoraCare.')
+    } catch {
+      // silently ignore — server will validate on submit
+    } finally {
+      setEmailChecking(false)
+    }
+  }
+
   async function handleShare() {
-    if (!email.trim()) return
+    if (!email.trim() || shareError) return
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      setShareError('Please enter a valid email address.')
+      return
+    }
     setIsSharing(true)
     setShareError('')
     try {
@@ -102,10 +127,17 @@ export function ConsentManager({ recordId, consents, onShare, onRevoke }: Consen
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setShareError('') }}
+              onBlur={handleEmailBlur}
               placeholder="doctor@hospital.com"
-              className="w-full border border-sand-light rounded-lg px-3 py-2 text-sm font-body text-charcoal-deep bg-white focus:outline-none focus:border-gold-soft"
+              className={cn(
+                'w-full border rounded-lg px-3 py-2 text-sm font-body text-charcoal-deep bg-white focus:outline-none',
+                shareError ? 'border-[#B91C1C] focus:border-[#B91C1C]' : 'border-sand-light focus:border-gold-soft'
+              )}
             />
+            {shareError && (
+              <p className="text-xs text-[#B91C1C] font-body mt-1">{shareError}</p>
+            )}
           </div>
 
           <div>
@@ -132,9 +164,7 @@ export function ConsentManager({ recordId, consents, onShare, onRevoke }: Consen
             </div>
           </div>
 
-          {shareError && <p className="text-xs text-error-soft font-body">{shareError}</p>}
-
-          <Button size="sm" onClick={handleShare} disabled={isSharing || !email.trim()} className="w-full justify-center">
+          <Button size="sm" onClick={handleShare} disabled={isSharing || emailChecking || !email.trim() || !!shareError} className="w-full justify-center">
             {isSharing ? 'Sharing…' : 'Grant Access'}
           </Button>
         </div>
@@ -164,7 +194,7 @@ export function ConsentManager({ recordId, consents, onShare, onRevoke }: Consen
             <button
               onClick={() => handleRevoke(c.id)}
               disabled={revokingId === c.id}
-              className="shrink-0 text-xs text-error-soft font-body hover:underline disabled:opacity-50"
+              className="shrink-0 text-xs text-[#B91C1C] font-body font-medium hover:underline disabled:opacity-50"
             >
               {revokingId === c.id ? 'Revoking…' : 'Revoke'}
             </button>
