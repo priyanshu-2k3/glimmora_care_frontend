@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, Users, Plus, Trash2, Check, X, Lock, Globe } from 'lucide-react'
+import { Shield, Users, Plus, Trash2, Check, X, Lock, Globe, Eye, Calendar, Mail, UserCircle, Layers } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -20,6 +20,7 @@ export default function AccessControlPage() {
   const [newResource, setNewResource] = useState('all')
   const [isAdding, setIsAdding]   = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [viewingRule, setViewingRule] = useState<AccessRuleOut | null>(null)
 
   const load = useCallback(async () => {
     const [r, s] = await Promise.all([accessApi.listRules(), accessApi.getSettings()])
@@ -166,10 +167,25 @@ export default function AccessControlPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => toggleRule(rule.id)} className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}>
+                <button
+                  title="View rule details"
+                  onClick={() => setViewingRule(rule)}
+                  className="p-1.5 text-greige hover:text-gold-deep rounded-lg transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  title={rule.is_active ? 'Active — click to block' : 'Blocked — click to activate'}
+                  onClick={() => toggleRule(rule.id)}
+                  className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}
+                >
                   {rule.is_active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </button>
-                <button onClick={() => removeRule(rule.id)} className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors">
+                <button
+                  title="Remove rule"
+                  onClick={() => removeRule(rule.id)}
+                  className="p-1.5 text-greige hover:text-[#B91C1C] rounded-lg transition-colors"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -207,6 +223,65 @@ export default function AccessControlPage() {
           ))}
         </CardContent>
       </Card>
+      {/* Rule detail modal */}
+      {viewingRule && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-deep/40 backdrop-blur-sm"
+          onClick={() => setViewingRule(null)}
+        >
+          <div
+            className="bg-ivory-cream border border-sand-light rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="font-body text-base font-semibold text-charcoal-deep">Rule Details</h2>
+              <button onClick={() => setViewingRule(null)} className="p-1.5 text-greige hover:text-charcoal-deep rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Avatar name={viewingRule.granted_to_name} size="md" />
+              <div>
+                <p className="text-sm font-body font-semibold text-charcoal-deep">{viewingRule.granted_to_name}</p>
+                <Badge variant={viewingRule.is_active ? 'success' : 'default'}>{viewingRule.is_active ? 'Active' : 'Blocked'}</Badge>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {[
+                { icon: Mail,        label: 'Email',       value: viewingRule.granted_to_email },
+                { icon: UserCircle,  label: 'Role',        value: viewingRule.granted_to_role.replace(/_/g, ' ') },
+                { icon: Layers,      label: 'Resource',    value: viewingRule.resource },
+                { icon: Shield,      label: 'Permissions', value: viewingRule.permissions.join(', ') },
+                { icon: Calendar,    label: 'Added on',    value: new Date(viewingRule.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-start gap-2.5">
+                  <Icon className="w-4 h-4 text-greige mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-greige font-body">{label}</p>
+                    <p className="text-sm font-body text-charcoal-deep capitalize">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button
+                className="flex-1"
+                size="sm"
+                variant={viewingRule.is_active ? 'outline' : 'primary'}
+                onClick={() => { toggleRule(viewingRule.id); setViewingRule(null) }}
+              >
+                {viewingRule.is_active ? 'Block Access' : 'Activate'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setViewingRule(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
