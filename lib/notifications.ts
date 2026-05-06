@@ -42,9 +42,14 @@ export function resolveHref(notif: NotificationOut, role: string | undefined): s
       if (role === 'patient' || role === 'super_admin' || role === 'family_admin') return '/family'
       return '/dashboard'
 
-    case 'info':
+    case 'info': {
       if (notif.actionHref?.startsWith('/')) return notif.actionHref
+      // Revoke notifications arrive as 'info' type — route doctor to vault
+      const msg = (notif.message ?? '').toLowerCase()
+      if (msg.includes('revoked') && role === 'doctor') return '/vault'
+      if (msg.includes('revoked') && role === 'patient') return '/access'
       return null  // info-only by default; only navigate if backend set an explicit href
+    }
 
     default:
       return null
