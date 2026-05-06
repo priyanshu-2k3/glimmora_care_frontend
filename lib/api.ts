@@ -839,7 +839,10 @@ export interface AuditLogOut {
   id: string
   action: string
   performed_by: string
+  actor_name: string | null
+  actor_role: string | null
   target: string | null
+  target_name: string | null
   detail: string | null
   severity: string
   timestamp: string

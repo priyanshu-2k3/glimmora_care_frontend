@@ -182,8 +182,17 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           ))}
         </nav>
 
-        {/* Logout — full-width button (no user card; identity lives in topbar). */}
-        <div className="p-3 border-t border-sand-light">
+        {/* User card + Logout */}
+        <div className="p-3 border-t border-sand-light space-y-1">
+          <div className="bg-ivory-warm/60 rounded-xl mx-1">
+            <div className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-default">
+              <Avatar name={user.name} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-body font-semibold text-charcoal-deep truncate">{user.name}</p>
+                <p className="text-[10px] font-body text-greige capitalize">{ROLES[user.role as Role]?.label}</p>
+              </div>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-body font-medium text-stone hover:text-coral-muted hover:bg-coral-soft/40 border border-transparent hover:border-coral-DEFAULT/30 transition-all duration-200"

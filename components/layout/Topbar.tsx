@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, Settings as SettingsIcon, LogOut } from 'lucide-react'
+import { Menu, Bell, Search, AlertTriangle, Info, Shield, RefreshCw, Bot, Users, Trash2, X, ChevronRight, ChevronDown, User as UserIcon, Settings as SettingsIcon, LogOut, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { NAV_ITEMS, SEARCHABLE_SUBPAGES, FEATURE_INDEX, ROLES } from '@/lib/constants'
 import { ADMIN_SIDEBAR_SECTIONS } from '@/config/sidebar-config'
 import { Avatar } from '@/components/ui/Avatar'
 import { notificationApi, getAccessToken, type NotificationOut } from '@/lib/api'
+import { resolveHref } from '@/lib/notifications'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/types/auth'
+
+const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/otp-verify', '/verify-email', '/2fa-setup', '/invite', '/join-org']
+const isAuthPath = (p: string) => AUTH_PATHS.some((a) => p === a || p.startsWith(a + '/'))
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   alert: AlertTriangle,
@@ -50,8 +54,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [notifications, setNotifications] = useState<NotificationOut[]>([])
+  const [loadingDropdown, setLoadingDropdown] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const navStack = useRef<string[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -204,10 +210,32 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     setShowSearchDropdown(false)
   }, [pathname])
 
-  // Refresh on dropdown open
+  // Track dashboard navigation history — never record auth pages
+  useEffect(() => {
+    if (isAuthPath(pathname)) return
+    const stack = navStack.current
+    if (stack[stack.length - 1] !== pathname) {
+      navStack.current = [...stack, pathname].slice(-20)
+    }
+  }, [pathname])
+
+  const handleBack = useCallback(() => {
+    const stack = navStack.current
+    // Pop current page, then find last different page that isn't an auth route
+    const previous = [...stack].reverse().find((p, i) => i > 0 || p !== pathname)
+    const target = previous && !isAuthPath(previous) && previous !== pathname ? previous : '/dashboard'
+    navStack.current = stack.slice(0, -1)
+    router.push(target)
+  }, [pathname, router])
+
+  // Refresh on dropdown open — show loading state to prevent flash of empty
   useEffect(() => {
     if (!showNotifications || !getAccessToken()) return
-    notificationApi.list(20).then(setNotifications).catch(() => {})
+    setLoadingDropdown(true)
+    notificationApi.list(20)
+      .then(setNotifications)
+      .catch(() => {})
+      .finally(() => setLoadingDropdown(false))
   }, [showNotifications])
 
   useEffect(() => {
@@ -252,6 +280,20 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       >
         <Menu className="w-5 h-5" />
       </button>
+
+      {/* Back button — hidden on root dashboard pages */}
+      {pathname !== '/dashboard' && pathname !== '/admin' && (
+        <>
+          <button
+            onClick={handleBack}
+            title="Go back"
+            className="p-1.5 text-greige hover:text-charcoal-deep hover:bg-parchment/60 transition-all duration-200 rounded-lg shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="w-px h-4 bg-sand-light shrink-0" />
+        </>
+      )}
 
       {/* Page title */}
       <div className="flex-1 min-w-0">
@@ -388,30 +430,38 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-sand-light">
-                {notifications.length === 0 ? (
+                {loadingDropdown ? (
+                  <div className="py-10 text-center">
+                    <div className="w-5 h-5 border-2 border-gold-soft border-t-gold-deep rounded-full animate-spin mx-auto" />
+                  </div>
+                ) : notifications.filter((n) => !n.isRead).length === 0 ? (
                   <div className="py-10 text-center">
                     <Bell className="w-8 h-8 text-greige mx-auto mb-2" />
-                    <p className="text-sm text-greige font-body">All caught up!</p>
+                    <p className="text-sm text-greige font-body">No new notifications</p>
                   </div>
                 ) : (
-                  notifications.slice(0, 5).map((notif) => {
+                  notifications.filter((n) => !n.isRead).slice(0, 5).map((notif) => {
                     const Icon = TYPE_ICONS[notif.type] ?? Info
+                    const href = resolveHref(notif, user.role)
                     return (
                       <div
                         key={notif.id}
                         className={cn(
-                          'flex items-start gap-3 px-4 py-3 hover:bg-ivory-warm cursor-pointer transition-colors',
-                          !notif.isRead && 'bg-parchment/40'
+                          'flex items-start gap-3 px-4 py-3 transition-colors bg-parchment/40',
+                          href ? 'cursor-pointer hover:bg-ivory-warm' : 'cursor-default'
                         )}
-                        onClick={() => { markRead(notif.id); if (notif.actionHref) { setShowNotifications(false); router.push(notif.actionHref) } }}
+                        onClick={() => {
+                          markRead(notif.id)
+                          if (href) { setShowNotifications(false); router.push(href) }
+                        }}
                       >
                         <div className="w-7 h-7 rounded-lg bg-parchment flex items-center justify-center shrink-0 mt-0.5">
                           <Icon className={cn('w-3.5 h-3.5', TYPE_COLORS[notif.type] ?? 'text-stone')} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className={cn('text-xs font-body font-semibold truncate', notif.isRead ? 'text-stone' : 'text-charcoal-deep')}>{notif.title}</p>
-                            {!notif.isRead && <span className="w-1.5 h-1.5 rounded-full bg-gold-deep shrink-0" />}
+                            <p className="text-xs font-body font-semibold truncate text-charcoal-deep">{notif.title}</p>
+                            <span className="w-1.5 h-1.5 rounded-full bg-gold-deep shrink-0" />
                           </div>
                           <p className="text-[11px] text-greige font-body line-clamp-2 leading-relaxed">{notif.message}</p>
                           <p className="text-[10px] text-greige mt-0.5">{timeAgo(notif.timestamp)}</p>

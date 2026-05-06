@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft, LogIn, LogOut, KeyRound } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut, AdminUserOut, AdminOrgItem } from '@/lib/api'
@@ -15,20 +15,45 @@ import { Pagination } from '@/components/ui/Pagination'
 import { cn } from '@/lib/utils'
 
 const ACTION_META: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  upload:         { icon: Upload,   label: 'Record Uploaded',  color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
-  confirm:        { icon: FileText, label: 'Record Confirmed', color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
-  manual_entry:   { icon: FileText, label: 'Manual Entry',     color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
-  read:           { icon: Eye,      label: 'Record Viewed',    color: 'text-stone',           bg: 'bg-parchment'      },
-  read_list:      { icon: Eye,      label: 'Records Listed',   color: 'text-stone',           bg: 'bg-parchment'      },
-  download_url:   { icon: Download, label: 'Download Issued',  color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
-  share:          { icon: Shield,   label: 'Record Shared',    color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
-  revoke_share:   { icon: Shield,   label: 'Access Revoked',   color: 'text-[#B91C1C]',   bg: 'bg-error-soft'     },
-  bulk_import:    { icon: Upload,   label: 'Bulk Import',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
-  assign_patient: { icon: User,     label: 'Patient Assigned', color: 'text-stone',           bg: 'bg-parchment'      },
-  invite_doctor:  { icon: User,     label: 'Doctor Invited',   color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
-  update_role:    { icon: Shield,   label: 'Role Updated',     color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
-  delete_user:    { icon: User,     label: 'User Deleted',     color: 'text-[#B91C1C]',   bg: 'bg-error-soft'     },
-  ai_analysis:    { icon: Bot,      label: 'AI Analysis',      color: 'text-charcoal-deep',   bg: 'bg-ivory-warm'     },
+  upload:                { icon: Upload,   label: 'Record Uploaded',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  confirm:               { icon: FileText, label: 'Record Confirmed',     color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  manual_entry:          { icon: FileText, label: 'Manual Entry',         color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  read:                  { icon: Eye,      label: 'Record Viewed',        color: 'text-stone',           bg: 'bg-parchment'      },
+  read_list:             { icon: Eye,      label: 'Records Listed',       color: 'text-stone',           bg: 'bg-parchment'      },
+  download_url:          { icon: Download, label: 'Download Issued',      color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  share:                 { icon: Shield,   label: 'Record Shared',        color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  revoke_share:          { icon: Shield,   label: 'Access Revoked',       color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  bulk_import:           { icon: Upload,   label: 'Bulk Import',          color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  assign_patient:        { icon: User,     label: 'Patient Assigned',     color: 'text-stone',           bg: 'bg-parchment'      },
+  invite_doctor:         { icon: User,     label: 'Doctor Invited',       color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  update_role:           { icon: Shield,   label: 'Role Updated',         color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  delete_user:           { icon: User,     label: 'User Deleted',         color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  ai_analysis:           { icon: Bot,      label: 'AI Analysis',          color: 'text-charcoal-deep',   bg: 'bg-ivory-warm'     },
+  'auth.login':          { icon: LogIn,    label: 'Login',                color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'auth.login_failed':   { icon: LogIn,    label: 'Login Failed',         color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  'auth.login_otp':      { icon: LogIn,    label: 'Login via OTP',        color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'auth.login_email_otp':{ icon: LogIn,    label: 'Login via Email OTP',  color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'auth.login_phone':    { icon: LogIn,    label: 'Login via Phone',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'auth.login_google':   { icon: LogIn,    label: 'Login via Google',     color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'auth.register':       { icon: User,     label: 'Account Registered',   color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'auth.register_google':{ icon: User,     label: 'Registered via Google',color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'auth.logout':         { icon: LogOut,   label: 'Logout',               color: 'text-stone',           bg: 'bg-parchment'      },
+  'auth.logout_all':     { icon: LogOut,   label: 'Logout All Devices',   color: 'text-[#B45309]',       bg: 'bg-warning-soft'   },
+  'auth.password_changed':{ icon: KeyRound,label: 'Password Changed',     color: 'text-[#B45309]',       bg: 'bg-warning-soft'   },
+  'auth.password_reset': { icon: KeyRound, label: 'Password Reset',       color: 'text-[#B45309]',       bg: 'bg-warning-soft'   },
+  'user.update':         { icon: User,     label: 'User Updated',         color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  'user.delete':         { icon: User,     label: 'User Deleted',         color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  'org.create':          { icon: Shield,   label: 'Org Created',          color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'org.update':          { icon: Shield,   label: 'Org Updated',          color: 'text-stone',           bg: 'bg-parchment'      },
+  'org.update_mine':     { icon: Shield,   label: 'Org Details Updated',  color: 'text-stone',           bg: 'bg-parchment'      },
+  'org.delete':          { icon: Shield,   label: 'Org Deleted',          color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  'org.admin_assigned':  { icon: User,     label: 'Admin Assigned',       color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  'org.admin_removed':   { icon: User,     label: 'Admin Removed',        color: 'text-[#B45309]',       bg: 'bg-warning-soft'   },
+  'org.coadmin_added':   { icon: User,     label: 'Co-admin Added',       color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'org.doctor_invited':  { icon: User,     label: 'Doctor Invited',       color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'org.doctor_created':  { icon: User,     label: 'Doctor Account Created',color: 'text-success-DEFAULT',bg: 'bg-success-soft'   },
+  'org.doctor_linked':   { icon: User,     label: 'Doctor Linked',        color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'org.patient_assigned':{ icon: User,     label: 'Patient Assigned',     color: 'text-stone',           bg: 'bg-parchment'      },
 }
 
 function getMeta(action: string) {
@@ -36,23 +61,44 @@ function getMeta(action: string) {
 }
 
 function buildDescription(row: LogRow): string {
-  const d = row.detail?.trim() || ''
+  // If we have a detail string from the backend, use it directly — it is already human-readable.
+  if (row.detail?.trim()) return row.detail.trim()
   switch (row.action) {
-    case 'upload':         return `A new health record was uploaded${d ? ` — ${d}` : ''}.`
-    case 'confirm':        return `A health record was confirmed${d ? ` — ${d}` : ''}.`
-    case 'manual_entry':   return `A health record was added via manual entry${d ? ` — ${d}` : ''}.`
-    case 'read':           return `A health record was viewed${d ? ` (${d})` : ''}.`
-    case 'read_list':      return `The health records list was accessed${d ? ` (${d})` : ''}.`
-    case 'download_url':   return `A download link was issued for a health record${d ? ` — ${d}` : ''}.`
-    case 'share':          return `Access to health records was shared with a doctor${d ? ` — ${d}` : ''}.`
-    case 'revoke_share':   return `A doctor's access to health records was revoked${d ? ` — reason: ${d}` : ''}.`
-    case 'bulk_import':    return `Multiple health records were imported in bulk${d ? ` — ${d}` : ''}.`
-    case 'assign_patient': return `A patient was assigned to a doctor${d ? ` — ${d}` : ''}.`
-    case 'invite_doctor':  return `A doctor was invited to the organisation${d ? ` — ${d}` : ''}.`
-    case 'update_role':    return `A user's role was updated${d ? ` — ${d}` : ''}.`
-    case 'delete_user':    return `A user account was deleted${d ? ` — ${d}` : ''}.`
-    case 'ai_analysis':    return `AI analysis was performed on health data${d ? ` — ${d}` : ''}.`
-    default:               return d || `Action recorded: ${row.action}.`
+    case 'upload':                return 'A new health record was uploaded.'
+    case 'confirm':               return 'A health record was confirmed and saved.'
+    case 'manual_entry':          return 'A health record was added via manual entry.'
+    case 'read':                  return 'A health record was viewed.'
+    case 'read_list':             return 'The health records list was accessed.'
+    case 'download_url':          return 'A download link was issued for a health record.'
+    case 'share':                 return 'Access to a health record was shared with another user.'
+    case 'revoke_share':          return 'A shared access to a health record was revoked.'
+    case 'bulk_import':           return 'Multiple health records were imported in bulk.'
+    case 'auth.login':            return 'Successful login with email and password.'
+    case 'auth.login_failed':     return 'A login attempt failed due to invalid credentials.'
+    case 'auth.login_otp':        return 'Successful login via phone OTP.'
+    case 'auth.login_email_otp':  return 'Successful login via email OTP.'
+    case 'auth.login_phone':      return 'Successful login via Firebase phone verification.'
+    case 'auth.login_google':     return 'Successful login via Google.'
+    case 'auth.register':         return 'A new account was registered.'
+    case 'auth.register_google':  return 'A new account was created via Google sign-up.'
+    case 'auth.logout':           return 'User logged out — current session revoked.'
+    case 'auth.logout_all':       return 'User logged out from all devices — all sessions revoked.'
+    case 'auth.password_changed': return 'Password was changed — all other sessions invalidated.'
+    case 'auth.password_reset':   return 'Password was reset — all active sessions invalidated.'
+    case 'user.update':           return 'A user account was updated.'
+    case 'user.delete':           return 'A user account was permanently deleted.'
+    case 'org.create':            return 'A new organisation was created.'
+    case 'org.update':            return 'Organisation details were updated by super admin.'
+    case 'org.update_mine':       return 'Organisation details were updated.'
+    case 'org.delete':            return 'An organisation was permanently deleted.'
+    case 'org.admin_assigned':    return 'An admin was assigned to an organisation.'
+    case 'org.admin_removed':     return 'An admin was removed from an organisation.'
+    case 'org.coadmin_added':     return 'A co-admin was added to the organisation.'
+    case 'org.doctor_invited':    return 'A doctor was invited to join the organisation.'
+    case 'org.doctor_created':    return 'A new doctor account was created and added to the organisation.'
+    case 'org.doctor_linked':     return 'An existing doctor account was linked to the organisation.'
+    case 'org.patient_assigned':  return 'A patient was assigned to a doctor.'
+    default:                      return `Action recorded: ${row.action}.`
   }
 }
 
@@ -70,8 +116,14 @@ const TABS = [
 interface LogRow {
   id: string
   action: string
-  actor: string
-  target: string | null
+  /** Resolved human name when available (e.g. "Priyanshu Verma (super_admin)") */
+  actorLabel: string | null
+  /** Raw performed_by ID — used as FriendlyRef fallback for old entries */
+  actorRawId: string
+  /** Resolved target name when available */
+  targetLabel: string | null
+  /** Raw target string — used as FriendlyRef fallback for old entries */
+  targetRawId: string | null
   recordId: string | null
   detail: string
   severity?: string
@@ -79,10 +131,24 @@ interface LogRow {
 }
 
 function fromTrail(e: AuditTrailEntry): LogRow {
-  return { id: e.id, action: e.action, actor: '', target: null, recordId: e.record_id ?? null, detail: e.detail, timestamp: e.timestamp }
+  return { id: e.id, action: e.action, actorLabel: null, actorRawId: '', targetLabel: null, targetRawId: null, recordId: e.record_id ?? null, detail: e.detail, timestamp: e.timestamp }
 }
 function fromAdminLog(e: AuditLogOut): LogRow {
-  return { id: e.id, action: e.action, actor: e.performed_by, target: e.target ?? null, recordId: null, detail: e.detail ?? '', severity: e.severity, timestamp: e.timestamp }
+  const actorLabel = e.actor_name
+    ? `${e.actor_name}${e.actor_role ? ` (${e.actor_role})` : ''}`
+    : null
+  return {
+    id: e.id,
+    action: e.action,
+    actorLabel,
+    actorRawId: e.performed_by,
+    targetLabel: e.target_name ?? null,
+    targetRawId: e.target ?? null,
+    recordId: null,
+    detail: e.detail ?? '',
+    severity: e.severity,
+    timestamp: e.timestamp,
+  }
 }
 
 function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
@@ -109,21 +175,25 @@ function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
 
         {/* Affected / actor chips */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-          {row.actor && (
+          {(row.actorLabel || row.actorRawId) && (
             <span className="inline-flex items-center gap-1 text-[11px] text-greige font-body">
               <User className="w-3 h-3 shrink-0" />
               <span className="font-medium text-charcoal-warm">By:</span>
-              <span className="truncate max-w-[180px]">
-                <FriendlyRef refValue={row.actor} maps={idMaps} inline />
+              <span className="truncate max-w-[220px]">
+                {row.actorLabel
+                  ? <span className="text-charcoal-deep">{row.actorLabel}</span>
+                  : <FriendlyRef refValue={row.actorRawId} maps={idMaps} inline />}
               </span>
             </span>
           )}
-          {row.target && (
+          {(row.targetLabel || row.targetRawId) && (
             <span className="inline-flex items-center gap-1 text-[11px] text-greige font-body">
               <Shield className="w-3 h-3 shrink-0" />
               <span className="font-medium text-charcoal-warm">Affected:</span>
-              <span className="truncate max-w-[180px]">
-                <FriendlyRef refValue={row.target} maps={idMaps} inline />
+              <span className="truncate max-w-[220px]">
+                {row.targetLabel
+                  ? <span className="text-charcoal-deep">{row.targetLabel}</span>
+                  : <FriendlyRef refValue={row.targetRawId} maps={idMaps} inline />}
               </span>
             </span>
           )}
@@ -348,8 +418,8 @@ export default function LogsPage() {
         r.action.toLowerCase().includes(q) ||
         label.includes(q) ||
         r.detail.toLowerCase().includes(q) ||
-        (r.actor    ?? '').toLowerCase().includes(q) ||
-        (r.target   ?? '').toLowerCase().includes(q) ||
+        (r.actorLabel ?? r.actorRawId ?? '').toLowerCase().includes(q) ||
+        (r.targetLabel ?? r.targetRawId ?? '').toLowerCase().includes(q) ||
         (r.recordId ?? '').toLowerCase().includes(q)
       if (!matches) return false
     }
