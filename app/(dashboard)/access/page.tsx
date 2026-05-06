@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, Users, Plus, Trash2, Check, X, Lock, Globe, Eye, Calendar, Mail, UserCircle, Layers } from 'lucide-react'
+import { Shield, Users, Plus, Trash2, ShieldOff, ShieldCheck, X, Lock, Globe, Eye, Calendar, Mail, UserCircle, Layers } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -175,11 +175,11 @@ export default function AccessControlPage() {
                   <Eye className="w-4 h-4" />
                 </button>
                 <button
-                  title={rule.is_active ? 'Active — click to block' : 'Blocked — click to activate'}
+                  title={rule.is_active ? 'Block access' : 'Activate access'}
                   onClick={() => toggleRule(rule.id)}
-                  className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-success-DEFAULT hover:bg-success-soft' : 'text-greige hover:bg-parchment')}
+                  className={cn('p-1.5 rounded-lg transition-colors', rule.is_active ? 'text-[#B91C1C] hover:bg-error-soft' : 'text-success-DEFAULT hover:bg-success-soft')}
                 >
-                  {rule.is_active ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                  {rule.is_active ? <ShieldOff className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                 </button>
                 <button
                   title="Remove rule"
