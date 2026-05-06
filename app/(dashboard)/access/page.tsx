@@ -20,6 +20,7 @@ export default function AccessControlPage() {
   const [newResource, setNewResource] = useState('all')
   const [isAdding, setIsAdding]   = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [success, setSuccess]     = useState<string | null>(null)
   const [viewingRule, setViewingRule] = useState<AccessRuleOut | null>(null)
 
   const load = useCallback(async () => {
@@ -40,6 +41,8 @@ export default function AccessControlPage() {
       setNewEmail('')
       setNewResource('all')
       setShowAdd(false)
+      setSuccess(`Access rule added for ${rule.granted_to_email}`)
+      setTimeout(() => setSuccess(null), 4000)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to add rule')
     } finally {
@@ -79,6 +82,16 @@ export default function AccessControlPage() {
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Access Control</h1>
         <p className="text-sm text-greige font-body mt-1">Manage who can access your health data and how</p>
       </div>
+
+      {/* Success banner */}
+      {success && (
+        <div className="rounded-xl border bg-success-soft border-success-DEFAULT/30 text-success-DEFAULT px-4 py-3 text-xs font-body font-medium flex items-center justify-between">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="ml-2 text-success-DEFAULT/60 hover:text-success-DEFAULT transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
