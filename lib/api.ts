@@ -1047,6 +1047,10 @@ export const intakeApi = {
       body: JSON.stringify(data),
     }),
 
+  /** Check whether an email belongs to a registered user */
+  checkEmailRegistered: (email: string) =>
+    apiFetch<{ registered: boolean }>(`/intake/check-email?email=${encodeURIComponent(email)}`),
+
   /** Share a record with another user by email */
   shareRecord: (recordId: string, email: string, scope: string[]) =>
     apiFetch<unknown>(`/intake/records/${recordId}/share`, {
