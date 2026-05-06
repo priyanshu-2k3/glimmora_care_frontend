@@ -369,16 +369,11 @@ function DoctorConsentView() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send request'
       setReqMsg({ ok: false, text: msg })
-      // If a pending request already exists, fetch its ID so we can offer a cancel button
-      if (msg.toLowerCase().includes('pending')) {
-        consentApi.getMyPending().then((pending) => {
-          const match = pending.find((r) => {
-            const email = r.patient_email ?? ''
-            return email === reqPatientEmail || r.patient_id === reqPatientEmail
-          })
-          if (match) setPendingRequestId(match.id)
-        }).catch(() => {})
-      }
+      // Always look for an existing pending request for this patient so the cancel button appears
+      consentApi.getMyPending().then((pending) => {
+        const match = pending.find((r) => r.patient_email === reqPatientEmail)
+        if (match) setPendingRequestId(match.id)
+      }).catch(() => {})
     } finally {
       setReqLoading(false)
     }
