@@ -469,18 +469,21 @@ function DoctorConsentView() {
             className="w-full text-xs border border-sand-light rounded-lg px-3 py-2 bg-ivory-warm font-body text-charcoal-deep focus:outline-none focus:border-gold-soft resize-none"
           />
           {reqMsg && (
-            <div>
-              <p className={cn('text-xs font-body', reqMsg.ok ? 'text-success-DEFAULT' : 'text-[#B91C1C]')}>
-                {reqMsg.text}
-              </p>
+            <div className={cn(
+              'rounded-xl border px-4 py-3 text-xs font-body',
+              reqMsg.ok
+                ? 'bg-success-soft border-success-DEFAULT/30 text-success-DEFAULT'
+                : 'bg-error-soft border-[#DC2626]/30 text-[#B91C1C]'
+            )}>
+              <p className="font-medium">{reqMsg.text}</p>
               {pendingRequestId && !reqMsg.ok && (
                 <button
                   type="button"
                   onClick={handleCancelPending}
                   disabled={cancelLoading}
-                  className="mt-1 text-xs font-body text-gold-deep hover:text-gold-muted underline transition-colors disabled:opacity-50"
+                  className="mt-2 text-xs font-body text-gold-deep hover:text-gold-muted underline transition-colors disabled:opacity-50 block"
                 >
-                  {cancelLoading ? 'Cancelling…' : 'Cancel existing request and send a new one →'}
+                  {cancelLoading ? 'Cancelling…' : '→ Cancel existing request and send a new one'}
                 </button>
               )}
             </div>

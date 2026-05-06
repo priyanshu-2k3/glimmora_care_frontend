@@ -56,6 +56,7 @@ export function FriendlyRef({
       : <span className="text-charcoal-deep">Org: <span className="font-medium">{o.name}</span></span>
   }
 
-  // Unknown reference — fall back to a neutral label rather than leaking raw ids.
-  return <span className="text-greige italic">Unknown reference</span>
+  // ID could not be resolved — user/org was likely deleted. Show truncated ID.
+  const display = id.length > 20 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id
+  return <span className="text-greige font-mono text-[11px]" title={id}>{display}</span>
 }

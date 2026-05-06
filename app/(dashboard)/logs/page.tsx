@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft, LogIn, LogOut, KeyRound } from 'lucide-react'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft, LogIn, LogOut, KeyRound, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut, AdminUserOut, AdminOrgItem } from '@/lib/api'
@@ -238,29 +238,111 @@ function LogEntry({ row, idMaps }: { row: LogRow; idMaps: IdMaps }) {
 
 interface FilterOption { value: string; label: string }
 
-interface FilterPillsProps {
+function FilterDropdown({ label, options, selected, onChange, searchable = false }: {
   label: string
   options: FilterOption[]
-  value: string
-  onChange: (v: string) => void
-}
+  selected: string[]
+  onChange: (v: string[]) => void
+  searchable?: boolean
+}) {
+  const [open, setOpen]         = useState(false)
+  const [query, setQuery]       = useState('')
+  const ref                     = useRef<HTMLDivElement>(null)
+  const searchInputRef          = useRef<HTMLInputElement>(null)
 
-function FilterPills({ label, options, value, onChange }: FilterPillsProps) {
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    if (open) document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
+  useEffect(() => {
+    if (open && searchable) setTimeout(() => searchInputRef.current?.focus(), 50)
+  }, [open, searchable])
+
+  function toggle(value: string) {
+    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value])
+  }
+
+  const filtered = searchable && query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options
+
+  const displayLabel = selected.length === 0 ? `All ${label}` : `${label} (${selected.length})`
+
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider shrink-0">{label}:</span>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            'px-2.5 py-1 rounded-full text-xs font-body transition-all',
-            value === o.value ? 'bg-charcoal-deep text-ivory-cream' : 'bg-parchment text-greige hover:text-charcoal-deep'
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-body transition-all',
+          selected.length > 0
+            ? 'bg-charcoal-deep text-ivory-cream border-charcoal-deep'
+            : 'bg-white text-greige border-sand-light hover:border-gold-soft hover:text-charcoal-deep'
+        )}
+      >
+        <Filter className="w-3 h-3" />
+        {displayLabel}
+        <ChevronDown className={cn('w-3 h-3 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-sand-light rounded-xl shadow-lg min-w-[220px] flex flex-col max-h-72">
+          {searchable && (
+            <div className="px-3 pt-2.5 pb-1.5 border-b border-sand-light shrink-0">
+              <div className="flex items-center gap-2 bg-parchment rounded-lg px-2.5 py-1.5">
+                <Search className="w-3 h-3 text-greige shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={`Search ${label.toLowerCase()}…`}
+                  className="flex-1 bg-transparent text-xs font-body text-charcoal-deep placeholder:text-greige outline-none"
+                />
+                {query && (
+                  <button onClick={() => setQuery('')} className="text-greige hover:text-charcoal-deep transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
           )}
-        >
-          {o.label}
-        </button>
-      ))}
+          <div className="overflow-y-auto flex-1 py-1">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-greige font-body text-center py-4">No results</p>
+            ) : filtered.map((o) => (
+              <label
+                key={o.value}
+                className="flex items-center gap-2.5 px-3 py-2 hover:bg-parchment cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(o.value)}
+                  onChange={() => toggle(o.value)}
+                  className="w-3.5 h-3.5 accent-charcoal-deep shrink-0"
+                />
+                <span className="text-xs font-body text-charcoal-deep">{o.label}</span>
+              </label>
+            ))}
+          </div>
+          {selected.length > 0 && (
+            <div className="border-t border-sand-light pt-1.5 pb-2 px-3 shrink-0">
+              <button
+                onClick={() => { onChange([]); setOpen(false); setQuery('') }}
+                className="text-[11px] text-greige hover:text-charcoal-deep font-body transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -328,41 +410,31 @@ export default function LogsPage() {
   }, [isAdmin, user?.id])
 
   // Admin-specific filters
-  const [severity, setSeverity]         = useState('all')
-  const [actionFilter, setActionFilter] = useState('all')
+  const [severity, setSeverity]         = useState<string[]>([])
+  const [actionFilter, setActionFilter] = useState<string[]>([])
 
   // Patient/doctor-specific filters (client-side)
-  const [actionType, setActionType] = useState('all')
+  const [actionType, setActionType] = useState<string[]>([])
   const [dateFrom, setDateFrom]     = useState('')
   const [dateTo, setDateTo]         = useState('')
 
-  // Use refs so debounce callback always reads the latest filter values
-  const severityRef     = useRef(severity)
-  const actionFilterRef = useRef(actionFilter)
-  const debounceRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
-  severityRef.current     = severity
-  actionFilterRef.current = actionFilter
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRef   = useRef(search)
+  searchRef.current = search
 
-  function reloadAdmin(sev: string, act: string, q: string) {
+  function reloadAdmin(q: string) {
     setLoading(true)
-    adminApi.getAuditLogs({
-      search: q || undefined,
-      severity: sev !== 'all' ? sev : undefined,
-      limit: 500,
-    }).then((logs) => {
-      let result = logs.map(fromAdminLog)
-      if (act !== 'all') result = result.filter((r) => r.action === act)
-      setRows(result)
-    })
-    .catch(() => setRows([]))
-    .finally(() => setLoading(false))
+    adminApi.getAuditLogs({ search: q || undefined, limit: 500 })
+      .then((logs) => setRows(logs.map(fromAdminLog)))
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false))
   }
 
   // Initial data load
   useEffect(() => {
     if (!getAccessToken()) { setLoading(false); return }
     if (isAdmin) {
-      reloadAdmin(severity, actionFilter, search)
+      reloadAdmin(search)
     } else {
       Promise.all([
         intakeApi.getAuditTrail(500).catch(() => [] as AuditTrailEntry[]),
@@ -387,30 +459,19 @@ export default function LogsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
-  // Admin: re-fetch when severity or actionFilter changes (use current search via ref)
-  useEffect(() => {
-    if (!isAdmin) return
-    reloadAdmin(severity, actionFilter, search)
-    setPage(1)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [severity, actionFilter])
-
-  // Admin: debounced search — reads latest severity/actionFilter from refs
+  // Admin: debounced search re-fetch
   function handleSearch(q: string) {
     setSearch(q)
     setPage(1)
     if (!isAdmin) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(
-      () => reloadAdmin(severityRef.current, actionFilterRef.current, q),
-      400,
-    )
+    debounceRef.current = setTimeout(() => reloadAdmin(q), 400)
   }
 
   // Derive exact action pills from data present in rows (patient/doctor only)
   const availableActions = [...new Set(rows.map((r) => r.action))].sort()
 
-  // Patient/doctor: client-side filtering — search + exact action + date range
+  // Patient/doctor: client-side filtering — search + action multi-select + date range
   const patientFiltered = rows.filter((r) => {
     if (search) {
       const q = search.toLowerCase()
@@ -424,16 +485,23 @@ export default function LogsPage() {
         (r.recordId ?? '').toLowerCase().includes(q)
       if (!matches) return false
     }
-    if (actionType !== 'all' && r.action !== actionType) return false
+    if (actionType.length > 0 && !actionType.includes(r.action)) return false
     if (dateFrom && r.timestamp < dateFrom) return false
     if (dateTo   && r.timestamp > dateTo + 'T23:59:59') return false
     return true
   })
 
-  const displayRows = isAdmin ? rows : patientFiltered
+  // Admin: apply severity + action filters client-side
+  const adminFiltered = rows.filter((r) => {
+    if (severity.length > 0 && !severity.includes(r.severity ?? 'info')) return false
+    if (actionFilter.length > 0 && !actionFilter.includes(r.action)) return false
+    return true
+  })
 
-  // Reset page whenever any filter, search, or tab changes
-  useEffect(() => { setPage(1) }, [actionType, dateFrom, dateTo, search])
+  const displayRows = isAdmin ? adminFiltered : patientFiltered
+
+  // Reset page whenever any filter changes
+  useEffect(() => { setPage(1) }, [actionType, severity, actionFilter, dateFrom, dateTo, search])
 
   const totalEvents  = rows.length
   const viewCount    = isAdmin
@@ -501,42 +569,53 @@ export default function LogsPage() {
 
       {/* Admin filters */}
       {isAdmin && (
-        <div className="space-y-3 p-4 bg-parchment rounded-xl border border-sand-light">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-greige" />
-            <span className="text-xs font-body font-semibold text-greige">Admin Filters</span>
-          </div>
-          <FilterPills
+        <div className="flex items-center gap-2 flex-wrap">
+          <FilterDropdown
             label="Severity"
-            options={['all', 'info', 'warning', 'critical'].map((s) => ({ value: s, label: s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1) }))}
-            value={severity}
+            options={['info', 'warning', 'critical'].map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+            selected={severity}
             onChange={setSeverity}
           />
-          <FilterPills
+          <FilterDropdown
             label="Action"
-            options={[{ value: 'all', label: 'All' }, ...adminActions.map((a) => ({ value: a, label: getMeta(a).label }))]}
-            value={actionFilter}
+            options={adminActions.map((a) => ({ value: a, label: getMeta(a).label }))}
+            selected={actionFilter}
             onChange={setActionFilter}
+            searchable
           />
+          {(severity.length > 0 || actionFilter.length > 0) && (
+            <button
+              onClick={() => { setSeverity([]); setActionFilter([]) }}
+              className="text-xs text-greige hover:text-charcoal-deep font-body transition-colors flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Clear filters
+            </button>
+          )}
         </div>
       )}
 
       {/* Patient / Doctor filters */}
       {!isAdmin && (
         <div className="space-y-3 p-4 bg-parchment rounded-xl border border-sand-light">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Filter className="w-3.5 h-3.5 text-greige" />
             <span className="text-xs font-body font-semibold text-greige">Filters</span>
+            <FilterDropdown
+              label="Type"
+              options={availableActions.map((a) => ({ value: a, label: getMeta(a).label }))}
+              selected={actionType}
+              onChange={(v) => { setActionType(v); setPage(1) }}
+              searchable
+            />
+            {actionType.length > 0 && (
+              <button
+                onClick={() => setActionType([])}
+                className="text-xs text-greige hover:text-charcoal-deep font-body transition-colors flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
           </div>
-          <FilterPills
-            label="Type"
-            options={[
-              { value: 'all', label: 'All' },
-              ...availableActions.map((a) => ({ value: a, label: getMeta(a).label })),
-            ]}
-            value={actionType}
-            onChange={(v) => { setActionType(v); setPage(1) }}
-          />
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-[11px] text-greige font-body font-semibold uppercase tracking-wider">Date:</span>
             <input
