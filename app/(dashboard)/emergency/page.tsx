@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Shield, Phone, Clock, CheckCircle, Share2, Eye, Users } from 'lucide-react'
+import { AlertTriangle, Shield, Phone, Clock, CheckCircle, Share2, Eye, Users, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
+import { useRouter } from 'next/navigation'
 import { familyApi, emergencyApi, getAccessToken, type EmergencyHistoryItem, type BackendMember, type ManageableMember } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,7 @@ interface EmergencyContact {
 
 export default function EmergencyPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const [step, setStep]             = useState<EmergencyStep>('idle')
   const [otp, setOtp]               = useState('')
   const [isLoading, setIsLoading]   = useState(false)
@@ -112,6 +114,13 @@ export default function EmergencyPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm text-greige hover:text-charcoal-deep font-body transition-colors mb-3"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
         <h1 className="font-body text-2xl font-bold text-charcoal-deep">Emergency Access</h1>
         <p className="text-sm text-greige font-body mt-1">
           {isOwnerActing
