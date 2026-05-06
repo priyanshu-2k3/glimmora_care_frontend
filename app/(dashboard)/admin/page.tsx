@@ -428,8 +428,21 @@ export default function AdminDashboardPage() {
   const [doctors, setDoctors] = useState<AdminDoctorOut[]>(_cache?.doctors ?? [])
   const [orgs, setOrgs] = useState<AdminOrgItem[]>(_cache?.orgs ?? [])
 
+  // Clear cache when the logged-in user changes (e.g. role switch to a new admin account)
+  useEffect(() => {
+    _cache = null
+    setStats(null)
+    setLogs([])
+    setIdMaps({ users: {}, orgs: {} })
+    setPatients([])
+    setDoctors([])
+    setOrgs([])
+    setLoading(true)
+  }, [user?.id])
+
   useEffect(() => {
     if (_cache !== null) return // already loaded this session
+    if (!user?.id) return
     let active = true
     Promise.all([
       adminApi.getStats().catch(() => null),
@@ -462,7 +475,7 @@ export default function AdminDashboardPage() {
       setLoading(false)
     })
     return () => { active = false }
-  }, [])
+  }, [user?.id])
 
   return (
     <RoleGuard allowed={['admin', 'super_admin']}>
