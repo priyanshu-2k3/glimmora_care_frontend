@@ -18,7 +18,7 @@ interface FileUploaderProps {
 
 const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
-const MAX_FILES = 50
+const MAX_FILES = 1
 
 export function FileUploader({ onFilesSelected }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
@@ -87,7 +87,6 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
         <input
           ref={inputRef}
           type="file"
-          multiple
           accept=".pdf,.jpg,.jpeg,.png,.webp"
           className="hidden"
           onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
@@ -96,7 +95,7 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
         <p className="font-body font-medium text-charcoal-warm text-sm">
           Drop lab reports or prescriptions here
         </p>
-        <p className="text-xs text-greige mt-1">PDF, JPG, PNG · Max 10MB per file · Up to 50 files</p>
+        <p className="text-xs text-greige mt-1">PDF, JPG, PNG · Max 10MB per file · One file at a time</p>
         <Button variant="secondary" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}>
           Browse Files
         </Button>

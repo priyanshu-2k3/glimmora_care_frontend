@@ -109,12 +109,13 @@ export default function IntakePage() {
       setDraftRecordId(result.recordId)
       setExtractedMarkers(result.markers)
       setOcrConfidence(Math.round(result.ocrConfidence * 100))
+      // OcrProcessingAnimation onComplete will fire after its animation finishes
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'OCR processing failed')
+      // Reset animation state so the failed attempt doesn't leave a stuck spinner
       setIsProcessing(false)
-      return
+      setProcessComplete(false)
     }
-    // OcrProcessingAnimation onComplete will fire after its animation
   }
 
   function handleOcrComplete() {
@@ -379,10 +380,15 @@ export default function IntakePage() {
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => {
+                            onClick={async () => {
+                              if (draftRecordId) {
+                                await intakeApi.discardDraft(draftRecordId).catch(() => {})
+                              }
                               setProcessComplete(false)
                               setFilesSelected(false)
                               setExtractedMarkers([])
+                              setDraftRecordId(null)
+                              setSaveError(null)
                             }}
                           >
                             Discard
