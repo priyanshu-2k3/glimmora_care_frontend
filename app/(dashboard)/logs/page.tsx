@@ -53,7 +53,15 @@ const ACTION_META: Record<string, { icon: React.ElementType; label: string; colo
   'org.doctor_invited':  { icon: User,     label: 'Doctor Invited',       color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
   'org.doctor_created':  { icon: User,     label: 'Doctor Account Created',color: 'text-success-DEFAULT',bg: 'bg-success-soft'   },
   'org.doctor_linked':   { icon: User,     label: 'Doctor Linked',        color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
-  'org.patient_assigned':{ icon: User,     label: 'Patient Assigned',     color: 'text-stone',           bg: 'bg-parchment'      },
+  'org.patient_assigned':  { icon: User,     label: 'Patient Assigned',       color: 'text-stone',           bg: 'bg-parchment'      },
+  update_metadata:         { icon: FileText, label: 'Record Updated',          color: 'text-stone',           bg: 'bg-parchment'      },
+  'profile.create':        { icon: User,     label: 'Dependent Profile Created',color: 'text-success-DEFAULT',bg: 'bg-success-soft'   },
+  'profile.update':        { icon: User,     label: 'Dependent Profile Updated',color: 'text-stone',          bg: 'bg-parchment'      },
+  'profile.delete':        { icon: User,     label: 'Dependent Profile Deleted',color: 'text-[#B91C1C]',      bg: 'bg-error-soft'     },
+  'access.rule_created':   { icon: Shield,   label: 'Access Rule Created',     color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'access.rule_toggled':   { icon: Shield,   label: 'Access Rule Toggled',     color: 'text-stone',           bg: 'bg-parchment'      },
+  'access.rule_deleted':   { icon: Shield,   label: 'Access Rule Deleted',     color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
+  'access.setting_updated':{ icon: Shield,   label: 'Access Setting Changed',  color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
 }
 
 function getMeta(action: string) {
@@ -97,8 +105,16 @@ function buildDescription(row: LogRow): string {
     case 'org.doctor_invited':    return 'A doctor was invited to join the organisation.'
     case 'org.doctor_created':    return 'A new doctor account was created and added to the organisation.'
     case 'org.doctor_linked':     return 'An existing doctor account was linked to the organisation.'
-    case 'org.patient_assigned':  return 'A patient was assigned to a doctor.'
-    default:                      return `Action recorded: ${row.action}.`
+    case 'org.patient_assigned':   return 'A patient was assigned to a doctor.'
+    case 'update_metadata':        return 'Health record metadata was updated.'
+    case 'profile.create':         return 'A new dependent profile was created.'
+    case 'profile.update':         return 'A dependent profile was updated.'
+    case 'profile.delete':         return 'A dependent profile was deleted.'
+    case 'access.rule_created':    return 'A new access control rule was created.'
+    case 'access.rule_toggled':    return 'An access control rule was enabled or disabled.'
+    case 'access.rule_deleted':    return 'An access control rule was deleted.'
+    case 'access.setting_updated': return 'An access control setting was changed.'
+    default:                       return `Action recorded: ${row.action}.`
   }
 }
 
