@@ -140,8 +140,8 @@ export default function ActiveConsentsPage() {
                   )}
 
                   <Button
-                    variant="danger"
-                    className="w-full bg-error/70 hover:bg-error-DEFAULT border-error/70"
+                    variant="outline"
+                    className="w-full bg-white text-[#B91C1C] border-[#B91C1C] hover:bg-[#B91C1C] hover:text-white transition-colors duration-200"
                     onClick={() => setRevokeId(consent.id)}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -160,7 +160,7 @@ export default function ActiveConsentsPage() {
                       <button
                         onClick={() => handleRevoke(consent.id)}
                         disabled={revoking || !revokeReason.trim()}
-                        className="text-xs px-3 py-2 rounded-lg bg-error-soft text-[#B91C1C] font-body disabled:opacity-50"
+                        className="text-xs px-3 py-2 rounded-lg bg-error-soft text-[#B91C1C] font-body disabled:opacity-50 hover:bg-[#B91C1C] hover:text-white transition-colors"
                       >
                         {revoking ? 'Revoking…' : 'Confirm'}
                       </button>

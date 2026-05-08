@@ -149,8 +149,9 @@ export default function ConsentHistoryPage() {
                   </div>
 
                   {entry.revocation_reason && (
-                    <p className="text-xs text-greige font-body bg-error-soft/30 rounded-lg px-3 py-2">
-                      Reason: {entry.revocation_reason}
+                    <p className="text-xs font-body bg-error-soft/30 rounded-lg px-3 py-2">
+                      <span className="text-greige-deep">Reason: </span>
+                      <span className="text-charcoal-deep font-medium">{entry.revocation_reason}</span>
                     </p>
                   )}
 

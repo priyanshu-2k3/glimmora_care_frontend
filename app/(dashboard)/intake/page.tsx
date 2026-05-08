@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, Sparkles, Save, Check, ChevronRight, UserCircle } from 'lucide-react'
+import { Upload, Sparkles, Save, Check, ChevronRight, UserCircle, AlertCircle } from 'lucide-react'
 import { FileUploader } from '@/components/intake/FileUploader'
 import { OcrProcessingAnimation } from '@/components/intake/OcrProcessingAnimation'
 import { MarkerReviewForm, countUnresolved } from '@/components/intake/MarkerReviewForm'
@@ -109,18 +109,32 @@ export default function IntakePage() {
       setDraftRecordId(result.recordId)
       setExtractedMarkers(result.markers)
       setOcrConfidence(Math.round(result.ocrConfidence))
-      // OcrProcessingAnimation onComplete will fire after its animation finishes
+      setProcessComplete(true)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'OCR processing failed')
-      // Reset animation state so the failed attempt doesn't leave a stuck spinner
+    } finally {
       setIsProcessing(false)
-      setProcessComplete(false)
     }
   }
 
-  function handleOcrComplete() {
-    setIsProcessing(false)
-    setProcessComplete(true)
+  async function handleDiscard() {
+    // Drop the draft on the backend first so its row + S3 file go away.
+    // Without this the file_hash dedupe keeps the next re-upload blocked.
+    if (draftRecordId) {
+      try {
+        await intakeApi.discardDraft(draftRecordId)
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : 'Could not discard draft')
+        return
+      }
+    }
+    setProcessComplete(false)
+    setFilesSelected(false)
+    setUploadedFile(null)
+    setExtractedMarkers([])
+    setDraftRecordId(null)
+    setOcrConfidence(0)
+    setSaveError(null)
   }
 
   async function handleSave() {
@@ -315,26 +329,32 @@ export default function IntakePage() {
                   }}
                 />
                 {filesSelected && !processComplete && (
-                  <>
-                    <Button
-                      className="mt-4 w-full bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
-                      onClick={handleProcess}
-                      isLoading={isProcessing}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {isProcessing ? 'Processing...' : 'Process with OCR Engine'}
-                    </Button>
-                    {saveError && (
-                      <p className="text-xs text-[#B91C1C] font-body mt-2">{saveError}</p>
-                    )}
-                  </>
+                  <Button
+                    className="mt-4 w-full bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+                    onClick={handleProcess}
+                    isLoading={isProcessing}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {isProcessing ? 'Processing...' : 'Process with OCR Engine'}
+                  </Button>
+                )}
+                {!processComplete && saveError && (
+                  <div className="mt-3 flex items-start gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-body font-semibold text-[#B91C1C]">
+                        {/^This file was already uploaded/i.test(saveError) ? 'Duplicate file' : 'Upload failed'}
+                      </p>
+                      <p className="text-xs font-body text-[#B91C1C] mt-0.5">{saveError}</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* OCR animation */}
             {(isProcessing || processComplete) && (
-              <OcrProcessingAnimation isRunning={isProcessing} onComplete={handleOcrComplete} />
+              <OcrProcessingAnimation isRunning={isProcessing} />
             )}
 
             {/* Extracted markers */}
@@ -385,16 +405,7 @@ export default function IntakePage() {
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={async () => {
-                              if (draftRecordId) {
-                                await intakeApi.discardDraft(draftRecordId).catch(() => {})
-                              }
-                              setProcessComplete(false)
-                              setFilesSelected(false)
-                              setExtractedMarkers([])
-                              setDraftRecordId(null)
-                              setSaveError(null)
-                            }}
+                            onClick={handleDiscard}
                           >
                             Discard
                           </Button>
