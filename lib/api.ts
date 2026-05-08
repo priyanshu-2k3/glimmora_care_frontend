@@ -1071,12 +1071,6 @@ export const intakeApi = {
       method: 'DELETE',
     }),
 
-  /** Delete a draft record and its underlying file so the same file can be re-uploaded */
-  discardDraft: (recordId: string) =>
-    apiFetch<unknown>(`/intake/records/${recordId}/draft`, {
-      method: 'DELETE',
-    }),
-
   /** Get the current user's own health record audit trail */
   getAuditTrail: (limit = 100) =>
     apiFetch<AuditTrailEntry[]>(`/intake/audit-trail?limit=${limit}`),
