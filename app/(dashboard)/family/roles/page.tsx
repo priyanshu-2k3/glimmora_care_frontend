@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { ArrowLeft, Crown, Shield, Users, Eye, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -92,8 +93,8 @@ export default function FamilyRolesPage() {
             </thead>
             <tbody>
               {categories.map((cat) => (
-                <>
-                  <tr key={`cat-${cat}`} className="bg-parchment">
+                <React.Fragment key={cat}>
+                  <tr className="bg-parchment">
                     <td colSpan={5} className="px-5 py-2 text-[10px] font-body font-semibold text-greige uppercase tracking-widest">{cat}</td>
                   </tr>
                   {PERMISSIONS.filter((p) => p.category === cat).map((perm) => (
@@ -110,7 +111,7 @@ export default function FamilyRolesPage() {
                       ))}
                     </tr>
                   ))}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

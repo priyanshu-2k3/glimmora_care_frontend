@@ -108,14 +108,11 @@ export default function IntakePage() {
       const result = await intakeApi.upload(uploadedFile, selectedPatient, reportDate || null)
       setDraftRecordId(result.recordId)
       setExtractedMarkers(result.markers)
-      setOcrConfidence(Math.round(result.ocrConfidence * 100))
+      setOcrConfidence(Math.round(result.ocrConfidence))
       setProcessComplete(true)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'OCR processing failed')
     } finally {
-      // Flip isProcessing off only after the real OCR call has resolved.
-      // The animation watches this flag and reaches its "complete" stage
-      // here — never on a fixed timer.
       setIsProcessing(false)
     }
   }
