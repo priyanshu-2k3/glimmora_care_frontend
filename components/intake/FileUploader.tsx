@@ -66,7 +66,11 @@ export function FileUploader({ onFilesSelected }: FileUploaderProps) {
   }
 
   function removeFile(id: string) {
-    setFiles((prev) => prev.filter((f) => f.id !== id))
+    setFiles((prev) => {
+      const next = prev.filter((f) => f.id !== id)
+      onFilesSelected(next.map((f) => f.file))
+      return next
+    })
   }
 
   return (

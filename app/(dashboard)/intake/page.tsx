@@ -108,7 +108,7 @@ export default function IntakePage() {
       const result = await intakeApi.upload(uploadedFile, selectedPatient, reportDate || null)
       setDraftRecordId(result.recordId)
       setExtractedMarkers(result.markers)
-      setOcrConfidence(Math.round(result.ocrConfidence * 100))
+      setOcrConfidence(Math.round(result.ocrConfidence))
       // OcrProcessingAnimation onComplete will fire after its animation finishes
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'OCR processing failed')
@@ -315,14 +315,19 @@ export default function IntakePage() {
                   }}
                 />
                 {filesSelected && !processComplete && (
-                  <Button
-                    className="mt-4 w-full bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
-                    onClick={handleProcess}
-                    isLoading={isProcessing}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {isProcessing ? 'Processing...' : 'Process with OCR Engine'}
-                  </Button>
+                  <>
+                    <Button
+                      className="mt-4 w-full bg-gradient-to-r from-charcoal-deep to-stone text-ivory-cream shadow-md hover:opacity-90 border-0"
+                      onClick={handleProcess}
+                      isLoading={isProcessing}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {isProcessing ? 'Processing...' : 'Process with OCR Engine'}
+                    </Button>
+                    {saveError && (
+                      <p className="text-xs text-[#B91C1C] font-body mt-2">{saveError}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
