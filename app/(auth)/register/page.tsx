@@ -112,7 +112,8 @@ export default function RegisterPage() {
         password:  owner.password,
         role:      owner.role,
       })
-      router.push('/verify-email')
+      // Patients go straight to plan selection; others verify email first
+      router.push(owner.role === 'patient' ? '/select-plan' : '/verify-email')
     } catch {
       // error shown via context
     } finally {

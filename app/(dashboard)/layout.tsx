@@ -1,16 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { paymentApi } from '@/lib/api'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { ToastProvider } from '@/components/ui/Toast'
 
+// Pages a patient with no subscription is still allowed to visit
+const PATIENT_EXEMPT = ['/subscription']
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [subChecked, setSubChecked] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -18,11 +24,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isAuthenticated, isLoading, router])
 
+  // For patients: check subscription on every dashboard entry
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user) return
+    if (user.role !== 'patient') { setSubChecked(true); return }
+    if (PATIENT_EXEMPT.some((p) => pathname.startsWith(p))) { setSubChecked(true); return }
+
+    paymentApi.patientGetSubscription()
+      .then((sub) => {
+        const expired = sub.expires_at && new Date(sub.expires_at) < new Date()
+        if (sub.status !== 'active' || expired) {
+          router.replace('/select-plan?renew=1')
+        } else {
+          setSubChecked(true)
+        }
+      })
+      .catch(() => {
+        // 404 = no subscription at all
+        router.replace('/select-plan')
+      })
+  }, [isLoading, isAuthenticated, user, pathname, router])
+
   // Render loading shell while auth state is resolving OR while we redirect
   // an unauthenticated user. Never render dashboard children until
   // isAuthenticated === true — this prevents any flash of protected UI
   // when the user hits a /(dashboard) URL directly.
-  if (isLoading || !isAuthenticated) {
+  const waitingForSubCheck = user?.role === 'patient' && !subChecked &&
+    !PATIENT_EXEMPT.some((p) => pathname.startsWith(p))
+
+  if (isLoading || !isAuthenticated || waitingForSubCheck) {
     return (
       <div className="min-h-screen bg-dawn-luxury flex items-center justify-center">
         <div className="text-center">

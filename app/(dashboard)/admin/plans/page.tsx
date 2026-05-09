@@ -231,16 +231,18 @@ export default function PlansPage() {
                         </td>
                         <td className="py-2.5">
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => copyPayLink(p)}
-                              title="Copy shareable payment link"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"
-                            >
-                              {copiedId === p.id
-                                ? <><Check className="w-3.5 h-3.5 text-[#059669]" /> Copied</>
-                                : <><Link2 className="w-3.5 h-3.5" /> Link</>
-                              }
-                            </button>
+                            {p.plan_type === 'org' && (
+                              <button
+                                onClick={() => copyPayLink(p)}
+                                title="Copy shareable payment link"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"
+                              >
+                                {copiedId === p.id
+                                  ? <><Check className="w-3.5 h-3.5 text-[#059669]" /> Copied</>
+                                  : <><Link2 className="w-3.5 h-3.5" /> Link</>
+                                }
+                              </button>
+                            )}
                             <button
                               onClick={() => openEdit(p)}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"

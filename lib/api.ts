@@ -1145,8 +1145,10 @@ export interface PlanOut {
   price: number
   discount_percent: number
   description: string | null
+  features: string[]
   plan_type: 'org' | 'patient'
   is_popular: boolean
+  is_best_value: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -1158,8 +1160,10 @@ export interface PlanCreate {
   price: number
   discount_percent?: number
   description?: string
+  features?: string[]
   plan_type: 'org' | 'patient'
   is_popular?: boolean
+  is_best_value?: boolean
   is_active?: boolean
 }
 
