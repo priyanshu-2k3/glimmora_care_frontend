@@ -217,6 +217,12 @@ export const NAV_ITEMS = [
     icon: 'UserCheck',
     roles: ['super_admin'] as Role[],
   },
+  {
+    href: '/admin/plans',
+    label: 'Subscription Plans',
+    icon: 'Tag',
+    roles: ['super_admin'] as Role[],
+  },
 ]
 
 /* ── Searchable sub-pages — not in sidebar but discoverable via topbar search ── */
