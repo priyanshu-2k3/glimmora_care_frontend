@@ -1022,6 +1022,32 @@ export const paymentApi = {
       body: JSON.stringify(data),
     }),
 
+  publicCreateOrder: (planId: string, amountPaise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/public/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id: planId, amount_paise: amountPaise }),
+      auth: false,
+    }),
+
+  publicVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    contact_name?: string
+    contact_email?: string
+    plan_id: string
+    amount_paise: number
+  }) =>
+    apiFetch<VerifyPaymentResponse>('/payments/public/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      auth: false,
+    }),
+
   createPaymentLink: (data: {
     plan_id: string
     amount_paise: number

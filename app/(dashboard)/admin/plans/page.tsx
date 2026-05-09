@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Tag, Plus, Edit2, Trash2, Loader2, X, AlertCircle, Star } from 'lucide-react'
+import { Tag, Plus, Edit2, Trash2, Loader2, X, AlertCircle, Star, Link2, Copy, Check } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -36,6 +36,14 @@ export default function PlansPage() {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<PlanOut | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function copyPayLink(p: PlanOut) {
+    const base = typeof window !== 'undefined' ? window.location.origin : ''
+    navigator.clipboard.writeText(`${base}/pay?plan=${p.id}`)
+    setCopiedId(p.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   async function load() {
     setLoading(true)
@@ -223,6 +231,16 @@ export default function PlansPage() {
                         </td>
                         <td className="py-2.5">
                           <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => copyPayLink(p)}
+                              title="Copy shareable payment link"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"
+                            >
+                              {copiedId === p.id
+                                ? <><Check className="w-3.5 h-3.5 text-[#059669]" /> Copied</>
+                                : <><Link2 className="w-3.5 h-3.5" /> Link</>
+                              }
+                            </button>
                             <button
                               onClick={() => openEdit(p)}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-stone hover:text-charcoal-deep hover:bg-parchment transition-colors"
