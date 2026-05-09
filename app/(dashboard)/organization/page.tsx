@@ -467,16 +467,6 @@ function AssignAdminModal({
   )
 }
 
-// ─── Razorpay types ───────────────────────────────────────────────────────────
-declare global { interface Window { Razorpay: new (o: RpOptions) => { open(): void } } }
-interface RpOptions {
-  key: string; amount: number; currency: string; name: string; description: string
-  order_id: string; prefill?: { name?: string; email?: string; contact?: string }
-  theme?: { color?: string }
-  handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void
-  modal?: { ondismiss?: () => void }
-}
-
 function useRpScript() {
   const [ready, setReady] = useState(false)
   useEffect(() => {

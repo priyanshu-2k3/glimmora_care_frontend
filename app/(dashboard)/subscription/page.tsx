@@ -13,15 +13,6 @@ import { paymentApi, planApi, type PlanOut, type PatientVerifyResponse, type Sub
 import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 
-// ─── Razorpay ─────────────────────────────────────────────────────────────────
-declare global { interface Window { Razorpay: new (o: RpOpts) => { open(): void } } }
-interface RpOpts {
-  key: string; amount: number; currency: string; name: string; description: string
-  order_id: string; theme?: { color?: string }
-  handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void
-  modal?: { ondismiss?: () => void }
-}
-
 function useRpScript() {
   const [ready, setReady] = useState(false)
   useEffect(() => {
@@ -121,7 +112,7 @@ export default function PatientSubscriptionPage() {
   const status = currentSub ? subStatus(currentSub) : null
 
   return (
-    <RoleGuard allowedRoles={['patient']}>
+    <RoleGuard allowed={['patient']}>
       <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
         <DashboardBackLink />
 

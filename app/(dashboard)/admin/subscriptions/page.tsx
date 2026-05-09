@@ -44,7 +44,7 @@ export default function SubscriptionsPage() {
   }, [filter])
 
   return (
-    <RoleGuard allowedRoles={['super_admin']}>
+    <RoleGuard allowed={['super_admin']}>
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
         <DashboardBackLink />
 

@@ -15,34 +15,6 @@ import { paymentApi, planApi, ApiError, type PlanOut, type VerifyPaymentResponse
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
 import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 
-// ─── Razorpay window types ─────────────────────────────────────────────────
-declare global {
-  interface Window {
-    Razorpay: new (options: RazorpayOptions) => RazorpayInstance
-  }
-}
-interface RazorpayOptions {
-  key: string
-  amount: number
-  currency: string
-  name: string
-  description: string
-  order_id: string
-  prefill?: { name?: string; email?: string; contact?: string }
-  notes?: Record<string, string>
-  theme?: { color?: string }
-  handler: (response: RazorpayResponse) => void
-  modal?: { ondismiss?: () => void }
-}
-interface RazorpayResponse {
-  razorpay_payment_id: string
-  razorpay_order_id: string
-  razorpay_signature: string
-}
-interface RazorpayInstance {
-  open: () => void
-  on: (event: string, handler: () => void) => void
-}
 
 // ─── Load Razorpay checkout.js ─────────────────────────────────────────────
 function useRazorpayScript() {
