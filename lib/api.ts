@@ -978,6 +978,52 @@ export const adminApi = {
   },
 }
 
+// ─── Plan API ─────────────────────────────────────────────────────────────────
+
+export interface PlanOut {
+  id: string
+  name: string
+  duration_months: number
+  price: number
+  discount_percent: number
+  description: string | null
+  plan_type: 'org' | 'patient'
+  is_popular: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanCreate {
+  name: string
+  duration_months: number
+  price: number
+  discount_percent?: number
+  description?: string
+  plan_type: 'org' | 'patient'
+  is_popular?: boolean
+  is_active?: boolean
+}
+
+export const planApi = {
+  /** Public — active plans only */
+  getPublicPlans: (planType?: 'org' | 'patient') =>
+    apiFetch<PlanOut[]>(`/plans${planType ? `?plan_type=${planType}` : ''}`),
+
+  /** Super admin — all plans including inactive */
+  adminListPlans: (planType?: 'org' | 'patient') =>
+    apiFetch<PlanOut[]>(`/admin/plans${planType ? `?plan_type=${planType}` : ''}`),
+
+  createPlan: (data: PlanCreate) =>
+    apiFetch<PlanOut>('/admin/plans', { method: 'POST', body: JSON.stringify(data) }),
+
+  updatePlan: (planId: string, data: Partial<PlanCreate>) =>
+    apiFetch<PlanOut>(`/admin/plans/${planId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deletePlan: (planId: string) =>
+    apiFetch<{ message: string }>(`/admin/plans/${planId}`, { method: 'DELETE' }),
+}
+
 // ─── Intake API ───────────────────────────────────────────────────────────────
 export const intakeApi = {
   /** Upload a lab report file and run OCR.  ``reportDate`` (YYYY-MM-DD) is
