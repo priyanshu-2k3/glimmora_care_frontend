@@ -866,6 +866,9 @@ export interface AdminOrgItem {
   doctor_count: number
   patient_count: number
   created_at: string | null
+  subscription_status: 'active' | 'expired' | null
+  subscription_expires_at: string | null
+  subscription_plan_name: string | null
 }
 
 export interface AdminDoctorOut {
@@ -1064,6 +1067,23 @@ export const paymentApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  listSubscriptions: (status?: string) =>
+    apiFetch<SubscriptionListItem[]>(`/admin/subscriptions${status ? `?status=${status}` : ''}`),
+}
+
+export interface SubscriptionListItem {
+  id: string
+  org_id: string | null
+  org_name: string | null
+  plan_name: string | null
+  amount_paise: number
+  status: string
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
+  razorpay_payment_id: string | null
+  razorpay_payment_link_url: string | null
 }
 
 // ─── Plan API ─────────────────────────────────────────────────────────────────

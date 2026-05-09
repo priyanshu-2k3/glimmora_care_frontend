@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, ChevronUp, UserCheck, UserMinus, Trash2, X } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, UserCheck, UserMinus, Trash2, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -469,21 +469,12 @@ function AssignAdminModal({
 
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 function SuperAdminOrgView() {
+  const router = useRouter()
   const toast = useToast()
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
-
-  // Create org state
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createAddress, setCreateAddress] = useState('')
-  const [createPhone, setCreatePhone] = useState('')
-  const [createWebsite, setCreateWebsite] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [createSuccess, setCreateSuccess] = useState(false)
 
   // Assign admin state
   const [assignOrgTarget, setAssignOrgTarget] = useState<AdminOrgItem | null>(null)
@@ -514,40 +505,6 @@ function SuperAdminOrgView() {
     o.name.toLowerCase().includes(search.toLowerCase()) ||
     (o.admin_email ?? '').toLowerCase().includes(search.toLowerCase())
   )
-
-  async function handleCreateOrg(e: React.FormEvent) {
-    e.preventDefault()
-    if (!createName.trim()) return
-    const phoneErr = validatePhone(createPhone, { optional: true })
-    if (phoneErr) { setCreateError(phoneErr); return }
-    const webErr = validateWebsite(createWebsite, { optional: true })
-    if (webErr) { setCreateError(webErr); return }
-    setCreating(true)
-    setCreateError(null)
-    try {
-      const created = await adminApi.createOrg({
-        name: createName.trim(),
-        address: createAddress.trim() || undefined,
-        phone: createPhone.trim() || undefined,
-        website: createWebsite.trim() ? normaliseWebsite(createWebsite) : undefined,
-      })
-      toast.success(`Organisation created: ${created.name}`)
-      setCreateSuccess(true)
-      setCreateName('')
-      setCreateAddress('')
-      setCreatePhone('')
-      setCreateWebsite('')
-      await loadOrgs()
-      setTimeout(() => {
-        setCreateSuccess(false)
-        setShowCreateForm(false)
-      }, 1200)
-    } catch (err) {
-      setCreateError(err instanceof ApiError ? err.detail : 'Failed to create organisation.')
-    } finally {
-      setCreating(false)
-    }
-  }
 
   function handleAssignSuccess(updatedOrg: AdminOrgItem) {
     setOrgs((prev) => prev.map((o) => o.id === updatedOrg.id ? updatedOrg : o))
@@ -678,81 +635,18 @@ function SuperAdminOrgView() {
         ))}
       </div>
 
-      {/* ── Create New Organisation card ── */}
-      <Card className={cn('overflow-hidden transition-all duration-300', showCreateForm && 'border-gold-soft/50')}>
-        <button
-          type="button"
-          onClick={() => { setShowCreateForm((v) => !v); setCreateError(null); setCreateSuccess(false) }}
-          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-parchment/50 transition-colors"
-        >
+      {/* ── Create New Organisation button ── */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-gold-soft" />
             <span className="font-body font-semibold text-charcoal-deep text-sm">Create New Organisation</span>
           </div>
-          {showCreateForm
-            ? <ChevronUp className="w-4 h-4 text-greige" />
-            : <ChevronDown className="w-4 h-4 text-greige" />}
-        </button>
-
-        {showCreateForm && (
-          <div className="border-t border-sand-light px-5 pb-5 pt-4 bg-white text-charcoal-deep">
-            {createSuccess ? (
-              <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
-                <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
-                <p className="text-xs font-body text-success-DEFAULT">Organisation created successfully.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCreateOrg} className="space-y-4 [&_label]:text-charcoal-deep [&_label]:font-semibold">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Organisation Name *"
-                    placeholder="e.g. Sunrise Health Clinic"
-                    value={createName}
-                    onChange={(e) => { setCreateName(e.target.value); setCreateError(null) }}
-                    required
-                    className="sm:col-span-2"
-                  />
-                  <Input
-                    label="Address"
-                    placeholder="123 Medical Street, Mumbai"
-                    value={createAddress}
-                    onChange={(e) => setCreateAddress(e.target.value)}
-                  />
-                  <Input
-                    label="Phone"
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={createPhone}
-                    onChange={(e) => setCreatePhone(e.target.value)}
-                  />
-                  <Input
-                    label="Website"
-                    type="url"
-                    placeholder="https://clinic.example.com"
-                    value={createWebsite}
-                    onChange={(e) => setCreateWebsite(e.target.value)}
-                    className="sm:col-span-2"
-                  />
-                </div>
-                {createError && (
-                  <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
-                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
-                    <p className="text-xs font-body text-[#B91C1C]">{createError}</p>
-                  </div>
-                )}
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" isLoading={creating} disabled={!createName.trim()}>
-                    <Plus className="w-4 h-4" />
-                    Create Organisation
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
+          <Button size="sm" onClick={() => router.push('/organization/create')}>
+            <Plus className="w-3.5 h-3.5" />
+            Create
+          </Button>
+        </div>
       </Card>
 
       {/* Search */}
@@ -791,6 +685,17 @@ function SuperAdminOrgView() {
                     <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                       <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
                       <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
+                      {org.subscription_status === 'active' && org.subscription_expires_at
+                        ? (() => {
+                            const daysLeft = Math.ceil((new Date(org.subscription_expires_at).getTime() - Date.now()) / 86400000)
+                            return daysLeft <= 30
+                              ? <Badge variant="warning">Expiring in {daysLeft}d</Badge>
+                              : <Badge variant="success">{org.subscription_plan_name ?? 'Active'}</Badge>
+                          })()
+                        : org.subscription_status === 'expired'
+                          ? <Badge variant="error">Expired</Badge>
+                          : <Badge variant="default">No Plan</Badge>
+                      }
                       {!org.admin_email ? (
                         <Button
                           variant="outline"
@@ -844,6 +749,8 @@ function SuperAdminOrgView() {
                         { label: 'Phone', value: org.phone ?? 'Not set' },
                         { label: 'Website', value: org.website ?? 'Not set' },
                         { label: 'Created', value: org.created_at ? new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                        { label: 'Subscription Plan', value: org.subscription_plan_name ?? 'None' },
+                        { label: 'Sub. Expires', value: org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
                       ].map(({ label, value }) => (
                         <div key={label} className="flex flex-col">
                           <span className="text-xs text-greige">{label}</span>
