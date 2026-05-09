@@ -978,6 +978,68 @@ export const adminApi = {
   },
 }
 
+// ─── Payment API ──────────────────────────────────────────────────────────────
+
+export interface CreateOrderResponse {
+  order_id: string
+  amount: number
+  currency: string
+}
+
+export interface VerifyPaymentResponse {
+  org_id: string
+  org_name: string
+  subscription_id: string
+  expires_at: string
+}
+
+export interface CreatePaymentLinkResponse {
+  payment_link_url: string
+  payment_link_id: string
+  expires_at: string
+}
+
+export const paymentApi = {
+  createOrder: (planId: string, amountPaise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id: planId, amount_paise: amountPaise }),
+    }),
+
+  verifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    plan_id: string
+    amount_paise: number
+  }) =>
+    apiFetch<VerifyPaymentResponse>('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  createPaymentLink: (data: {
+    plan_id: string
+    amount_paise: number
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    contact_name?: string
+    contact_email: string
+    contact_phone?: string
+    expiry_hours: 24 | 72 | 168
+  }) =>
+    apiFetch<CreatePaymentLinkResponse>('/payments/create-payment-link', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
+
 // ─── Plan API ─────────────────────────────────────────────────────────────────
 
 export interface PlanOut {
