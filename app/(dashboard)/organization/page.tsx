@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, UserCheck, UserMinus, Trash2, X } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, UserCheck, UserMinus, Trash2, X, RefreshCw, CreditCard, Shield, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
-import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem, type DoctorOut } from '@/lib/api'
+import { orgApi, adminApi, paymentApi, planApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem, type DoctorOut, type PlanOut, type VerifyPaymentResponse } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
@@ -467,6 +467,162 @@ function AssignAdminModal({
   )
 }
 
+// ─── Razorpay types ───────────────────────────────────────────────────────────
+declare global { interface Window { Razorpay: new (o: RpOptions) => { open(): void } } }
+interface RpOptions {
+  key: string; amount: number; currency: string; name: string; description: string
+  order_id: string; prefill?: { name?: string; email?: string; contact?: string }
+  theme?: { color?: string }
+  handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void
+  modal?: { ondismiss?: () => void }
+}
+
+function useRpScript() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.Razorpay) { setReady(true); return }
+    const s = document.createElement('script')
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    s.async = true; s.onload = () => setReady(true)
+    document.body.appendChild(s)
+  }, [])
+  return ready
+}
+
+// ─── Renew Subscription Modal ─────────────────────────────────────────────────
+function RenewModal({ org, onClose, onSuccess }: {
+  org: AdminOrgItem
+  onClose: () => void
+  onSuccess: (result: VerifyPaymentResponse) => void
+}) {
+  const rpReady = useRpScript()
+  const [plans, setPlans] = useState<PlanOut[]>([])
+  const [selectedPlan, setSelectedPlan] = useState<PlanOut | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [orderLoading, setOrderLoading] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    planApi.getPublicPlans('org')
+      .then((ps) => { setPlans(ps); setSelectedPlan(ps.find((p) => p.is_popular) ?? ps[0] ?? null) })
+      .catch(() => setError('Failed to load plans'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleRenew() {
+    if (!selectedPlan) return
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    if (!keyId) { setError('Payment not configured'); return }
+    if (!rpReady) { setError('Payment SDK not loaded. Refresh and try again.'); return }
+    setError(null); setOrderLoading(true)
+    let orderId: string
+    try {
+      const res = await paymentApi.renewCreateOrder({ org_id: org.id, plan_id: selectedPlan.id, amount_paise: selectedPlan.price * 100 })
+      orderId = res.order_id
+    } catch { setError('Failed to create order. Please try again.'); setOrderLoading(false); return }
+    setOrderLoading(false)
+
+    new window.Razorpay({
+      key: keyId,
+      amount: selectedPlan.price * 100,
+      currency: 'INR',
+      name: 'GlimmoraCare',
+      description: `${selectedPlan.name} renewal — ${org.name}`,
+      order_id: orderId,
+      theme: { color: '#B8860B' },
+      handler: async (response) => {
+        setPaying(true)
+        try {
+          const result = await paymentApi.renewVerifyPayment({
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature,
+            org_id: org.id,
+            plan_id: selectedPlan.id,
+            amount_paise: selectedPlan.price * 100,
+          })
+          onSuccess(result)
+        } catch { setError('Payment received but verification failed. Contact support.') }
+        finally { setPaying(false) }
+      },
+      modal: { ondismiss: () => setError('Payment cancelled.') },
+    }).open()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={onClose} />
+      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white">
+        <CardHeader>
+          <CardTitle className="font-body text-base flex items-center gap-2 text-charcoal-deep">
+            <RefreshCw className="w-4 h-4 text-gold-soft" /> Renew Subscription
+          </CardTitle>
+          <CardDescription>Renewing subscription for <span className="font-medium text-charcoal-deep">{org.name}</span></CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-gold-soft animate-spin" /></div>}
+          {!loading && plans.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-body text-greige font-medium uppercase tracking-wide">Select plan</p>
+              {plans.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPlan(p)}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all',
+                    selectedPlan?.id === p.id
+                      ? 'border-charcoal-deep bg-charcoal-deep/5'
+                      : 'border-sand-light hover:border-gold-soft',
+                  )}
+                >
+                  <div>
+                    <p className="font-body font-semibold text-sm text-charcoal-deep">{p.name}</p>
+                    <p className="text-xs text-greige">{p.duration_months} month{p.duration_months !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-body font-semibold text-charcoal-deep">₹{p.price.toLocaleString('en-IN')}</p>
+                    {p.discount_percent > 0 && <p className="text-[10px] text-[#059669]">Save {p.discount_percent}%</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center gap-2 bg-[#FEF2F2] border border-[#DC2626]/20 rounded-xl p-3">
+              <AlertCircle className="w-3.5 h-3.5 text-[#B91C1C] shrink-0" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
+            </div>
+          )}
+          {(orderLoading || paying) && (
+            <div className="flex items-center gap-2 text-sm text-greige font-body">
+              <Loader2 className="w-4 h-4 text-gold-soft animate-spin" />
+              {orderLoading ? 'Creating order…' : 'Verifying payment…'}
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={orderLoading || paying}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={handleRenew}
+              disabled={!selectedPlan || !rpReady || orderLoading || paying || loading}
+              isLoading={orderLoading || paying}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Pay ₹{selectedPlan ? selectedPlan.price.toLocaleString('en-IN') : '—'}
+            </Button>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-[10px] text-greige font-body flex items-center gap-1"><Shield className="w-3 h-3 text-gold-soft" /> SSL Encrypted</span>
+            <span className="text-[10px] text-greige font-body flex items-center gap-1"><Check className="w-3 h-3 text-gold-soft" /> Razorpay</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 function SuperAdminOrgView() {
   const router = useRouter()
@@ -484,6 +640,9 @@ function SuperAdminOrgView() {
   const [deleteTarget, setDeleteTarget] = useState<AdminOrgItem | null>(null)
   const [removeAdminTargetId, setRemoveAdminTargetId] = useState<string | null>(null)
   const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState<AdminOrgItem | null>(null)
+
+  // Renewal
+  const [renewTarget, setRenewTarget] = useState<AdminOrgItem | null>(null)
 
   function loadOrgs() {
     return adminApi.listAllOrgs()
@@ -544,6 +703,18 @@ function SuperAdminOrgView() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {renewTarget && (
+        <RenewModal
+          org={renewTarget}
+          onClose={() => setRenewTarget(null)}
+          onSuccess={(result) => {
+            toast.success(`Subscription renewed for ${result.org_name} until ${new Date(result.expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)
+            setRenewTarget(null)
+            loadOrgs()
+          }}
+        />
+      )}
+
       {assignOrgTarget && (
         <AssignAdminModal
           org={assignOrgTarget}
@@ -693,8 +864,18 @@ function SuperAdminOrgView() {
                               : <Badge variant="success">{org.subscription_plan_name ?? 'Active'}</Badge>
                           })()
                         : org.subscription_status === 'expired'
-                          ? <Badge variant="error">Expired</Badge>
-                          : <Badge variant="default">No Plan</Badge>
+                          ? <>
+                              <Badge variant="error">Expired</Badge>
+                              <Button variant="outline" size="sm" onClick={() => setRenewTarget(org)} className="text-xs px-2 py-1 h-auto !text-[#B8860B] !border-[#B8860B]/40 hover:!bg-amber-50">
+                                <RefreshCw className="w-3 h-3" /> Renew
+                              </Button>
+                            </>
+                          : <>
+                              <Badge variant="default">No Plan</Badge>
+                              <Button variant="outline" size="sm" onClick={() => setRenewTarget(org)} className="text-xs px-2 py-1 h-auto">
+                                <CreditCard className="w-3 h-3" /> Subscribe
+                              </Button>
+                            </>
                       }
                       {!org.admin_email ? (
                         <Button

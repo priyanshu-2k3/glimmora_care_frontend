@@ -75,6 +75,12 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
   {
+    href: '/subscription',
+    label: 'My Subscription',
+    icon: 'CreditCard',
+    roles: ['patient'] as Role[],
+  },
+  {
     href: '/profiles',
     label: 'Dependent Profiles',
     icon: 'UserPlus',

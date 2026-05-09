@@ -1070,6 +1070,56 @@ export const paymentApi = {
 
   listSubscriptions: (status?: string) =>
     apiFetch<SubscriptionListItem[]>(`/admin/subscriptions${status ? `?status=${status}` : ''}`),
+
+  renewCreateOrder: (data: { org_id: string; plan_id: string; amount_paise: number }) =>
+    apiFetch<CreateOrderResponse>('/payments/renew/create-order', { method: 'POST', body: JSON.stringify(data) }),
+
+  renewVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_id: string
+    plan_id: string
+    amount_paise: number
+  }) => apiFetch<VerifyPaymentResponse>('/payments/renew/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  patientCreateOrder: (plan_id: string, amount_paise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/patient/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id, amount_paise }),
+    }),
+
+  patientVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    plan_id: string
+    amount_paise: number
+  }) => apiFetch<PatientVerifyResponse>('/payments/patient/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  patientGetSubscription: () =>
+    apiFetch<SubscriptionOut>('/payments/patient/subscription'),
+}
+
+export interface PatientVerifyResponse {
+  patient_id: string
+  subscription_id: string
+  expires_at: string
+}
+
+export interface SubscriptionOut {
+  id: string
+  org_id: string | null
+  plan_id: string
+  plan_snapshot: Record<string, unknown>
+  amount_paise: number
+  currency: string
+  status: string
+  razorpay_payment_id: string | null
+  razorpay_payment_link_url: string | null
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
 }
 
 export interface SubscriptionListItem {

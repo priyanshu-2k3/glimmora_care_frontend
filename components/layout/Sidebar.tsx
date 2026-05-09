@@ -42,6 +42,7 @@ const DEFAULT_NAV_SECTIONS = [
   { label: 'FAMILY & ACCOUNT', hrefs: ['/family', '/profiles', '/my-doctor'] },
   { label: 'ACCESS & CONSENT', hrefs: ['/consent', '/emergency', '/access'] },
   { label: 'ORGANISATION', hrefs: ['/organization'] },
+  { label: 'SUBSCRIPTION', hrefs: ['/subscription'] },
   { label: 'MANAGEMENT', hrefs: ['/admin/users', '/admin/doctors', '/admin/patients', '/manage-users', '/admin/plans', '/admin/subscriptions'] },
   { label: 'TOOLS', hrefs: ['/assistants', '/intelligence'] },
   { label: 'SYSTEM', hrefs: ['/logs', '/notifications', '/settings'] },
