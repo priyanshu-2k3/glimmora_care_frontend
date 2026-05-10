@@ -1083,10 +1083,10 @@ export const paymentApi = {
     amount_paise: number
   }) => apiFetch<VerifyPaymentResponse>('/payments/renew/verify', { method: 'POST', body: JSON.stringify(data) }),
 
-  patientCreateOrder: (plan_id: string, amount_paise: number) =>
+  patientCreateOrder: (plan_id: string, amount_paise: number, patient_id?: string) =>
     apiFetch<CreateOrderResponse>('/payments/patient/create-order', {
       method: 'POST',
-      body: JSON.stringify({ plan_id, amount_paise }),
+      body: JSON.stringify({ plan_id, amount_paise, ...(patient_id ? { patient_id } : {}) }),
     }),
 
   patientVerifyPayment: (data: {
@@ -1095,10 +1095,44 @@ export const paymentApi = {
     razorpay_signature: string
     plan_id: string
     amount_paise: number
+    patient_id?: string
   }) => apiFetch<PatientVerifyResponse>('/payments/patient/verify', { method: 'POST', body: JSON.stringify(data) }),
 
   patientGetSubscription: () =>
     apiFetch<SubscriptionOut>('/payments/patient/subscription'),
+
+  patientGetPaymentHistory: () =>
+    apiFetch<SubscriptionListItem[]>('/payments/patient/history'),
+
+  orgGetSubscription: () =>
+    apiFetch<OrgSubscriptionStatus>('/organizations/mine/subscription'),
+
+  orgListSubscriptions: () =>
+    apiFetch<SubscriptionListItem[]>('/organizations/mine/subscriptions'),
+
+  orgCreateOrder: (plan_id: string, amount_paise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/org/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id, amount_paise }),
+    }),
+
+  orgVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    plan_id: string
+    amount_paise: number
+  }) => apiFetch<VerifyPaymentResponse>('/payments/org/verify', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+}
+
+export interface OrgSubscriptionStatus {
+  status: 'active' | 'expired' | 'none'
+  expires_at: string | null
+  plan_name: string | null
+  subscription_id: string | null
 }
 
 export interface PatientVerifyResponse {
@@ -1126,6 +1160,7 @@ export interface SubscriptionListItem {
   id: string
   org_id: string | null
   org_name: string | null
+  plan_type: string | null
   plan_name: string | null
   amount_paise: number
   status: string

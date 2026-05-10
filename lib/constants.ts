@@ -76,8 +76,14 @@ export const NAV_ITEMS = [
   },
   {
     href: '/subscription',
-    label: 'My Subscription',
+    label: 'My Plan',
     icon: 'CreditCard',
+    roles: ['patient'] as Role[],
+  },
+  {
+    href: '/payments',
+    label: 'Payments',
+    icon: 'Receipt',
     roles: ['patient'] as Role[],
   },
   {
@@ -180,6 +186,12 @@ export const NAV_ITEMS = [
     label: 'Org Audit Logs',
     icon: 'ClipboardList',
     roles: ['admin', 'super_admin'] as Role[],
+  },
+  {
+    href: '/admin/subscription',
+    label: 'Subscription',
+    icon: 'CreditCard',
+    roles: ['admin'] as Role[],
   },
   {
     href: '/admin/settings',

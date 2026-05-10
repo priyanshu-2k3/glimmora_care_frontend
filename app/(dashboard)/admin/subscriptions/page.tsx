@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CreditCard, Loader2, Building2, AlertCircle, ExternalLink } from 'lucide-react'
+import { CreditCard, Loader2, Building2, AlertCircle, ExternalLink, User } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -100,13 +100,21 @@ export default function SubscriptionsPage() {
                 <CardContent>
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gold-whisper border border-gold-soft/40 flex items-center justify-center shrink-0 mt-0.5">
-                        <Building2 className="w-4 h-4 text-gold-deep" />
+                      <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${sub.plan_type === 'patient' ? 'bg-sapphire-mist/20 border-sapphire-mist/40' : 'bg-gold-whisper border-gold-soft/40'}`}>
+                        {sub.plan_type === 'patient'
+                          ? <User className="w-4 h-4 text-sapphire-deep" />
+                          : <Building2 className="w-4 h-4 text-gold-deep" />
+                        }
                       </div>
                       <div className="space-y-0.5">
-                        <p className="font-body font-semibold text-charcoal-deep text-sm">
-                          {sub.org_name ?? 'Unknown org'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-body font-semibold text-charcoal-deep text-sm">
+                            {sub.org_name ?? (sub.plan_type === 'patient' ? 'Patient' : 'Unknown')}
+                          </p>
+                          {sub.plan_type === 'patient' && (
+                            <span className="text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-sapphire-mist/20 text-sapphire-deep uppercase tracking-wide">Patient</span>
+                          )}
+                        </div>
                         <p className="text-xs text-greige font-body">
                           {sub.plan_name ?? '—'} · {fmtAmount(sub.amount_paise)}
                         </p>

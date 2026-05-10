@@ -104,7 +104,7 @@ export default function RegisterPage() {
     setIsLoading(true)
     clearError()
     try {
-      await register({
+      const userId = await register({
         firstName: owner.firstName,
         lastName:  owner.lastName,
         email:     owner.email,
@@ -112,8 +112,9 @@ export default function RegisterPage() {
         password:  owner.password,
         role:      owner.role,
       })
-      // Patients go straight to plan selection; others verify email first
-      router.push(owner.role === 'patient' ? '/select-plan' : '/verify-email')
+      // Patients go straight to plan selection with their ID so the payment
+      // endpoint works even before the auth context re-hydrates
+      router.push(owner.role === 'patient' ? `/select-plan?pid=${userId ?? ''}` : '/verify-email')
     } catch {
       // error shown via context
     } finally {

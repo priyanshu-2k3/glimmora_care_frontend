@@ -45,6 +45,7 @@ export const ADMIN_SIDEBAR_SECTIONS: SidebarSection[] = [
     label: 'ORGANISATION',
     items: [
       { href: '/organization', label: 'Organisation', icon: 'Building2' },
+      { href: '/admin/subscription', label: 'Subscription', icon: 'CreditCard' },
     ],
   },
   {
