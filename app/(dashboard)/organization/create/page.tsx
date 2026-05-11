@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2, ArrowLeft, ArrowRight, CheckCircle, AlertCircle,
-  CreditCard, Shield, Check, Calendar, Loader2, Link2, Copy,
-  MessageCircle, ChevronDown,
+  CreditCard, Shield, Check, Calendar, Loader2,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -13,6 +12,7 @@ import { Input } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
 import { paymentApi, planApi, ApiError, type PlanOut, type VerifyPaymentResponse } from '@/lib/api'
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
+
 import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 
 
@@ -155,17 +155,6 @@ export default function CreateOrganisationPage() {
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
 
-  // Step 3 — payment link
-  const [showLinkForm, setShowLinkForm] = useState(false)
-  const [linkContactName, setLinkContactName] = useState('')
-  const [linkEmail, setLinkEmail] = useState('')
-  const [linkPhone, setLinkPhone] = useState('')
-  const [linkExpiry, setLinkExpiry] = useState<24 | 72 | 168>(72)
-  const [linkLoading, setLinkLoading] = useState(false)
-  const [linkResult, setLinkResult] = useState<{ url: string; expires_at: string } | null>(null)
-  const [linkError, setLinkError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-
   // Step 4
   const [successData, setSuccessData] = useState<VerifyPaymentResponse | null>(null)
 
@@ -242,53 +231,6 @@ export default function CreateOrganisationPage() {
     rzp.open()
   }
 
-  async function handleGenerateLink() {
-    if (!plan) return
-    if (!linkEmail) { setLinkError('Contact email is required.'); return }
-    setLinkError(null)
-    setLinkLoading(true)
-    try {
-      const res = await paymentApi.createPaymentLink({
-        plan_id: plan.id,
-        amount_paise: plan.price * 100,
-        org_name: name.trim(),
-        address: address.trim() || undefined,
-        phone: phone.trim() || undefined,
-        website: website.trim() ? normaliseWebsite(website) : undefined,
-        contact_name: linkContactName.trim() || undefined,
-        contact_email: linkEmail.trim(),
-        contact_phone: linkPhone.trim() || undefined,
-        expiry_hours: linkExpiry,
-      })
-      setLinkResult({ url: res.payment_link_url, expires_at: res.expires_at })
-    } catch (err) {
-      setLinkError(err instanceof ApiError ? err.detail : 'Failed to generate link.')
-    } finally {
-      setLinkLoading(false)
-    }
-  }
-
-  function copyLink() {
-    if (!linkResult) return
-    navigator.clipboard.writeText(linkResult.url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  function whatsappLink() {
-    if (!linkResult) return '#'
-    const msg = encodeURIComponent(
-      `Hi, please complete your GlimmoraCare subscription payment here: ${linkResult.url}`
-    )
-    return `https://wa.me/?text=${msg}`
-  }
-
-  function expiryLabel(h: 24 | 72 | 168) {
-    if (h === 24) return '24 hours'
-    if (h === 72) return '3 days'
-    return '7 days'
-  }
-
   function formatExpiry(iso: string) {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
   }
@@ -297,8 +239,7 @@ export default function CreateOrganisationPage() {
     setStep(1)
     setName(''); setAddress(''); setPhone(''); setWebsite('')
     setSelectedPlanId(null); setSuccessData(null)
-    setLinkResult(null); setLinkEmail(''); setLinkContactName(''); setLinkPhone('')
-    setShowLinkForm(false); setPayError(null)
+    setPayError(null)
   }
 
   return (
@@ -509,124 +450,6 @@ export default function CreateOrganisationPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
-
-          {/* ── Payment link section ── */}
-          <Card>
-            <CardHeader>
-              <button
-                type="button"
-                onClick={() => { setShowLinkForm((v) => !v); setLinkResult(null); setLinkError(null) }}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <div>
-                  <CardTitle className="font-body text-base flex items-center gap-2">
-                    <Link2 className="w-4 h-4 text-gold-soft" /> Send Payment Link
-                  </CardTitle>
-                  <CardDescription className="mt-0.5">
-                    Generate a Razorpay link and share it with the organisation contact
-                  </CardDescription>
-                </div>
-                <ChevronDown className={cn('w-4 h-4 text-greige transition-transform', showLinkForm && 'rotate-180')} />
-              </button>
-            </CardHeader>
-
-            {showLinkForm && (
-              <CardContent className="space-y-4 pt-0">
-                {linkResult ? (
-                  /* Link generated — show result */
-                  <div className="space-y-3">
-                    <div className="bg-parchment/60 border border-sand-light rounded-xl p-4 space-y-3">
-                      <p className="text-xs font-body font-semibold text-charcoal-deep flex items-center gap-1.5">
-                        <CheckCircle className="w-3.5 h-3.5 text-[#059669]" /> Payment link ready
-                      </p>
-                      <p className="text-xs font-mono text-stone break-all">{linkResult.url}</p>
-                      <p className="text-[10px] text-greige font-body">
-                        Expires {formatExpiry(linkResult.expires_at)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" onClick={copyLink}>
-                        <Copy className="w-3.5 h-3.5" />
-                        {copied ? 'Copied!' : 'Copy Link'}
-                      </Button>
-                      <a
-                        href={whatsappLink()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#25D366] text-[#25D366] text-xs font-body font-medium hover:bg-[#25D366]/10 transition-colors"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" /> Share via WhatsApp
-                      </a>
-                      <Button size="sm" variant="outline" onClick={() => setLinkResult(null)}>
-                        New Link
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Link form */
-                  <div className="space-y-3">
-                    <Input
-                      label="Contact Name (optional)"
-                      placeholder="Dr. Meena Sharma"
-                      value={linkContactName}
-                      onChange={(e) => setLinkContactName(e.target.value)}
-                    />
-                    <Input
-                      label="Contact Email *"
-                      type="email"
-                      placeholder="contact@clinic.com"
-                      value={linkEmail}
-                      onChange={(e) => { setLinkEmail(e.target.value); setLinkError(null) }}
-                    />
-                    <Input
-                      label="Contact Phone (optional)"
-                      type="tel"
-                      placeholder="+91 98765 43210"
-                      value={linkPhone}
-                      onChange={(e) => setLinkPhone(e.target.value)}
-                    />
-
-                    <div>
-                      <label className="text-xs font-body font-medium text-stone block mb-1.5">Link expires in</label>
-                      <div className="flex gap-2">
-                        {([24, 72, 168] as const).map((h) => (
-                          <button
-                            key={h}
-                            type="button"
-                            onClick={() => setLinkExpiry(h)}
-                            className={cn(
-                              'flex-1 py-1.5 rounded-xl border text-xs font-body font-medium transition-colors',
-                              linkExpiry === h
-                                ? 'bg-gold-soft text-white border-gold-soft'
-                                : 'bg-white text-stone border-sand-light hover:border-gold-soft',
-                            )}
-                          >
-                            {expiryLabel(h)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {linkError && (
-                      <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
-                        <AlertCircle className="w-3.5 h-3.5 text-[#B91C1C] shrink-0" />
-                        <p className="text-xs font-body text-[#B91C1C]">{linkError}</p>
-                      </div>
-                    )}
-
-                    <Button
-                      size="sm"
-                      onClick={handleGenerateLink}
-                      isLoading={linkLoading}
-                      disabled={!linkEmail}
-                    >
-                      <Link2 className="w-3.5 h-3.5" /> Generate &amp; Copy Link
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            )}
           </Card>
 
           <div className="flex gap-3 justify-between">
