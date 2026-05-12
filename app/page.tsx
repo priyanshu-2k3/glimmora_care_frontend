@@ -33,7 +33,7 @@ function Navbar() {
         </span>
 
         <nav className="hidden md:flex items-center gap-8">
-          {[['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
+          {[['/', 'Home'], ['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
             <a key={href} href={href} className={cn('text-[13px] font-body transition-colors duration-300', scrolled ? 'text-stone hover:text-charcoal-deep' : 'text-ivory-cream/70 hover:text-ivory-cream')}>
               {label}
             </a>
@@ -56,7 +56,7 @@ function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-sand-light px-6 py-5 space-y-4">
-          {[['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
+          {[['/', 'Home'], ['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
             <a key={href} href={href} className="block text-sm font-body text-stone" onClick={() => setMenuOpen(false)}>{label}</a>
           ))}
           <div className="flex gap-3 pt-3 border-t border-sand-light">
@@ -98,7 +98,7 @@ function Hero() {
 
           <div className="flex flex-wrap gap-3 mb-14">
             <Link href="/register" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-body font-semibold text-[14px] hover:opacity-90 transition-all shadow-xl" style={{ background: 'linear-gradient(135deg, #C9A962 0%, #9A7F35 100%)', color: '#1A1816' }}>
-              Start for free <ArrowRight className="w-4 h-4" />
+              Get started <ArrowRight className="w-4 h-4" />
             </Link>
             <a href="#get-started" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-ivory-cream/15 text-ivory-cream font-body font-medium text-[14px] hover:border-ivory-cream/30 hover:bg-ivory-cream/5 transition-all">
               For organisations
@@ -155,7 +155,7 @@ function Hero() {
             </div>
 
             {/* Floating badges */}
-            <div className="absolute -bottom-5 -left-6 rounded-2xl px-5 py-4 shadow-xl border border-ivory-cream/8" style={{ background: 'linear-gradient(135deg, #2D2A26 0%, #4A453D 100%)' }}>
+            <div className="absolute -bottom-24 -left-2 rounded-2xl px-5 py-4 shadow-xl border border-ivory-cream/8" style={{ background: 'linear-gradient(135deg, #2D2A26 0%, #4A453D 100%)' }}>
               <div className="flex items-center gap-2 mb-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-gold-soft" />
                 <span className="text-[12px] font-body font-semibold text-ivory-cream">Consent granted</span>
@@ -163,7 +163,7 @@ function Hero() {
               <p className="text-[10px] font-body text-ivory-cream/40">Dr. Sharma · 30 days</p>
             </div>
 
-            <div className="absolute -top-4 -right-4 rounded-2xl px-4 py-3.5 shadow-xl border border-ivory-cream/8" style={{ background: 'linear-gradient(135deg, #3D3228 0%, #2D2A26 100%)' }}>
+            <div className="absolute -top-24 -right-2 rounded-2xl px-4 py-3.5 shadow-xl border border-ivory-cream/8" style={{ background: 'linear-gradient(135deg, #3D3228 0%, #2D2A26 100%)' }}>
               <div className="flex items-center gap-2">
                 <ScanText className="w-3.5 h-3.5 text-gold-soft" />
                 <span className="text-[12px] font-body font-semibold text-ivory-cream">OCR complete</span>
@@ -686,7 +686,7 @@ function CTABanner() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-[14px] font-body font-semibold transition-all shadow-lg" style={{ background: 'linear-gradient(135deg, #C9A962 0%, #9A7F35 100%)', color: '#1A1816' }}>
-                Get started free <ArrowRight className="w-4 h-4" />
+                Get started <ArrowRight className="w-4 h-4" />
               </Link>
               <a href="mailto:onboarding@glimmora.ai" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-ivory-cream/15 text-ivory-cream text-[14px] font-body font-medium hover:border-ivory-cream/30 hover:bg-ivory-cream/5 transition-all">
                 <Mail className="w-4 h-4" /> Contact for orgs

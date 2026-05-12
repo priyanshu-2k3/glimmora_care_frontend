@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import {
-  CreditCard, CheckCircle, AlertCircle, Shield, Check,
-  Loader2, Calendar, RefreshCw, Clock, Star, X,
+  CreditCard, CheckCircle, AlertCircle, Shield,
+  Loader2, Clock, Star, X,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { paymentApi, planApi, type PlanOut, type PatientVerifyResponse, type SubscriptionOut } from '@/lib/api'
 import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 import { RoleGuard } from '@/components/auth/RoleGuard'
+import { useToast } from '@/components/ui/Toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -80,21 +81,6 @@ function PlanCard({ plan, selected, onSelect }: { plan: PlanOut; selected: boole
           Save {plan.discount_percent}%
         </span>
       )}
-
-      {plan.features.length > 0 && (
-        <>
-          <div className="h-px bg-sand-light my-4" />
-          <p className="text-[10px] font-body font-semibold text-greige uppercase tracking-wider mb-2">What you get</p>
-          <ul className="space-y-2">
-            {plan.features.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-xs text-stone font-body">
-                <Check className={cn('w-3.5 h-3.5 shrink-0 mt-0.5', selected ? 'text-charcoal-deep' : 'text-greige')} />
-                {f}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
     </button>
   )
 }
@@ -112,6 +98,7 @@ function PayModal({ plans, onClose, onSuccess }: {
   const [orderLoading, setOrderLoading] = useState(false)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   async function handlePay() {
     if (!selected) return
@@ -150,8 +137,10 @@ function PayModal({ plans, onClose, onSuccess }: {
             plan_id: selected.id,
             amount_paise: selected.price * 100,
           })
+          toast.success(`Subscription activated — ₹${selected.price.toLocaleString('en-IN')} paid for ${selected.name}.`)
           onSuccess(result)
         } catch {
+          toast.error('Payment received but verification failed. Please contact support.')
           setError('Payment received but verification failed. Contact support.')
         } finally {
           setPaying(false)
@@ -347,17 +336,19 @@ export default function PatientSubscriptionPage() {
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowModal(true)}
-                className={cn(
-                  'shrink-0 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all',
-                  !currentSub || isExpired
-                    ? 'bg-charcoal-deep text-white hover:bg-noir'
-                    : 'bg-white border border-sand-light text-charcoal-deep hover:border-gold-soft',
-                )}
-              >
-                {!currentSub ? 'Subscribe' : isExpired ? 'Renew' : isExpiring ? 'Renew early' : 'Upgrade'}
-              </button>
+              {(!currentSub || isExpired || isExpiring) && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className={cn(
+                    'shrink-0 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all',
+                    !currentSub || isExpired
+                      ? 'bg-charcoal-deep text-white hover:bg-noir'
+                      : 'bg-white border border-sand-light text-charcoal-deep hover:border-gold-soft',
+                  )}
+                >
+                  {!currentSub ? 'Subscribe' : isExpired ? 'Renew' : 'Renew early'}
+                </button>
+              )}
             </div>
 
             {isActive && currentSub && (
@@ -381,15 +372,15 @@ export default function PatientSubscriptionPage() {
           </div>
         )}
 
-        {/* Available plans preview (read-only) */}
-        {!plansLoading && plans.length > 0 && (
+        {/* Available plans preview — only shown when user needs to act */}
+        {!plansLoading && plans.length > 0 && (!currentSub || isExpired || isExpiring) && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-body font-semibold text-charcoal-deep">
-                {isActive && !isExpiring ? 'Available Plans' : isExpiring || isExpired ? 'Renew your plan' : 'Choose a plan'}
+                {isExpiring || isExpired ? 'Renew your plan' : 'Choose a plan'}
               </p>
               <button onClick={() => setShowModal(true)} className="text-xs font-body text-gold-deep hover:text-gold-muted transition-colors">
-                {isActive ? 'Upgrade / change →' : 'Subscribe →'}
+                Subscribe →
               </button>
             </div>
 

@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import {
   CreditCard, CheckCircle, AlertCircle, Clock, Loader2,
-  RefreshCw, Check, Star, Shield, X, CalendarDays, Zap,
+  RefreshCw, Star, Shield, X, CalendarDays, Zap,
 } from 'lucide-react'
 import { RoleGuard } from '@/components/auth/RoleGuard'
 import { Card, CardContent } from '@/components/ui/Card'
 import { paymentApi, planApi, type OrgSubscriptionStatus, type SubscriptionListItem, type PlanOut } from '@/lib/api'
 import { DashboardBackLink } from '@/components/layout/DashboardBackLink'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,18 +72,6 @@ function PlanCard({ plan, selected, onSelect }: { plan: PlanOut; selected: boole
       {plan.discount_percent > 0 && (
         <p className="text-[10px] font-body font-semibold text-emerald-600 mt-1">Save {plan.discount_percent}%</p>
       )}
-
-      <div className="h-px bg-sand-light my-4" />
-
-      <p className="text-[10px] font-body font-semibold text-greige uppercase tracking-wider mb-2">What you get</p>
-      <ul className="space-y-2 flex-1">
-        {plan.features.map((f) => (
-          <li key={f} className="flex items-start gap-2 text-xs text-stone font-body">
-            <Check className={cn('w-3.5 h-3.5 shrink-0 mt-0.5', selected ? 'text-charcoal-deep' : 'text-greige')} />
-            {f}
-          </li>
-        ))}
-      </ul>
     </button>
   )
 }
@@ -100,6 +89,7 @@ function PlanModal({ isRenewal, onClose, onSuccess }: {
   const [orderLoading, setOrderLoading] = useState(false)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     planApi.getPublicPlans('org')
@@ -153,8 +143,10 @@ function PlanModal({ isRenewal, onClose, onSuccess }: {
             plan_id: selected.id,
             amount_paise: selected.price * 100,
           })
+          toast.success(`Organisation subscription activated — ₹${selected.price.toLocaleString('en-IN')} paid for ${selected.name}.`)
           onSuccess()
         } catch {
+          toast.error('Payment received but verification failed. Please contact support.')
           setError('Payment received but verification failed. Contact support.')
         } finally {
           setPaying(false)
@@ -285,8 +277,9 @@ export default function AdminSubscriptionPage() {
   const actionLabel =
     isNone    ? 'Subscribe now' :
     isExpired ? 'Renew subscription' :
-    expiringSoon ? 'Renew early' :
-    'Upgrade / change plan'
+    'Renew early'
+
+  const canChangeplan = isNone || isExpired || expiringSoon
 
   return (
     <RoleGuard allowed={['admin']}>
@@ -357,17 +350,19 @@ export default function AdminSubscriptionPage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setShowModal(true)}
-                  className={cn(
-                    'shrink-0 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all',
-                    isNone || isExpired
-                      ? 'bg-charcoal-deep text-white hover:bg-noir'
-                      : 'bg-white border border-sand-light text-charcoal-deep hover:border-gold-soft',
-                  )}
-                >
-                  {actionLabel}
-                </button>
+                {canChangeplan && (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className={cn(
+                      'shrink-0 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all',
+                      isNone || isExpired
+                        ? 'bg-charcoal-deep text-white hover:bg-noir'
+                        : 'bg-white border border-sand-light text-charcoal-deep hover:border-gold-soft',
+                    )}
+                  >
+                    {actionLabel}
+                  </button>
+                )}
               </div>
 
               {/* Quick stats row for active plans */}
@@ -444,7 +439,7 @@ export default function AdminSubscriptionPage() {
         )}
       </div>
 
-      {showModal && (
+      {showModal && canChangeplan && (
         <PlanModal
           isRenewal={isRenewal ?? false}
           onClose={() => setShowModal(false)}
