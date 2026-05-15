@@ -9,6 +9,7 @@ export interface ChatMessage {
   confidenceScore?: number
   disclaimer?: string
   sourceMarkers?: string[]
+  followupQuestions?: string[]
 }
 
 export interface ChatResponse {

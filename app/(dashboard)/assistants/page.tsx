@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Send, Bot, Info, AlertTriangle, RotateCcw, ChevronRight, Users, Check, X as XIcon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
 import type { Persona } from '@/types/chat'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { Card, CardHeader, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
@@ -16,30 +16,34 @@ import type { PatientOut } from '@/lib/api'
 import { MOCK_PATIENTS } from '@/data/patients'
 import type { Role } from '@/types/auth'
 
-const PERSONA_CONFIG: Record<Persona, { label: string; description: string; color: string; starterPrompts: string[] }> = {
+const PERSONA_CONFIG: Record<Persona, { label: string; description: string; color: string; genericPrompts: string[]; patientPrompts: string[] }> = {
   patient: {
     label: 'Patient Assistant',
     description: 'Explains your health records in simple language',
     color: 'bg-azure-whisper text-sapphire-deep',
-    starterPrompts: ['What does my HbA1c trend mean?', 'Why is my hemoglobin low?', 'Explain my blood pressure readings', 'What should I track for diabetes prevention?'],
+    genericPrompts: ['What does my HbA1c trend mean?', 'Why is my hemoglobin low?', 'Explain my latest blood report', 'What should I track for diabetes prevention?'],
+    patientPrompts: [],
   },
   doctor: {
     label: 'Doctor Assistant',
     description: 'Structured patient summaries and consultation briefs',
     color: 'bg-parchment text-charcoal-deep',
-    starterPrompts: ["Priya Sharma's clinical summary", "Ramesh Patel's risk brief", 'Show HbA1c correlation analysis', "Today's consultation preparation"],
+    genericPrompts: ['What is HbA1c and why does it matter?', 'Explain cholesterol panel interpretation', 'What are signs of hepatic dysfunction?', 'How to interpret a CBC report?'],
+    patientPrompts: ['Explain the latest lab report', 'What are the critical risk flags?', 'Summarise abnormal markers', 'Prepare a consultation brief'],
   },
   admin: {
     label: 'Admin Assistant',
     description: 'Operational management and team coordination',
     color: 'bg-champagne text-gold-deep',
-    starterPrompts: ['Pending consent requests summary', 'Doctor assignment status', 'Team activity this week', 'Audit log highlights'],
+    genericPrompts: ['Pending consent requests summary', 'Doctor assignment status', 'Team activity this week', 'Audit log highlights'],
+    patientPrompts: [],
   },
   super_admin: {
     label: 'System Intelligence',
     description: 'Full platform oversight and governance insights',
     color: 'bg-charcoal-warm/10 text-charcoal-deep',
-    starterPrompts: ['Platform health summary', 'Agent performance status', 'User growth metrics', 'System compliance overview'],
+    genericPrompts: ['Platform health summary', 'Agent performance status', 'User growth metrics', 'System compliance overview'],
+    patientPrompts: [],
   },
 }
 
@@ -115,11 +119,11 @@ export default function AssistantsPage() {
   }, [activePersona, needsPatientPicker, role])
 
   const {
-    messages, isTyping, sendMessage, clearMessages,
-    } = useGeminiChat(
-      activePersona,
-      needsPatientPicker ? selectedPatientId || null : null,
-    )
+    messages, isTyping, isInitialising, followupQuestions, sendMessage, clearMessages,
+  } = useGeminiChat(
+    activePersona,
+    needsPatientPicker ? selectedPatientId || null : null,
+  )
 
   const [input, setInput] = useState('')
   const [showPatientPicker, setShowPatientPicker] = useState(false)
@@ -130,6 +134,14 @@ export default function AssistantsPage() {
   const pickerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const config = PERSONA_CONFIG[activePersona]
+
+  const starterPrompts = useMemo(() => {
+    const hasPatient = needsPatientPicker && !!selectedPatientId
+    if (hasPatient && config.patientPrompts.length > 0) {
+      return config.patientPrompts
+    }
+    return config.genericPrompts
+  }, [config, needsPatientPicker, selectedPatientId])
 
   // Close patient picker on outside click
   useEffect(() => {
@@ -225,13 +237,20 @@ export default function AssistantsPage() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 && (
+          {isInitialising && (
+            <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
+              <div className="w-8 h-8 border-2 border-gold-soft border-t-gold-deep rounded-full animate-spin" />
+              <p className="text-xs text-greige font-body">Restoring conversation…</p>
+            </div>
+          )}
+
+          {!isInitialising && messages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center">
               <Bot className="w-10 h-10 text-greige mb-3" />
               <p className="text-sm text-charcoal-warm font-body font-medium">Start a conversation</p>
               <p className="text-xs text-greige font-body mb-5">Try one of these prompts:</p>
               <div className="flex flex-wrap gap-2 justify-center max-w-xs">
-                {config.starterPrompts.map((p) => (
+                {starterPrompts.map((p) => (
                   <button
                     key={p}
                     onClick={() => sendMessage(p)}
@@ -311,13 +330,28 @@ export default function AssistantsPage() {
                 {selectedPatientLabel}
                 <button
                   type="button"
-                  onClick={() => { setSelectedPatientId(''); clearMessages() }}
+                  onClick={() => { setSelectedPatientId('') }}
                   className="text-greige hover:text-charcoal-deep"
                   aria-label="Clear selected patient"
                 >
                   <XIcon className="w-3 h-3" />
                 </button>
               </span>
+            </div>
+          )}
+
+          {followupQuestions.length > 0 && !isTyping && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {followupQuestions.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => sendMessage(q)}
+                  className="text-[11px] px-2.5 py-1 bg-azure-whisper/60 text-sapphire-deep border border-sapphire-deep/20 rounded-full hover:bg-azure-whisper transition-colors font-body"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           )}
 
@@ -388,7 +422,7 @@ export default function AssistantsPage() {
                           setSelectedPatientId('')
                           setShowPatientPicker(false)
                           setPatientSearch('')
-                          clearMessages()
+                          // hook's useEffect resets automatically when patientId changes
                         }}
                         className={cn(
                           'w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-body transition-colors',
@@ -412,7 +446,7 @@ export default function AssistantsPage() {
                               setSelectedPatientId(p.patient_id)
                               setShowPatientPicker(false)
                               setPatientSearch('')
-                              clearMessages()
+                              // hook's useEffect resets automatically when patientId changes
                             }}
                             className={cn(
                               'w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-body transition-colors',
