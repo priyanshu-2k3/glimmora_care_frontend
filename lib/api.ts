@@ -866,6 +866,9 @@ export interface AdminOrgItem {
   doctor_count: number
   patient_count: number
   created_at: string | null
+  subscription_status: 'active' | 'expired' | null
+  subscription_expires_at: string | null
+  subscription_plan_name: string | null
 }
 
 export interface AdminDoctorOut {
@@ -976,6 +979,246 @@ export const adminApi = {
     const qs = q.toString()
     return apiFetch<ConsentRequest[]>(`/admin/consents${qs ? `?${qs}` : ''}`)
   },
+}
+
+// ─── Payment API ──────────────────────────────────────────────────────────────
+
+export interface CreateOrderResponse {
+  order_id: string
+  amount: number
+  currency: string
+}
+
+export interface VerifyPaymentResponse {
+  org_id: string
+  org_name: string
+  subscription_id: string
+  expires_at: string
+}
+
+export interface CreatePaymentLinkResponse {
+  payment_link_url: string
+  payment_link_id: string
+  expires_at: string
+}
+
+export const paymentApi = {
+  createOrder: (planId: string, amountPaise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id: planId, amount_paise: amountPaise }),
+    }),
+
+  verifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    plan_id: string
+    amount_paise: number
+  }) =>
+    apiFetch<VerifyPaymentResponse>('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  publicCreateOrder: (planId: string, amountPaise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/public/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id: planId, amount_paise: amountPaise }),
+      auth: false,
+    }),
+
+  publicVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    contact_name?: string
+    contact_email?: string
+    plan_id: string
+    amount_paise: number
+  }) =>
+    apiFetch<VerifyPaymentResponse>('/payments/public/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      auth: false,
+    }),
+
+  createPaymentLink: (data: {
+    plan_id: string
+    amount_paise: number
+    org_name: string
+    address?: string
+    phone?: string
+    website?: string
+    contact_name?: string
+    contact_email: string
+    contact_phone?: string
+    expiry_hours: 24 | 72 | 168
+  }) =>
+    apiFetch<CreatePaymentLinkResponse>('/payments/create-payment-link', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  listSubscriptions: (status?: string) =>
+    apiFetch<SubscriptionListItem[]>(`/admin/subscriptions${status ? `?status=${status}` : ''}`),
+
+  renewCreateOrder: (data: { org_id: string; plan_id: string; amount_paise: number }) =>
+    apiFetch<CreateOrderResponse>('/payments/renew/create-order', { method: 'POST', body: JSON.stringify(data) }),
+
+  renewVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    org_id: string
+    plan_id: string
+    amount_paise: number
+  }) => apiFetch<VerifyPaymentResponse>('/payments/renew/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  patientCreateOrder: (plan_id: string, amount_paise: number, patient_id?: string) =>
+    apiFetch<CreateOrderResponse>('/payments/patient/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id, amount_paise, ...(patient_id ? { patient_id } : {}) }),
+    }),
+
+  patientVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    plan_id: string
+    amount_paise: number
+    patient_id?: string
+  }) => apiFetch<PatientVerifyResponse>('/payments/patient/verify', { method: 'POST', body: JSON.stringify(data) }),
+
+  patientGetSubscription: () =>
+    apiFetch<SubscriptionOut>('/payments/patient/subscription'),
+
+  patientGetPaymentHistory: () =>
+    apiFetch<SubscriptionListItem[]>('/payments/patient/history'),
+
+  orgGetSubscription: () =>
+    apiFetch<OrgSubscriptionStatus>('/organizations/mine/subscription'),
+
+  orgListSubscriptions: () =>
+    apiFetch<SubscriptionListItem[]>('/organizations/mine/subscriptions'),
+
+  orgCreateOrder: (plan_id: string, amount_paise: number) =>
+    apiFetch<CreateOrderResponse>('/payments/org/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ plan_id, amount_paise }),
+    }),
+
+  orgVerifyPayment: (data: {
+    razorpay_payment_id: string
+    razorpay_order_id: string
+    razorpay_signature: string
+    plan_id: string
+    amount_paise: number
+  }) => apiFetch<VerifyPaymentResponse>('/payments/org/verify', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+}
+
+export interface OrgSubscriptionStatus {
+  status: 'active' | 'expired' | 'none'
+  expires_at: string | null
+  plan_name: string | null
+  subscription_id: string | null
+}
+
+export interface PatientVerifyResponse {
+  patient_id: string
+  subscription_id: string
+  expires_at: string
+}
+
+export interface SubscriptionOut {
+  id: string
+  org_id: string | null
+  plan_id: string
+  plan_snapshot: Record<string, unknown>
+  amount_paise: number
+  currency: string
+  status: string
+  razorpay_payment_id: string | null
+  razorpay_payment_link_url: string | null
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
+}
+
+export interface SubscriptionListItem {
+  id: string
+  org_id: string | null
+  org_name: string | null
+  plan_type: string | null
+  plan_name: string | null
+  amount_paise: number
+  status: string
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
+  razorpay_payment_id: string | null
+  razorpay_payment_link_url: string | null
+}
+
+// ─── Plan API ─────────────────────────────────────────────────────────────────
+
+export interface PlanOut {
+  id: string
+  name: string
+  duration_months: number
+  price: number
+  discount_percent: number
+  description: string | null
+  features: string[]
+  plan_type: 'org' | 'patient'
+  is_popular: boolean
+  is_best_value: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanCreate {
+  name: string
+  duration_months: number
+  price: number
+  discount_percent?: number
+  description?: string
+  features?: string[]
+  plan_type: 'org' | 'patient'
+  is_popular?: boolean
+  is_best_value?: boolean
+  is_active?: boolean
+}
+
+export const planApi = {
+  /** Public — active plans only */
+  getPublicPlans: (planType?: 'org' | 'patient') =>
+    apiFetch<PlanOut[]>(`/plans${planType ? `?plan_type=${planType}` : ''}`),
+
+  /** Super admin — all plans including inactive */
+  adminListPlans: (planType?: 'org' | 'patient') =>
+    apiFetch<PlanOut[]>(`/admin/plans${planType ? `?plan_type=${planType}` : ''}`),
+
+  createPlan: (data: PlanCreate) =>
+    apiFetch<PlanOut>('/admin/plans', { method: 'POST', body: JSON.stringify(data) }),
+
+  updatePlan: (planId: string, data: Partial<PlanCreate>) =>
+    apiFetch<PlanOut>(`/admin/plans/${planId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deletePlan: (planId: string) =>
+    apiFetch<{ message: string }>(`/admin/plans/${planId}`, { method: 'DELETE' }),
 }
 
 // ─── Intake API ───────────────────────────────────────────────────────────────

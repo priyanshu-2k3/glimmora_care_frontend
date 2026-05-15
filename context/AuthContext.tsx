@@ -25,7 +25,7 @@ interface AuthContextValue {
   connectGoogle: () => Promise<{ ok: boolean; message: string }>
   googleLoginWithRole: (role: Role) => Promise<boolean>
   demoLogin: (role: Role) => Promise<void>
-  register: (credentials: RegisterCredentials) => Promise<void>
+  register: (credentials: RegisterCredentials) => Promise<string | undefined>
   logout: () => Promise<void>
   /** Re-fetch /auth/me and refresh user in state + localStorage */
   refreshUser: () => Promise<void>
@@ -294,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       persistUser(newUser)
+      return newUser.id
     } catch (err) {
       if (err instanceof ApiError) {
         setError(

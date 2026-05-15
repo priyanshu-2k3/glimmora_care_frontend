@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft, LogIn, LogOut, KeyRound, ChevronDown } from 'lucide-react'
+import { Activity, Eye, Upload, Shield, Download, Bot, Search, User, FileText, Filter, X, AlertTriangle, ArrowLeft, LogIn, LogOut, KeyRound, ChevronDown, CreditCard, RefreshCw, Link as LinkIcon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { intakeApi, adminApi, getAccessToken } from '@/lib/api'
 import type { AuditTrailEntry, AuditLogOut, AdminUserOut, AdminOrgItem } from '@/lib/api'
@@ -61,7 +61,13 @@ const ACTION_META: Record<string, { icon: React.ElementType; label: string; colo
   'access.rule_created':   { icon: Shield,   label: 'Access Rule Created',     color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
   'access.rule_toggled':   { icon: Shield,   label: 'Access Rule Toggled',     color: 'text-stone',           bg: 'bg-parchment'      },
   'access.rule_deleted':   { icon: Shield,   label: 'Access Rule Deleted',     color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
-  'access.setting_updated':{ icon: Shield,   label: 'Access Setting Changed',  color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  'access.setting_updated':         { icon: Shield,     label: 'Access Setting Changed',       color: 'text-sapphire-deep',   bg: 'bg-azure-whisper'  },
+  'payment.subscription_activated': { icon: CreditCard, label: 'Subscription Activated',        color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'payment.subscription_renewed':   { icon: RefreshCw,  label: 'Subscription Renewed',          color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'payment.org_subscription_created':{ icon: CreditCard,label: 'Org Subscription Created',      color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'payment.link_created':           { icon: LinkIcon,   label: 'Payment Link Created',          color: 'text-gold-deep',       bg: 'bg-gold-whisper'   },
+  'payment.link_paid':              { icon: CreditCard, label: 'Payment Link Paid',             color: 'text-success-DEFAULT', bg: 'bg-success-soft'   },
+  'payment.failed':                 { icon: AlertTriangle, label: 'Payment Failed',             color: 'text-[#B91C1C]',       bg: 'bg-error-soft'     },
 }
 
 function getMeta(action: string) {
@@ -113,8 +119,14 @@ function buildDescription(row: LogRow): string {
     case 'access.rule_created':    return 'A new access control rule was created.'
     case 'access.rule_toggled':    return 'An access control rule was enabled or disabled.'
     case 'access.rule_deleted':    return 'An access control rule was deleted.'
-    case 'access.setting_updated': return 'An access control setting was changed.'
-    default:                       return `Action recorded: ${row.action}.`
+    case 'access.setting_updated':          return 'An access control setting was changed.'
+    case 'payment.subscription_activated': return 'A subscription was activated after successful payment.'
+    case 'payment.subscription_renewed':   return 'A subscription was renewed after successful payment.'
+    case 'payment.org_subscription_created': return 'An organisation subscription was created by super admin.'
+    case 'payment.link_created':           return 'A Razorpay payment link was generated and sent.'
+    case 'payment.link_paid':              return 'A payment link was paid — subscription activated via webhook.'
+    case 'payment.failed':                 return 'A payment attempt failed.'
+    default:                               return `Action recorded: ${row.action}.`
   }
 }
 

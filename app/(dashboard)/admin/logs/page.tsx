@@ -52,6 +52,33 @@ function FriendlyRef({ refValue, users, orgs }: { refValue: string | null | unde
   )
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  'payment.subscription_activated':    'Subscription Activated',
+  'payment.subscription_renewed':      'Subscription Renewed',
+  'payment.org_subscription_created':  'Org Subscription Created',
+  'payment.link_created':              'Payment Link Created',
+  'payment.link_paid':                 'Payment Link Paid',
+  'payment.failed':                    'Payment Failed',
+  'auth.login':                        'Login',
+  'auth.login_failed':                 'Login Failed',
+  'auth.login_otp':                    'Login via OTP',
+  'auth.logout':                       'Logout',
+  'auth.logout_all':                   'Logout All Devices',
+  'auth.register':                     'Account Registered',
+  'auth.password_changed':             'Password Changed',
+  'auth.password_reset':               'Password Reset',
+  'user.update':                       'User Updated',
+  'user.delete':                       'User Deleted',
+  'org.create':                        'Org Created',
+  'org.update':                        'Org Updated',
+  'org.doctor_invited':                'Doctor Invited',
+  'org.patient_assigned':              'Patient Assigned',
+}
+
+function friendlyAction(action: string) {
+  return ACTION_LABELS[action] ?? action
+}
+
 const SEVERITY_VARIANT: Record<string, 'success' | 'warning' | 'error'> = {
   info: 'success',
   warning: 'warning',
@@ -207,7 +234,7 @@ export default function AdminLogsPage() {
                     <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_DOT[log.severity] ?? 'bg-success-DEFAULT'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-body font-medium text-charcoal-deep">{log.action}</p>
+                        <p className="text-sm font-body font-medium text-charcoal-deep">{friendlyAction(log.action)}</p>
                         <Badge variant={SEVERITY_VARIANT[log.severity] ?? 'success'} className="capitalize shrink-0">{log.severity}</Badge>
                       </div>
                       {(log.target || log.target_name) && (

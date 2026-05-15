@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, ChevronUp, UserCheck, UserMinus, Trash2, X } from 'lucide-react'
+import { Building2, Users, Plus, Save, AlertCircle, CheckCircle, Loader2, Edit2, Stethoscope, Search, ChevronDown, UserCheck, UserMinus, Trash2, X, RefreshCw, CreditCard, Shield, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
-import { orgApi, adminApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem, type DoctorOut } from '@/lib/api'
+import { orgApi, adminApi, paymentApi, planApi, ApiError, type OrgOut, type PatientOut, type AdminOrgItem, type DoctorOut, type PlanOut, type VerifyPaymentResponse } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { validatePhone, validateWebsite, normaliseWebsite } from '@/lib/validators'
@@ -467,23 +467,160 @@ function AssignAdminModal({
   )
 }
 
+function useRpScript() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.Razorpay) { setReady(true); return }
+    const s = document.createElement('script')
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    s.async = true; s.onload = () => setReady(true)
+    document.body.appendChild(s)
+  }, [])
+  return ready
+}
+
+// ─── Renew Subscription Modal ─────────────────────────────────────────────────
+function RenewModal({ org, onClose, onSuccess }: {
+  org: AdminOrgItem
+  onClose: () => void
+  onSuccess: (result: VerifyPaymentResponse) => void
+}) {
+  const rpReady = useRpScript()
+  const [plans, setPlans] = useState<PlanOut[]>([])
+  const [selectedPlan, setSelectedPlan] = useState<PlanOut | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [orderLoading, setOrderLoading] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    planApi.getPublicPlans('org')
+      .then((ps) => { setPlans(ps); setSelectedPlan(ps.find((p) => p.is_popular) ?? ps[0] ?? null) })
+      .catch(() => setError('Failed to load plans'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleRenew() {
+    if (!selectedPlan) return
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    if (!keyId) { setError('Payment not configured'); return }
+    if (!rpReady) { setError('Payment SDK not loaded. Refresh and try again.'); return }
+    setError(null); setOrderLoading(true)
+    let orderId: string
+    try {
+      const res = await paymentApi.renewCreateOrder({ org_id: org.id, plan_id: selectedPlan.id, amount_paise: selectedPlan.price * 100 })
+      orderId = res.order_id
+    } catch { setError('Failed to create order. Please try again.'); setOrderLoading(false); return }
+    setOrderLoading(false)
+
+    new window.Razorpay({
+      key: keyId,
+      amount: selectedPlan.price * 100,
+      currency: 'INR',
+      name: 'GlimmoraCare',
+      description: `${selectedPlan.name} renewal — ${org.name}`,
+      order_id: orderId,
+      theme: { color: '#B8860B' },
+      handler: async (response) => {
+        setPaying(true)
+        try {
+          const result = await paymentApi.renewVerifyPayment({
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature,
+            org_id: org.id,
+            plan_id: selectedPlan.id,
+            amount_paise: selectedPlan.price * 100,
+          })
+          onSuccess(result)
+        } catch { setError('Payment received but verification failed. Contact support.') }
+        finally { setPaying(false) }
+      },
+      modal: { ondismiss: () => setError('Payment cancelled.') },
+    }).open()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-charcoal-deep/40 backdrop-blur-sm" onClick={onClose} />
+      <Card className="relative z-10 w-full max-w-md animate-fade-in bg-white">
+        <CardHeader>
+          <CardTitle className="font-body text-base flex items-center gap-2 text-charcoal-deep">
+            <RefreshCw className="w-4 h-4 text-gold-soft" /> Renew Subscription
+          </CardTitle>
+          <CardDescription>Renewing subscription for <span className="font-medium text-charcoal-deep">{org.name}</span></CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-gold-soft animate-spin" /></div>}
+          {!loading && plans.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-body text-greige font-medium uppercase tracking-wide">Select plan</p>
+              {plans.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPlan(p)}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all',
+                    selectedPlan?.id === p.id
+                      ? 'border-charcoal-deep bg-charcoal-deep/5'
+                      : 'border-sand-light hover:border-gold-soft',
+                  )}
+                >
+                  <div>
+                    <p className="font-body font-semibold text-sm text-charcoal-deep">{p.name}</p>
+                    <p className="text-xs text-greige">{p.duration_months} month{p.duration_months !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-body font-semibold text-charcoal-deep">₹{p.price.toLocaleString('en-IN')}</p>
+                    {p.discount_percent > 0 && <p className="text-[10px] text-[#059669]">Save {p.discount_percent}%</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center gap-2 bg-[#FEF2F2] border border-[#DC2626]/20 rounded-xl p-3">
+              <AlertCircle className="w-3.5 h-3.5 text-[#B91C1C] shrink-0" />
+              <p className="text-xs font-body text-[#B91C1C]">{error}</p>
+            </div>
+          )}
+          {(orderLoading || paying) && (
+            <div className="flex items-center gap-2 text-sm text-greige font-body">
+              <Loader2 className="w-4 h-4 text-gold-soft animate-spin" />
+              {orderLoading ? 'Creating order…' : 'Verifying payment…'}
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={orderLoading || paying}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={handleRenew}
+              disabled={!selectedPlan || !rpReady || orderLoading || paying || loading}
+              isLoading={orderLoading || paying}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Pay ₹{selectedPlan ? selectedPlan.price.toLocaleString('en-IN') : '—'}
+            </Button>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-[10px] text-greige font-body flex items-center gap-1"><Shield className="w-3 h-3 text-gold-soft" /> SSL Encrypted</span>
+            <span className="text-[10px] text-greige font-body flex items-center gap-1"><Check className="w-3 h-3 text-gold-soft" /> Razorpay</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Super Admin view ─────────────────────────────────────────────────────────
 function SuperAdminOrgView() {
+  const router = useRouter()
   const toast = useToast()
   const [orgs, setOrgs] = useState<AdminOrgItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
-
-  // Create org state
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createAddress, setCreateAddress] = useState('')
-  const [createPhone, setCreatePhone] = useState('')
-  const [createWebsite, setCreateWebsite] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [createSuccess, setCreateSuccess] = useState(false)
 
   // Assign admin state
   const [assignOrgTarget, setAssignOrgTarget] = useState<AdminOrgItem | null>(null)
@@ -493,6 +630,9 @@ function SuperAdminOrgView() {
   const [deleteTarget, setDeleteTarget] = useState<AdminOrgItem | null>(null)
   const [removeAdminTargetId, setRemoveAdminTargetId] = useState<string | null>(null)
   const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState<AdminOrgItem | null>(null)
+
+  // Renewal
+  const [renewTarget, setRenewTarget] = useState<AdminOrgItem | null>(null)
 
   function loadOrgs() {
     return adminApi.listAllOrgs()
@@ -514,40 +654,6 @@ function SuperAdminOrgView() {
     o.name.toLowerCase().includes(search.toLowerCase()) ||
     (o.admin_email ?? '').toLowerCase().includes(search.toLowerCase())
   )
-
-  async function handleCreateOrg(e: React.FormEvent) {
-    e.preventDefault()
-    if (!createName.trim()) return
-    const phoneErr = validatePhone(createPhone, { optional: true })
-    if (phoneErr) { setCreateError(phoneErr); return }
-    const webErr = validateWebsite(createWebsite, { optional: true })
-    if (webErr) { setCreateError(webErr); return }
-    setCreating(true)
-    setCreateError(null)
-    try {
-      const created = await adminApi.createOrg({
-        name: createName.trim(),
-        address: createAddress.trim() || undefined,
-        phone: createPhone.trim() || undefined,
-        website: createWebsite.trim() ? normaliseWebsite(createWebsite) : undefined,
-      })
-      toast.success(`Organisation created: ${created.name}`)
-      setCreateSuccess(true)
-      setCreateName('')
-      setCreateAddress('')
-      setCreatePhone('')
-      setCreateWebsite('')
-      await loadOrgs()
-      setTimeout(() => {
-        setCreateSuccess(false)
-        setShowCreateForm(false)
-      }, 1200)
-    } catch (err) {
-      setCreateError(err instanceof ApiError ? err.detail : 'Failed to create organisation.')
-    } finally {
-      setCreating(false)
-    }
-  }
 
   function handleAssignSuccess(updatedOrg: AdminOrgItem) {
     setOrgs((prev) => prev.map((o) => o.id === updatedOrg.id ? updatedOrg : o))
@@ -587,6 +693,18 @@ function SuperAdminOrgView() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {renewTarget && (
+        <RenewModal
+          org={renewTarget}
+          onClose={() => setRenewTarget(null)}
+          onSuccess={(result) => {
+            toast.success(`Subscription renewed for ${result.org_name} until ${new Date(result.expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)
+            setRenewTarget(null)
+            loadOrgs()
+          }}
+        />
+      )}
+
       {assignOrgTarget && (
         <AssignAdminModal
           org={assignOrgTarget}
@@ -678,81 +796,18 @@ function SuperAdminOrgView() {
         ))}
       </div>
 
-      {/* ── Create New Organisation card ── */}
-      <Card className={cn('overflow-hidden transition-all duration-300', showCreateForm && 'border-gold-soft/50')}>
-        <button
-          type="button"
-          onClick={() => { setShowCreateForm((v) => !v); setCreateError(null); setCreateSuccess(false) }}
-          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-parchment/50 transition-colors"
-        >
+      {/* ── Create New Organisation button ── */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-gold-soft" />
             <span className="font-body font-semibold text-charcoal-deep text-sm">Create New Organisation</span>
           </div>
-          {showCreateForm
-            ? <ChevronUp className="w-4 h-4 text-greige" />
-            : <ChevronDown className="w-4 h-4 text-greige" />}
-        </button>
-
-        {showCreateForm && (
-          <div className="border-t border-sand-light px-5 pb-5 pt-4 bg-white text-charcoal-deep">
-            {createSuccess ? (
-              <div className="flex items-center gap-2 bg-success-soft border border-success-DEFAULT/20 rounded-xl p-3">
-                <CheckCircle className="w-4 h-4 text-success-DEFAULT shrink-0" />
-                <p className="text-xs font-body text-success-DEFAULT">Organisation created successfully.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCreateOrg} className="space-y-4 [&_label]:text-charcoal-deep [&_label]:font-semibold">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Organisation Name *"
-                    placeholder="e.g. Sunrise Health Clinic"
-                    value={createName}
-                    onChange={(e) => { setCreateName(e.target.value); setCreateError(null) }}
-                    required
-                    className="sm:col-span-2"
-                  />
-                  <Input
-                    label="Address"
-                    placeholder="123 Medical Street, Mumbai"
-                    value={createAddress}
-                    onChange={(e) => setCreateAddress(e.target.value)}
-                  />
-                  <Input
-                    label="Phone"
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={createPhone}
-                    onChange={(e) => setCreatePhone(e.target.value)}
-                  />
-                  <Input
-                    label="Website"
-                    type="url"
-                    placeholder="https://clinic.example.com"
-                    value={createWebsite}
-                    onChange={(e) => setCreateWebsite(e.target.value)}
-                    className="sm:col-span-2"
-                  />
-                </div>
-                {createError && (
-                  <div className="flex items-center gap-2 bg-error-soft border border-[#DC2626]/20 rounded-xl p-3">
-                    <AlertCircle className="w-4 h-4 text-[#B91C1C] shrink-0" />
-                    <p className="text-xs font-body text-[#B91C1C]">{createError}</p>
-                  </div>
-                )}
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" isLoading={creating} disabled={!createName.trim()}>
-                    <Plus className="w-4 h-4" />
-                    Create Organisation
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
+          <Button size="sm" onClick={() => router.push('/organization/create')}>
+            <Plus className="w-3.5 h-3.5" />
+            Create
+          </Button>
+        </div>
       </Card>
 
       {/* Search */}
@@ -791,6 +846,27 @@ function SuperAdminOrgView() {
                     <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                       <Badge variant="info">{org.doctor_count} doctor{org.doctor_count !== 1 ? 's' : ''}</Badge>
                       <Badge variant="success">{org.patient_count} patient{org.patient_count !== 1 ? 's' : ''}</Badge>
+                      {org.subscription_status === 'active' && org.subscription_expires_at
+                        ? (() => {
+                            const daysLeft = Math.ceil((new Date(org.subscription_expires_at).getTime() - Date.now()) / 86400000)
+                            return daysLeft <= 30
+                              ? <Badge variant="warning">Expiring in {daysLeft}d</Badge>
+                              : <Badge variant="success">{org.subscription_plan_name ?? 'Active'}</Badge>
+                          })()
+                        : org.subscription_status === 'expired'
+                          ? <>
+                              <Badge variant="error">Expired</Badge>
+                              <Button variant="outline" size="sm" onClick={() => setRenewTarget(org)} className="text-xs px-2 py-1 h-auto !text-[#B8860B] !border-[#B8860B]/40 hover:!bg-amber-50">
+                                <RefreshCw className="w-3 h-3" /> Renew
+                              </Button>
+                            </>
+                          : <>
+                              <Badge variant="default">No Plan</Badge>
+                              <Button variant="outline" size="sm" onClick={() => setRenewTarget(org)} className="text-xs px-2 py-1 h-auto">
+                                <CreditCard className="w-3 h-3" /> Subscribe
+                              </Button>
+                            </>
+                      }
                       {!org.admin_email ? (
                         <Button
                           variant="outline"
@@ -844,6 +920,8 @@ function SuperAdminOrgView() {
                         { label: 'Phone', value: org.phone ?? 'Not set' },
                         { label: 'Website', value: org.website ?? 'Not set' },
                         { label: 'Created', value: org.created_at ? new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                        { label: 'Subscription Plan', value: org.subscription_plan_name ?? 'None' },
+                        { label: 'Sub. Expires', value: org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
                       ].map(({ label, value }) => (
                         <div key={label} className="flex flex-col">
                           <span className="text-xs text-greige">{label}</span>

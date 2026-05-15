@@ -75,6 +75,18 @@ export const NAV_ITEMS = [
     roles: ['patient'] as Role[],
   },
   {
+    href: '/subscription',
+    label: 'My Plan',
+    icon: 'CreditCard',
+    roles: ['patient'] as Role[],
+  },
+  {
+    href: '/payments',
+    label: 'Payments',
+    icon: 'Receipt',
+    roles: ['patient'] as Role[],
+  },
+  {
     href: '/profiles',
     label: 'Dependent Profiles',
     icon: 'UserPlus',
@@ -176,6 +188,12 @@ export const NAV_ITEMS = [
     roles: ['admin', 'super_admin'] as Role[],
   },
   {
+    href: '/admin/subscription',
+    label: 'Subscription',
+    icon: 'CreditCard',
+    roles: ['admin'] as Role[],
+  },
+  {
     href: '/admin/settings',
     label: 'Admin Settings',
     icon: 'Settings',
@@ -215,6 +233,18 @@ export const NAV_ITEMS = [
     href: '/admin/patients',
     label: 'Patients',
     icon: 'UserCheck',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/admin/plans',
+    label: 'Subscription Plans',
+    icon: 'Tag',
+    roles: ['super_admin'] as Role[],
+  },
+  {
+    href: '/admin/subscriptions',
+    label: 'Subscriptions',
+    icon: 'CreditCard',
     roles: ['super_admin'] as Role[],
   },
 ]
