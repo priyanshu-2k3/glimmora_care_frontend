@@ -373,7 +373,7 @@ export default function PatientSubscriptionPage() {
         )}
 
         {/* Available plans preview — only shown when user needs to act */}
-        {!plansLoading && plans.length > 0 && (!currentSub || isExpired || isExpiring) && (
+        {!plansLoading && !subLoading && plans.length > 0 && (!currentSub || isExpired || isExpiring) && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-body font-semibold text-charcoal-deep">
