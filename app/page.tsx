@@ -28,9 +28,9 @@ function Navbar() {
       scrolled ? 'bg-white/96 backdrop-blur-md border-b border-sand-light/70 shadow-sm' : 'bg-transparent',
     )}>
       <div className="max-w-7xl mx-auto px-6 h-[68px] flex items-center justify-between">
-        <span className={cn('font-display text-[26px] tracking-tight select-none transition-colors duration-300', scrolled ? 'text-charcoal-deep' : 'text-ivory-cream')}>
+        <Link href="/" className={cn('font-display text-[26px] tracking-tight select-none transition-colors duration-300', scrolled ? 'text-charcoal-deep' : 'text-ivory-cream')}>
           Glimmora<span className="text-gold-soft italic">Care</span>
-        </span>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-8">
           {[['/', 'Home'], ['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
