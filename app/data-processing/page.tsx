@@ -151,18 +151,18 @@ export default function DataProcessing() {
       </Section>
 
       <Section title="5. Sub-processors">
-        <p>We engage the following sub-processors to operate the platform. All sub-processors are bound by contractual data protection obligations:</p>
+        <p>We engage the following categories of sub-processors to operate the platform. All sub-processors are bound by contractual data protection obligations:</p>
         <Table
-          headers={['Sub-processor', 'Country', 'Purpose', 'Data Shared']}
+          headers={['Category', 'Location', 'Purpose', 'Data Shared']}
           rows={[
-            ['MongoDB Atlas', 'India / Cloud', 'Primary database', 'All personal and health data (encrypted at rest)'],
-            ['AWS S3', 'EU (eu-north-1)', 'Document storage', 'Health record files (SSE-S3 encrypted)'],
-            ['OpenAI', 'USA', 'OCR extraction & AI chat', 'Health record images and text; chat context'],
-            ['Firebase (Google)', 'USA', 'Google Sign-In authentication', 'Email address, Google UID only'],
-            ['Resend', 'USA', 'Transactional email delivery', 'Email address and message content only'],
-            ['Razorpay', 'India', 'Payment processing', 'Payment metadata; no health data'],
-            ['DigitalOcean', 'India / Global', 'Backend server hosting', 'API traffic; no persistent data storage'],
-            ['Vercel', 'Global CDN', 'Frontend hosting', 'No personal data stored; static assets only'],
+            ['Database provider', 'India / Cloud', 'Primary database', 'All personal and health data (encrypted at rest)'],
+            ['Cloud storage provider', 'Cloud', 'Document storage', 'Health record files (server-side encrypted)'],
+            ['AI processing provider', 'International', 'OCR extraction & AI chat', 'Health record images and text; chat context'],
+            ['Authentication provider', 'International', 'Google Sign-In authentication', 'Email address, authentication UID only'],
+            ['Email delivery provider', 'International', 'Transactional email delivery', 'Email address and message content only'],
+            ['Payment processor', 'India', 'Payment processing', 'Payment metadata; no health data'],
+            ['Cloud hosting provider', 'India / Global', 'Backend server hosting', 'API traffic; no persistent data storage'],
+            ['Frontend hosting provider', 'Global CDN', 'Frontend hosting', 'No personal data stored; static assets only'],
           ]}
         />
         <p>
@@ -178,11 +178,11 @@ export default function DataProcessing() {
           rows={[
             ['Encryption in transit', 'TLS 1.2+ enforced on all connections in production'],
             ['Encryption at rest', 'Database-level encryption + AES-256-GCM field-level encryption on all health markers'],
-            ['File encryption', 'AWS S3 SSE-S3 server-side encryption on all uploaded documents'],
+            ['File encryption', 'Server-side encryption on all uploaded documents in cloud storage'],
             ['Access control', 'Role-based access control (RBAC) enforced at every API endpoint'],
-            ['Authentication', 'bcrypt password hashing (cost factor 12); JWT with short-lived access tokens (1hr)'],
+            ['Authentication', 'Secure password hashing; JWT with short-lived access tokens'],
             ['Session security', 'Server-side session store; individual and bulk session revocation'],
-            ['Input validation', 'Pydantic v2 schema validation on all API inputs'],
+            ['Input validation', 'Strict schema validation on all API inputs'],
             ['Audit logging', 'Immutable logs on every data access event, consent change, and admin action'],
             ['Vulnerability management', 'Dependency updates and security patches applied regularly'],
             ['Access reviews', 'Quarterly internal review of staff access to production systems'],
@@ -192,14 +192,14 @@ export default function DataProcessing() {
 
       <Section title="7. International Data Transfers">
         <p>
-          Health record files are stored in AWS S3 (eu-north-1 region). OCR processing and AI
-          chat inference are performed by OpenAI, whose servers are located in the United States.
-          When data is transferred outside India for processing by OpenAI, it is done under
-          explicit user consent and subject to OpenAI's contractual data protection commitments.
+          Certain service providers used to operate the platform — including our AI processing
+          provider for OCR and chat inference — are located outside India. When health data is
+          transferred internationally for processing, it is done under explicit user consent and
+          subject to contractual data protection commitments with those providers.
         </p>
         <p>
-          We do not transfer health data internationally for any purpose other than OCR processing
-          and AI inference. We are actively evaluating India-hosted AI infrastructure to minimise
+          We do not transfer health data internationally for any purpose other than AI-assisted
+          processing. We are actively evaluating India-hosted infrastructure to minimise
           cross-border transfers in future.
         </p>
       </Section>

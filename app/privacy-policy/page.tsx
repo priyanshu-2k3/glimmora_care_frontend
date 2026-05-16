@@ -99,7 +99,7 @@ export default function PrivacyPolicy() {
           <li>Compute your Digital Health Twin — a longitudinal model of your health trends</li>
           <li>Generate preventive AI insights (non-diagnostic) based on your historical data</li>
           <li>Enable consent-based sharing of your records with authorised doctors</li>
-          <li>Send transactional emails (OTPs, account verification, consent notifications) via Resend</li>
+          <li>Send transactional emails (OTPs, account verification, consent notifications)</li>
           <li>Maintain an immutable audit trail of all data access events</li>
           <li>Comply with applicable Indian law, including the DPDP Act 2023</li>
         </ul>
@@ -108,9 +108,8 @@ export default function PrivacyPolicy() {
 
       <Section title="4. Data Storage & Residency">
         <p>
-          All personal and health data is stored on servers located within India. We use MongoDB Atlas with
-          India-region clusters. Health record files (lab reports, documents) are stored in AWS S3 with
-          India-region or EU-region configuration and SSE-S3 server-side encryption.
+          All personal and health data is stored on servers located within India. Health record files
+          (lab reports, documents) are stored using encrypted cloud object storage with server-side encryption.
         </p>
         <p>
           We apply AES-256-GCM field-level encryption to all health marker values in the database.
@@ -138,13 +137,13 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="6. Third-Party Services">
-        <p>We integrate with the following third-party services to operate the platform:</p>
+        <p>We integrate with select third-party service providers to operate the platform. These providers are contractually bound to process data only for the purposes we specify:</p>
         <ul className="list-disc pl-5 space-y-2">
-          <li><strong className="text-charcoal-deep">OpenAI:</strong> Health record OCR and AI chat responses. Records are sent to OpenAI for processing and are subject to OpenAI's data usage policies.</li>
-          <li><strong className="text-charcoal-deep">Firebase (Google):</strong> Google Sign-In authentication only. We do not share health data with Firebase.</li>
-          <li><strong className="text-charcoal-deep">AWS S3:</strong> Secure document storage for uploaded health record files.</li>
-          <li><strong className="text-charcoal-deep">Resend:</strong> Transactional email delivery (OTPs, verification links, notifications). Only your email address and message content are shared.</li>
-          <li><strong className="text-charcoal-deep">Razorpay:</strong> Payment processing. We do not store card or banking information.</li>
+          <li><strong className="text-charcoal-deep">AI processing provider:</strong> Health record OCR and AI chat responses. Uploaded records are processed by our AI provider and are subject to their data usage policies.</li>
+          <li><strong className="text-charcoal-deep">Authentication provider:</strong> Google Sign-In authentication only. We do not share health data with this provider.</li>
+          <li><strong className="text-charcoal-deep">Cloud storage provider:</strong> Secure encrypted storage for uploaded health record files.</li>
+          <li><strong className="text-charcoal-deep">Email delivery provider:</strong> Transactional email delivery (OTPs, verification links, notifications). Only your email address and message content are shared.</li>
+          <li><strong className="text-charcoal-deep">Payment processor:</strong> Payment processing. We do not store card or banking information.</li>
         </ul>
       </Section>
 
@@ -178,9 +177,9 @@ export default function PrivacyPolicy() {
       <Section title="9. Security">
         <p>
           We implement multiple layers of security to protect your health data: AES-256-GCM
-          field-level encryption, bcrypt password hashing (cost factor 12), short-lived JWT access
-          tokens, server-side session management, S3 presigned URLs with 10-minute TTL, and
-          Pydantic-validated API inputs. All connections use HTTPS in production.
+          field-level encryption, bcrypt password hashing, short-lived access tokens,
+          server-side session management, time-limited secure file download URLs, and
+          strict API input validation. All connections use HTTPS in production.
         </p>
         <p>
           Despite these measures, no system is completely immune to security risks. We will notify

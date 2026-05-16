@@ -127,7 +127,7 @@ export default function TermsOfUse() {
 
       <Section title="5. Health Data & AI Disclaimer">
         <p>
-          GlimmoraCare uses artificial intelligence (OpenAI GPT-4.1) to extract health markers from
+          GlimmoraCare uses artificial intelligence to extract health markers from
           uploaded documents and to generate health insights. You acknowledge that:
         </p>
         <ul className="list-disc pl-5 space-y-2">
@@ -160,7 +160,7 @@ export default function TermsOfUse() {
           on the platform and may change with 30 days' notice to active subscribers.
         </p>
         <p>
-          Payments are processed by Razorpay. We do not store your payment card or banking details.
+          Payments are processed by a third-party payment processor. We do not store your payment card or banking details.
           Subscription fees are non-refundable except where required by applicable law or at our
           sole discretion.
         </p>
