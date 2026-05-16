@@ -712,11 +712,6 @@ function Footer() {
             <p className="text-[12px] font-body text-ivory-cream/35 mt-3 max-w-[240px] leading-[1.8]">
               Preventive health intelligence for patients and healthcare organisations across India.
             </p>
-            <div className="flex gap-2 mt-5">
-              {['Twitter', 'LinkedIn'].map(s => (
-                <a key={s} href="#" className="text-[11px] font-body text-ivory-cream/35 hover:text-ivory-cream transition-colors border border-ivory-cream/10 rounded-lg px-3 py-1.5">{s}</a>
-              ))}
-            </div>
           </div>
 
           {[
@@ -728,7 +723,11 @@ function Footer() {
               <p className="text-[10px] font-body font-semibold text-ivory-cream/50 uppercase tracking-[0.2em] mb-4">{heading}</p>
               <div className="space-y-2.5">
                 {(links as string[][]).map(([href, label]) => (
-                  <a key={href} href={href} className="block text-[13px] font-body text-ivory-cream/40 hover:text-ivory-cream/80 transition-colors">{label}</a>
+                  href.startsWith('/') ? (
+                    <Link key={href} href={href} className="block text-[13px] font-body text-ivory-cream/40 hover:text-ivory-cream/80 transition-colors">{label}</Link>
+                  ) : (
+                    <a key={href} href={href} className="block text-[13px] font-body text-ivory-cream/40 hover:text-ivory-cream/80 transition-colors">{label}</a>
+                  )
                 ))}
               </div>
             </div>
