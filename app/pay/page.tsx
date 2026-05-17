@@ -3,9 +3,10 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
-  Sparkles, CheckCircle, AlertCircle, CreditCard, Shield,
+  CheckCircle, AlertCircle, CreditCard, Shield,
   Check, Loader2, Building2, ArrowRight,
 } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 import { planApi, paymentApi, type PlanOut, type VerifyPaymentResponse } from '@/lib/api'
 
@@ -149,12 +150,7 @@ function PayPage() {
       {/* Header */}
       <div className="border-b border-sand-light bg-white/80 backdrop-blur-sm">
         <div className="max-w-xl mx-auto px-4 py-4 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-charcoal-deep flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-gold-soft" />
-          </div>
-          <span className="font-display text-xl text-charcoal-deep tracking-tight">
-            Glimmora<span className="text-gold-deep italic">Care</span>
-          </span>
+          <Logo href="/" />
           <span className="ml-auto text-[10px] text-greige font-body flex items-center gap-1">
             <Shield className="w-3 h-3 text-gold-soft" /> Secured by Razorpay
           </span>

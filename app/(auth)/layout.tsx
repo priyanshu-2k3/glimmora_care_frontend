@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Sparkles, Shield, Brain, Activity } from 'lucide-react'
+import { Shield, Brain, Activity } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 const FEATURES = [
   { icon: Shield,   text: 'End-to-end encrypted health records' },
@@ -28,15 +29,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Logo */}
         <div className="relative">
-          <Link href="/" className="flex items-center gap-3 mb-2 w-fit">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-soft/30 to-gold-deep/10 border border-gold-soft/20 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-gold-soft" />
-            </div>
-            <h1 className="font-display text-3xl text-ivory-cream tracking-tight leading-none">
-              Glimmora<span className="text-gold-soft italic">Care</span>
-            </h1>
-          </Link>
-          <p className="text-xs text-ivory-cream/30 font-body uppercase tracking-widest ml-[52px]">
+          <Logo href="/" />
+          <p className="text-xs text-ivory-cream/30 font-body uppercase tracking-widest mt-3">
             Preventive Intelligence Engine
           </p>
         </div>
@@ -81,18 +75,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Right: form area ── */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-ivory-cream via-white to-parchment">
         {/* Mobile logo (shown only on small screens) */}
-        <div className="lg:hidden text-center mb-8">
-          <Link href="/" className="inline-flex flex-col items-center gap-0">
-            <div className="flex items-center justify-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-charcoal-deep flex items-center justify-center">
-                <Sparkles className="w-4.5 h-4.5 text-gold-soft" />
-              </div>
-              <h1 className="font-display text-3xl text-charcoal-deep tracking-tight">
-                Glimmora<span className="text-gold-deep italic">Care</span>
-              </h1>
-            </div>
-            <p className="text-xs text-greige font-body">Preventive Intelligence Engine</p>
-          </Link>
+        <div className="lg:hidden text-center mb-8 flex flex-col items-center gap-1.5">
+          <Logo href="/" />
+          <p className="text-xs text-greige font-body">Preventive Intelligence Engine</p>
         </div>
 
         {/* Form card */}

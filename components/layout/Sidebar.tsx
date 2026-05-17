@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Logo } from '@/components/ui/Logo'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
@@ -150,20 +151,13 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     return (
       <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
         {/* Logo */}
-        <div className="px-5 py-[18px] border-b border-sand-light">
-          <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-gold-soft" />
-            </div>
-            <div>
-              <h1 className="font-display text-xl text-charcoal-deep tracking-tight leading-none">
-                Glimmora<span className="text-gold-deep italic">Care</span>
-              </h1>
-              <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-                Admin Console
-              </p>
-            </div>
-          </Link>
+        <div className="px-5 py-1 border-b border-sand-light">
+          <div className="flex items-center gap-2.5">
+            <Logo href="/dashboard" heightClass="h-[80px] md:h-[110px]" />
+            <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest">
+              Admin Console
+            </p>
+          </div>
         </div>
 
         {/* Admin nested navigation */}
@@ -221,20 +215,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-sand-light">
-        <Link href={user.role === 'super_admin' ? '/admin' : '/dashboard'} onClick={onClose} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-gold-soft" />
-          </div>
-          <div>
-            <h1 className="font-display text-xl text-charcoal-deep tracking-tight leading-none">
-              Glimmora<span className="text-gold-deep italic">Care</span>
-            </h1>
-            <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-              Preventive Intelligence
-            </p>
-          </div>
-        </Link>
+      <div className="px-5 py-1 border-b border-sand-light">
+        <Logo href={user.role === 'super_admin' ? '/admin' : '/dashboard'} heightClass="h-[80px] md:h-[110px]" />
       </div>
 
       {/* Profile switcher */}
