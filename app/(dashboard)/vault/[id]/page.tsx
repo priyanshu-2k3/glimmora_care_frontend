@@ -374,7 +374,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
                     {record.consentStatus}
                   </Badge>
                   {record.ocrConfidence != null && (
-                    <Badge variant="gold">OCR: {Math.round(record.ocrConfidence * 100)}% confidence</Badge>
+                    <Badge variant="gold">OCR: {record.ocrConfidence}% confidence</Badge>
                   )}
                   {record.fileSize && <Badge variant="default">{record.fileSize}</Badge>}
                 </div>
