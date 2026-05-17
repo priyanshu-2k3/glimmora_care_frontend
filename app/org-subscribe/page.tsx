@@ -159,7 +159,7 @@ function OrgSubscribeInner() {
     return (
       <div className="min-h-screen bg-[#F9F7F4] flex flex-col">
         <header className="bg-[#1A1A1A] px-6 py-4 flex items-center justify-between">
-          <Logo href="/" height={32} />
+          <Logo href="/" />
           <Steps current={3} />
           <div className="w-24" />
         </header>

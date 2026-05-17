@@ -29,7 +29,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Logo */}
         <div className="relative">
-          <Logo href="/" height={44} />
+          <Logo href="/" />
           <p className="text-xs text-ivory-cream/30 font-body uppercase tracking-widest mt-3">
             Preventive Intelligence Engine
           </p>
@@ -76,7 +76,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-ivory-cream via-white to-parchment">
         {/* Mobile logo (shown only on small screens) */}
         <div className="lg:hidden text-center mb-8 flex flex-col items-center gap-1.5">
-          <Logo href="/" height={40} />
+          <Logo href="/" />
           <p className="text-xs text-greige font-body">Preventive Intelligence Engine</p>
         </div>
 

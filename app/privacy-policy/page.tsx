@@ -7,7 +7,7 @@ function LegalLayout({ title, subtitle, children }: { title: string; subtitle: s
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/96 backdrop-blur-md border-b border-sand-light/70 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-[68px] flex items-center justify-between">
-          <Logo href="/" height={32} />
+          <Logo href="/" />
           <Link href="/login" className="text-[13px] font-body font-medium text-charcoal-deep hover:text-gold-deep transition-colors">
             Log in →
           </Link>

@@ -150,7 +150,7 @@ function PayPage() {
       {/* Header */}
       <div className="border-b border-sand-light bg-white/80 backdrop-blur-sm">
         <div className="max-w-xl mx-auto px-4 py-4 flex items-center gap-2.5">
-          <Logo href="/" height={32} />
+          <Logo href="/" />
           <span className="ml-auto text-[10px] text-greige font-body flex items-center gap-1">
             <Shield className="w-3 h-3 text-gold-soft" /> Secured by Razorpay
           </span>

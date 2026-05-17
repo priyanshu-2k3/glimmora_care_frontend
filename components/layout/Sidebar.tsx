@@ -151,9 +151,9 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     return (
       <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
         {/* Logo */}
-        <div className="px-5 py-[18px] border-b border-sand-light">
+        <div className="px-5 py-1 border-b border-sand-light">
           <div className="flex items-center gap-2.5">
-            <Logo href="/dashboard" height={34} />
+            <Logo href="/dashboard" heightClass="h-[80px] md:h-[110px]" />
             <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest">
               Admin Console
             </p>
@@ -215,8 +215,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-sand-light">
-        <Logo href={user.role === 'super_admin' ? '/admin' : '/dashboard'} height={34} />
+      <div className="px-5 py-1 border-b border-sand-light">
+        <Logo href={user.role === 'super_admin' ? '/admin' : '/dashboard'} heightClass="h-[80px] md:h-[110px]" />
       </div>
 
       {/* Profile switcher */}
