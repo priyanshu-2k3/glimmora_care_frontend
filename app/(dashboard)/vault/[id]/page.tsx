@@ -68,7 +68,7 @@ function toHealthMarkers(markers: MarkerOut[], timestamp: string): HealthMarker[
     normalRange: { min: m.normalMin ?? -1, max: m.normalMax ?? -1, unit: m.unit },
     category: (m.category as HealthMarker['category']) ?? 'blood',
     timestamp,
-    extractionConfidence: Math.round((m.extractionConfidence ?? 1) * 100),
+    extractionConfidence: m.extractionConfidence ?? 1,
     isAbnormal: m.isAbnormal,
   }))
 }
@@ -374,7 +374,7 @@ export default function VaultRecordPage({ params }: { params: Promise<{ id: stri
                     {record.consentStatus}
                   </Badge>
                   {record.ocrConfidence != null && (
-                    <Badge variant="gold">OCR: {record.ocrConfidence}% confidence</Badge>
+                    <Badge variant="gold">OCR: {Math.round((record.ocrConfidence ?? 0) * 100)}% confidence</Badge>
                   )}
                   {record.fileSize && <Badge variant="default">{record.fileSize}</Badge>}
                 </div>
