@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -152,17 +153,10 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         {/* Logo */}
         <div className="px-5 py-[18px] border-b border-sand-light">
           <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-gold-soft" />
-            </div>
-            <div>
-              <h1 className="font-display text-xl text-charcoal-deep tracking-tight leading-none">
-                Glimmora<span className="text-gold-deep italic">Care</span>
-              </h1>
-              <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-                Admin Console
-              </p>
-            </div>
+            <Image src="/logo.png" alt="Glimmora Care" width={120} height={40} className="h-9 w-auto object-contain" priority />
+            <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest">
+              Admin Console
+            </p>
           </Link>
         </div>
 
@@ -222,18 +216,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
       {/* Logo */}
       <div className="px-5 py-4 border-b border-sand-light">
-        <Link href={user.role === 'super_admin' ? '/admin' : '/dashboard'} onClick={onClose} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-charcoal-deep to-stone ring-1 ring-gold-soft/30 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-gold-soft" />
-          </div>
-          <div>
-            <h1 className="font-display text-xl text-charcoal-deep tracking-tight leading-none">
-              Glimmora<span className="text-gold-deep italic">Care</span>
-            </h1>
-            <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest mt-0.5">
-              Preventive Intelligence
-            </p>
-          </div>
+        <Link href={user.role === 'super_admin' ? '/admin' : '/dashboard'} onClick={onClose} className="flex items-center">
+          <Image src="/logo.png" alt="Glimmora Care" width={120} height={40} className="h-9 w-auto object-contain" priority />
         </Link>
       </div>
 
