@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
+import { Logo } from '@/components/ui/Logo'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Upload, Shield, Brain, Bot, MessageSquare,
@@ -152,12 +152,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
         {/* Logo */}
         <div className="px-5 py-[18px] border-b border-sand-light">
-          <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="Glimmora Care" width={120} height={40} className="h-9 w-auto object-contain" priority />
+          <div className="flex items-center gap-2.5">
+            <Logo href="/dashboard" height={34} />
             <p className="text-[9px] text-gold-deep/60 font-body uppercase tracking-widest">
               Admin Console
             </p>
-          </Link>
+          </div>
         </div>
 
         {/* Admin nested navigation */}
@@ -216,9 +216,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     <div className="flex flex-col h-full bg-gradient-to-b from-ivory-cream to-white border-r border-sand-light">
       {/* Logo */}
       <div className="px-5 py-4 border-b border-sand-light">
-        <Link href={user.role === 'super_admin' ? '/admin' : '/dashboard'} onClick={onClose} className="flex items-center">
-          <Image src="/logo.png" alt="Glimmora Care" width={120} height={40} className="h-9 w-auto object-contain" priority />
-        </Link>
+        <Logo href={user.role === 'super_admin' ? '/admin' : '/dashboard'} height={34} />
       </div>
 
       {/* Profile switcher */}

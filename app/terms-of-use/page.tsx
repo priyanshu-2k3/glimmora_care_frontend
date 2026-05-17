@@ -1,19 +1,12 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 function LegalLayout({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-ivory-cream">
       <header className="sticky top-0 z-50 bg-white/96 backdrop-blur-md border-b border-sand-light/70 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-[68px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-charcoal-deep flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-gold-soft" />
-            </div>
-            <span className="font-display text-[22px] text-charcoal-deep tracking-tight">
-              Glimmora<span className="text-gold-deep italic">Care</span>
-            </span>
-          </Link>
+          <Logo href="/" height={32} />
           <Link href="/login" className="text-[13px] font-body font-medium text-charcoal-deep hover:text-gold-deep transition-colors">
             Log in →
           </Link>

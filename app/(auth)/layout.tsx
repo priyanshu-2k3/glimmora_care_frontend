@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { Shield, Brain, Activity } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 const FEATURES = [
   { icon: Shield,   text: 'End-to-end encrypted health records' },
@@ -29,12 +29,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Logo */}
         <div className="relative">
-          <Link href="/" className="flex items-center mb-2 w-fit">
-            <div className="bg-white rounded-xl px-2 py-1">
-              <Image src="/logo.png" alt="Glimmora Care" width={160} height={52} className="h-12 w-auto object-contain" priority />
-            </div>
-          </Link>
-          <p className="text-xs text-ivory-cream/30 font-body uppercase tracking-widest mt-1">
+          <Logo href="/" height={44} />
+          <p className="text-xs text-ivory-cream/30 font-body uppercase tracking-widest mt-3">
             Preventive Intelligence Engine
           </p>
         </div>
@@ -79,11 +75,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Right: form area ── */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-ivory-cream via-white to-parchment">
         {/* Mobile logo (shown only on small screens) */}
-        <div className="lg:hidden text-center mb-8">
-          <Link href="/" className="inline-flex flex-col items-center gap-1">
-            <Image src="/logo.png" alt="Glimmora Care" width={160} height={52} className="h-12 w-auto object-contain" priority />
-            <p className="text-xs text-greige font-body">Preventive Intelligence Engine</p>
-          </Link>
+        <div className="lg:hidden text-center mb-8 flex flex-col items-center gap-1.5">
+          <Logo href="/" height={40} />
+          <p className="text-xs text-greige font-body">Preventive Intelligence Engine</p>
         </div>
 
         {/* Form card */}

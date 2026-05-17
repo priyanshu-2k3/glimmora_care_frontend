@@ -8,6 +8,7 @@ import {
   Brain, Lock, FileText, ArrowRight, Star,
   HeartPulse, Activity, Users, QrCode, Clock, Pill,
 } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 import { planApi, type PlanOut } from '@/lib/api'
 
@@ -28,9 +29,7 @@ function Navbar() {
       scrolled ? 'bg-white/96 backdrop-blur-md border-b border-sand-light/70 shadow-sm' : 'bg-transparent',
     )}>
       <div className="max-w-7xl mx-auto px-6 h-[68px] flex items-center justify-between">
-        <Link href="/" className={cn('font-display text-[26px] tracking-tight select-none transition-colors duration-300', scrolled ? 'text-charcoal-deep' : 'text-ivory-cream')}>
-          Glimmora<span className="text-gold-soft italic">Care</span>
-        </Link>
+        <Logo href="/" height={36} />
 
         <nav className="hidden md:flex items-center gap-8">
           {[['/', 'Home'], ['#features', 'Features'], ['#plans', 'Plans'], ['#get-started', 'Get Started']].map(([href, label]) => (
@@ -706,9 +705,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="grid sm:grid-cols-[2fr_1fr_1fr_1fr] gap-10 mb-12">
           <div>
-            <span className="font-display text-[28px] text-ivory-cream">
-              Glimmora<span className="text-gold-soft italic">Care</span>
-            </span>
+            <Logo href="/" height={36} />
             <p className="text-[12px] font-body text-ivory-cream/35 mt-3 max-w-[240px] leading-[1.8]">
               Preventive health intelligence for patients and healthcare organisations across India.
             </p>

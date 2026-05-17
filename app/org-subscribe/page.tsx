@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Building2, Check, CheckCircle, AlertCircle, Loader2, LogOut, Star, Shield } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 import { planApi, paymentApi, type PlanOut, type VerifyPaymentResponse } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -158,7 +159,7 @@ function OrgSubscribeInner() {
     return (
       <div className="min-h-screen bg-[#F9F7F4] flex flex-col">
         <header className="bg-[#1A1A1A] px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-xl text-white">Glimmora<span className="text-[#B8860B] italic">Care</span></span>
+          <Logo href="/" height={32} />
           <Steps current={3} />
           <div className="w-24" />
         </header>
